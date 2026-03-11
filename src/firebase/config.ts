@@ -1,8 +1,9 @@
 export const firebaseConfig = {
-  "projectId": "studio-7604430802-219f1",
-  "appId": "1:947151698389:web:51f2bc0d5879e245f4a55c",
-  "apiKey": "AIzaSyBot9Z3pyAu6RC2psdayyywGSpk1wqZteI",
-  "authDomain": "studio-7604430802-219f1.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "947151698389"
+  apiKey: "AIzaSyA7-PA5nAzkdDeHFHzxvbn3JyRt3uuk1zY",
+  authDomain: "devforge-academy.firebaseapp.com",
+  projectId: "devforge-academy",
+  storageBucket: "devforge-academy.firebasestorage.app",
+  messagingSenderId: "900875251371",
+  appId: "1:900875251371:web:bd779d64852195f8b791ee",
+  measurementId: "G-KFM5DGLQL3"
 };
