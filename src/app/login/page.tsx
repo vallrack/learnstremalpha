@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth, useUser } from '@/firebase';
+import { useState, useEffect } from 'react';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -11,33 +13,66 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlayCircle, LogIn, UserCircle, Loader2, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const { auth } = useAuth();
-  const { user } = useUser();
+  const { firestore } = useFirestore();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; code?: string } | null>(null);
 
-  // If user is already logged in, redirect to dashboard
-  if (user) {
-    router.push('/dashboard');
-    return null;
-  }
+  // Redirigir si ya está logueado
+  useEffect(() => {
+    if (user && !loading) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
+  const syncUserProfile = async (authUser: any) => {
+    if (!firestore || !authUser) return;
+    
+    const userRef = doc(firestore, 'users', authUser.uid);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      // Si el documento no existe (como podría pasar con tu super admin manual), lo creamos
+      setDocumentNonBlocking(userRef, {
+        id: authUser.uid,
+        displayName: authUser.displayName || email.split('@')[0],
+        email: authUser.email,
+        profileImageUrl: authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/200/200`,
+        createdAt: serverTimestamp(),
+        isPremiumSubscriber: true, // Asumimos premium para el super admin
+      }, { merge: true });
+    }
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await syncUserProfile(userCredential.user);
       router.push('/dashboard');
     } catch (err: any) {
-      setError('Credenciales inválidas. Por favor, inténtalo de nuevo.');
+      console.error("Login error:", err);
+      let message = 'Error al iniciar sesión. Por favor, verifica tus datos.';
+      
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        message = 'Credenciales inválidas. Verifica tu correo y contraseña.';
+      } else if (err.code === 'auth/network-request-failed') {
+        message = 'Error de conexión. Revisa tu internet.';
+      } else if (err.code === 'auth/too-many-requests') {
+        message = 'Demasiados intentos. Tu cuenta ha sido temporalmente bloqueada.';
+      }
+
+      setError({ message, code: err.code });
       setLoading(false);
     }
   };
@@ -46,13 +81,22 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await signInAnonymously(auth);
+      const userCredential = await signInAnonymously(auth);
+      await syncUserProfile(userCredential.user);
       router.push('/dashboard');
     } catch (err: any) {
-      setError('Error al iniciar sesión como invitado.');
+      setError({ message: 'Error al iniciar sesión como invitado.', code: err.code });
       setLoading(false);
     }
   };
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -84,7 +128,11 @@ export default function LoginPage() {
                 {error && (
                   <Alert variant="destructive" className="rounded-xl">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertTitle>Error de Acceso</AlertTitle>
+                    <AlertDescription>
+                      {error.message}
+                      {error.code && <div className="text-[10px] mt-1 opacity-70">Código: {error.code}</div>}
+                    </AlertDescription>
                   </Alert>
                 )}
 
