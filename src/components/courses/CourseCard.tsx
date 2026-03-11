@@ -1,3 +1,4 @@
+'use client';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -6,18 +7,19 @@ import { Badge } from '@/components/ui/badge';
 import { PlayCircle, BookOpen } from 'lucide-react';
 
 export function CourseCard({ course }: { course: any }) {
-  // Nota: La cuenta de lecciones requiere consultar subcolecciones. 
-  // Para la vista de lista, mostramos un mensaje descriptivo si no están denormalizadas.
+  // Usamos thumbnailDataUrl como fuente principal de la imagen
+  const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
+
   return (
     <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 flex flex-col h-full bg-card">
       <Link href={`/courses/${course.id}`}>
         <div className="relative aspect-video overflow-hidden">
           <Image 
-            src={course.imageUrl || 'https://picsum.photos/seed/course/800/450'} 
+            src={imageSrc} 
             alt={course.title}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
-            data-ai-hint="course thumbnail"
+            unoptimized={imageSrc.startsWith('data:')}
           />
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
           {course.isFree ? (

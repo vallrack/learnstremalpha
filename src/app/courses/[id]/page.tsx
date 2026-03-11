@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
@@ -57,7 +56,9 @@ export default function CourseDetailPage() {
     );
   }
 
-  const previewVideoUrl = course.previewVideoUrl || (modules?.[0]?.id ? "https://www.youtube.com/embed/bn2ZGKdYytc" : null);
+  // Priorizar thumbnailDataUrl sobre imageUrl
+  const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
+  const previewVideoUrl = course.previewVideoUrl || null;
 
   const formatVideoUrl = (url: string) => {
     if (!url) return '';
@@ -137,10 +138,11 @@ export default function CourseDetailPage() {
                 ) : (
                   <>
                     <Image 
-                      src={course.imageUrl || 'https://picsum.photos/seed/course/800/450'} 
+                      src={imageSrc} 
                       alt={course.title}
                       fill
                       className="object-cover opacity-80"
+                      unoptimized={imageSrc.startsWith('data:')}
                     />
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
                       <Button 
@@ -148,17 +150,20 @@ export default function CourseDetailPage() {
                         size="icon" 
                         className="h-16 w-16 text-white rounded-full hover:scale-110 transition-transform bg-primary/20 backdrop-blur-sm"
                         onClick={() => setShowPreview(true)}
+                        disabled={!previewVideoUrl}
                       >
                         <Play className="h-8 w-8 fill-current" />
                       </Button>
-                      <span className="text-white font-bold mt-4 drop-shadow-md">Vista previa del curso</span>
+                      <span className="text-white font-bold mt-4 drop-shadow-md">
+                        {previewVideoUrl ? 'Vista previa del curso' : 'Imagen del curso'}
+                      </span>
                     </div>
                   </>
                 )}
               </div>
               <div className="p-8">
                 <div className="text-3xl font-headline font-bold mb-6 text-foreground">
-                  {course.isFree ? 'Gratis' : '$29.99'}
+                  {course.price > 0 ? `$${course.price}` : 'Gratis'}
                   {course.isFree && <span className="text-sm font-normal text-muted-foreground ml-2">por tiempo limitado</span>}
                 </div>
                 
@@ -244,6 +249,7 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
   if (isLoading) return <div className="py-4 flex justify-center"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>;
 
   const isUrl = (str: string) => {
+    if (!str) return false;
     try {
       new URL(str);
       return true;
