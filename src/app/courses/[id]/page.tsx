@@ -149,7 +149,8 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
 
   const modulesQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'courses', courseId, 'modules'), orderBy('order', 'asc'));
+    // Ajustado para usar 'orderIndex' basado en la captura del usuario
+    return query(collection(db, 'courses', courseId, 'modules'), orderBy('orderIndex', 'asc'));
   }, [db, courseId]);
 
   const { data: modules, isLoading } = useCollection(modulesQuery);
@@ -168,11 +169,13 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
 
   return (
     <Accordion type="single" collapsible className="w-full space-y-4">
-      {modules.map((module) => (
+      {modules.map((module, index) => (
         <AccordionItem key={module.id} value={module.id} className="bg-card border rounded-2xl overflow-hidden px-4">
           <AccordionTrigger className="hover:no-underline py-6">
             <div className="flex flex-col items-start text-left gap-1">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {module.order}</span>
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                Módulo {module.orderIndex !== undefined ? module.orderIndex + 1 : index + 1}
+              </span>
               <span className="text-lg font-bold">{module.title}</span>
             </div>
           </AccordionTrigger>
@@ -190,7 +193,8 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
 
   const lessonsQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'courses', courseId, 'modules', moduleId, 'lessons'), orderBy('order', 'asc'));
+    // Ajustado para intentar 'orderIndex' o caer en 'order' si existe
+    return query(collection(db, 'courses', courseId, 'modules', moduleId, 'lessons'), orderBy('orderIndex', 'asc'));
   }, [db, courseId, moduleId]);
 
   const { data: lessons, isLoading } = useCollection(lessonsQuery);
