@@ -4,121 +4,59 @@ service cloud.firestore {
 
     /**
      * LearnStream Security Rules Documentation
-     *
-     * Core Philosophy:
-     * This ruleset enforces a strict user-ownership model for personal data (subscriptions, transactions, progress) 
-     * and an instructor-based ownership model for educational content. Authorization for premium content is 
-     * managed through a subscription status denormalized onto the user's profile.
-     *
-     * Data Structure:
-     * - Personal data is nested under /users/{userId}.
-     * - Shared educational content is stored in the top-level /courses collection.
-     * - Subscription definitions are in the top-level /subscriptionPlans collection.
-     *
-     * Key Security Decisions:
-     * - Authorization Independence: Critical fields like 'instructorId' and 'courseIsFree' are denormalized 
-     *   into subcollections (Modules, Lessons, Resources) to allow for flat, performant rule evaluation 
-     *   without deep 'get()' chains.
-     * - Subscription Verification: Read access to premium lessons and resources is gated by checking 
-     *   the 'isPremiumSubscriber' boolean on the authenticated user's profile.
-     * - Prototyping Flexibility: While authorization and relational integrity (like instructorId) 
-     *   are strictly enforced, the specific data types and internal schema of content fields are 
-     *   not restricted to facilitate rapid development.
-     * - Strict Ownership: All updates and deletes require the document to exist and the 
-     *   authenticated user's ID to match the owner/instructor field.
      */
 
-    // --- Global Helper Functions ---
-
-    /** @description Checks if the user is authenticated with any provider. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the authenticated user matches the provided ID. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Checks ownership and ensures the document exists for destructive/update actions. */
     function isExistingOwner(userId) {
       return resource != null && isOwner(userId);
     }
 
-    /** @description Checks if the user has a valid instructor ID for course content. */
     function isInstructor(instructorId) {
       return isSignedIn() && request.auth.uid == instructorId;
     }
 
-    /** @description Verifies if the current user has an active premium subscription status. */
     function isPremiumSubscriber() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremiumSubscriber == true;
     }
 
-    /** @description Logic for accessing course content based on free status or subscription. */
     function canAccessContent(data) {
-      return isSignedIn() && (data.courseIsFree == true || isPremiumSubscriber());
+      return isSignedIn() && (isInstructor(data.instructorId) || data.courseIsFree == true || isPremiumSubscriber());
     }
 
-    /** @description Logic for accessing specific lessons which may have independent premium flags. */
     function canAccessLesson(data) {
-      return isSignedIn() && ((data.courseIsFree == true && data.isPremium == false) || isPremiumSubscriber());
+      return isSignedIn() && (isInstructor(data.instructorId) || (data.courseIsFree == true && data.isPremium == false) || isPremiumSubscriber());
     }
 
-    /** @description Logic for accessing resources based on parent lesson premium status. */
     function canAccessResource(data) {
-      return isSignedIn() && ((data.courseIsFree == true && data.lessonIsPremium == false) || isPremiumSubscriber());
+      return isSignedIn() && (isInstructor(data.instructorId) || (data.courseIsFree == true && data.lessonIsPremium == false) || isPremiumSubscriber());
     }
 
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for user profile documents.
-     * @path /users/{userId}
-     * @allow (get) request.auth.uid == "user123"
-     * @deny (update) Attempting to change "isPremiumSubscriber" manually.
-     * @principle Ownership-based access with immutability for system-managed fields.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false; // Users cannot be listed for privacy
+      allow list: if false;
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && (request.resource.data.isPremiumSubscriber == resource.data.isPremiumSubscriber);
       allow delete: if isExistingOwner(userId);
 
-      /**
-       * @description Records of user subscriptions.
-       * @path /users/{userId}/subscriptions/{subscriptionId}
-       * @allow (list) A user listing their own subscriptions.
-       * @deny (get) User 'A' reading User 'B's subscription.
-       * @principle Private user subcollection scoped by path.
-       */
       match /subscriptions/{subscriptionId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
         allow update, delete: if isExistingOwner(userId);
       }
 
-      /**
-       * @description Financial transactions for the user.
-       * @path /users/{userId}/transactions/{transactionId}
-       * @allow (get) Owner viewing a transaction.
-       * @deny (create) Mismatched userId in payload.
-       * @principle Private financial data restricted to the account owner.
-       */
       match /transactions/{transactionId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
         allow update, delete: if isExistingOwner(userId);
       }
 
-      /**
-       * @description Progress tracking for specific courses.
-       * @path /users/{userId}/courseProgress/{courseId}
-       * @allow (create) User starting a new course.
-       * @deny (update) Changing the userId associated with the progress.
-       * @principle Relational integrity between path and document owner.
-       */
       match /courseProgress/{courseId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
@@ -127,63 +65,29 @@ service cloud.firestore {
       }
     }
 
-    /**
-     * @description Definitions of subscription plans.
-     * @path /subscriptionPlans/{planId}
-     * @allow (get) Any user viewing available plans.
-     * @deny (write) Any user attempting to modify pricing.
-     * @principle Publicly readable configuration data.
-     */
     match /subscriptionPlans/{planId} {
       allow get, list: if true;
       allow create, update, delete: if false;
     }
 
-    /**
-     * @description Top-level collection for courses and their metadata.
-     * @path /courses/{courseId}
-     * @allow (get) Any signed-in user viewing course metadata.
-     * @deny (update) User who is not the original instructor.
-     * @principle Public metadata with instructor-restricted management.
-     */
     match /courses/{courseId} {
       allow get, list: if isSignedIn();
       allow create: if isInstructor(request.resource.data.instructorId);
       allow update: if resource != null && isInstructor(resource.data.instructorId) && request.resource.data.instructorId == resource.data.instructorId;
       allow delete: if resource != null && isInstructor(resource.data.instructorId);
 
-      /**
-       * @description Modules grouped under a course.
-       * @path /courses/{courseId}/modules/{moduleId}
-       * @allow (get) Subscriber accessing a module in a premium course.
-       * @deny (create) Mismatched courseId reference.
-       * @principle Denormalized instructorId allows atomic write authorization.
-       */
       match /modules/{moduleId} {
         allow get, list: if canAccessContent(resource.data);
         allow create: if isInstructor(request.resource.data.instructorId) && request.resource.data.courseId == courseId;
         allow update: if resource != null && isInstructor(resource.data.instructorId) && request.resource.data.instructorId == resource.data.instructorId;
         allow delete: if resource != null && isInstructor(resource.data.instructorId);
 
-        /**
-         * @description Lessons within a module.
-         * @path /courses/{courseId}/modules/{moduleId}/lessons/{lessonId}
-         * @allow (get) Free user accessing a non-premium lesson.
-         * @deny (get) Free user accessing a premium lesson.
-         * @principle Granular content access based on lesson-level premium flags.
-         */
         match /lessons/{lessonId} {
           allow get, list: if canAccessLesson(resource.data);
           allow create: if isInstructor(request.resource.data.instructorId) && request.resource.data.moduleId == moduleId;
           allow update: if resource != null && isInstructor(resource.data.instructorId) && request.resource.data.instructorId == resource.data.instructorId;
           allow delete: if resource != null && isInstructor(resource.data.instructorId);
 
-          /**
-           * @description Resources (videos, text) attached to a lesson.
-           * @path /courses/{courseId}/modules/{moduleId}/lessons/{lessonId}/resources/{resourceId}
-           * @allow (get) Subscriber accessing a resource for a premium lesson.
-           * @principle Tiered access enforced via denormalized parent lesson status.
-           */
           match /resources/{resourceId} {
             allow get, list: if canAccessResource(resource.data);
             allow create: if isInstructor(request.resource.data.instructorId) && request.resource.data.lessonId == lessonId;
