@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
@@ -222,7 +223,7 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
           <AccordionTrigger className="hover:no-underline py-6">
             <div className="flex flex-col items-start text-left gap-1">
               <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                Módulo {module.orderIndex !== undefined ? module.orderIndex + 1 : index + 1}
+                Módulo {index + 1}
               </span>
               <span className="text-lg font-bold text-foreground">{module.title}</span>
             </div>

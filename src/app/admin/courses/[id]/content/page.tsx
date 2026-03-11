@@ -178,7 +178,7 @@ export default function CourseContentAdminPage() {
                       <div className="flex items-center gap-4 text-left">
                         <div className="bg-muted p-2 rounded-lg"><GripVertical className="h-4 w-4 text-muted-foreground" /></div>
                         <div>
-                          <p className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {module.orderIndex ?? i}</p>
+                          <p className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {i + 1}</p>
                           <p className="text-lg font-bold">{module.title}</p>
                         </div>
                       </div>
