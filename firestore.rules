@@ -2,9 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * LearnStream Security Rules Documentation
-     */
+    // ---------------------------------------------------------------------
+    // Funciones de Ayuda (Helpers)
+    // ---------------------------------------------------------------------
 
     function isSignedIn() {
       return request.auth != null;
@@ -14,88 +14,110 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    function isInstructor(instructorId) {
+    function isCourseInstructor(instructorId) {
       return isSignedIn() && request.auth.uid == instructorId;
     }
 
-    function isPremiumSubscriber() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremiumSubscriber == true;
+    // ✅ Lee el rol desde el documento /users en Firestore.
+    function isAdmin() {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function canAccessContent(data) {
-      return isSignedIn() && (isInstructor(data.instructorId) || data.courseIsFree == true || isPremiumSubscriber());
+    function isParentCoursePublished(courseId) {
+      // Usamos get() para verificar el estado del curso padre
+      let courseDoc = get(/databases/$(database)/documents/courses/$(courseId));
+      return courseDoc != null && courseDoc.data.isPublished == true;
+    }
+    
+    // ---------------------------------------------------------------------
+    // REGLA CRÍTICA: Collection Group (Lecciones)
+    // ---------------------------------------------------------------------
+    match /{path=**}/lessons/{lessonId} {
+      // Permitir listar si está autenticado
+      allow list: if isSignedIn();
+
+      // Get individual: Admin o lección publicada
+      allow get: if isAdmin() || (resource.data.isPublished == true);
     }
 
-    function canAccessLesson(data) {
-      return isSignedIn() && (isInstructor(data.instructorId) || (data.courseIsFree == true && data.isPremium == false) || isPremiumSubscriber());
-    }
-
-    function canAccessResource(data) {
-      return isSignedIn() && (isInstructor(data.instructorId) || (data.courseIsFree == true && data.lessonIsPremium == false) || isPremiumSubscriber());
-    }
+    // ---------------------------------------------------------------------
+    // Colecciones de Usuario
+    // ---------------------------------------------------------------------
 
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && (request.resource.data.isPremiumSubscriber == resource.data.isPremiumSubscriber);
-      allow delete: if isExistingOwner(userId);
-
-      match /subscriptions/{subscriptionId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update, delete: if isExistingOwner(userId);
-      }
-
-      match /transactions/{transactionId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update, delete: if isExistingOwner(userId);
-      }
-
-      match /courseProgress/{courseId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
-      }
+      allow create: if isOwner(userId);
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if false; 
     }
 
-    match /subscriptionPlans/{planId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+    match /user_profiles/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
     }
+    
+    match /instructors/{instructorId} {
+      allow read: if true;
+      allow write: if isOwner(instructorId) || isAdmin();
+    }
+
+    // ---------------------------------------------------------------------
+    // Contenido Educativo (Cursos, Módulos, Lecciones, Recursos)
+    // ---------------------------------------------------------------------
 
     match /courses/{courseId} {
-      allow get, list: if isSignedIn();
-      allow create: if isInstructor(request.resource.data.instructorId);
-      allow update: if resource != null && isInstructor(resource.data.instructorId) && request.resource.data.instructorId == resource.data.instructorId;
-      allow delete: if resource != null && isInstructor(resource.data.instructorId);
+      // Lectura: Si es público o si es el dueño/admin
+      allow get: if (resource.data.isPublished == true) || (isSignedIn() && (isCourseInstructor(resource.data.instructorId) || isAdmin()));
+      allow list: if true; 
+      
+      // Escritura: Dueño o Admin
+      allow create: if (isSignedIn() && isCourseInstructor(request.resource.data.instructorId)) || isAdmin();
+      allow update, delete: if isCourseInstructor(resource.data.instructorId) || isAdmin();
 
+      // Subcolecciones jerárquicas
       match /modules/{moduleId} {
-        allow get, list: if canAccessContent(resource.data);
-        allow create: if isInstructor(request.resource.data.instructorId) && request.resource.data.courseId == courseId;
-        allow update: if resource != null && isInstructor(resource.data.instructorId) && request.resource.data.instructorId == resource.data.instructorId;
-        allow delete: if resource != null && isInstructor(resource.data.instructorId);
+        allow read: if isAdmin() || isParentCoursePublished(courseId) || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
+        allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
 
         match /lessons/{lessonId} {
-          allow get, list: if canAccessLesson(resource.data);
-          allow create: if isInstructor(request.resource.data.instructorId) && request.resource.data.moduleId == moduleId;
-          allow update: if resource != null && isInstructor(resource.data.instructorId) && request.resource.data.instructorId == resource.data.instructorId;
-          allow delete: if resource != null && isInstructor(resource.data.instructorId);
+            allow read: if isAdmin() || isParentCoursePublished(courseId) || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
+            allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
 
-          match /resources/{resourceId} {
-            allow get, list: if canAccessResource(resource.data);
-            allow create: if isInstructor(request.resource.data.instructorId) && request.resource.data.lessonId == lessonId;
-            allow update: if resource != null && isInstructor(resource.data.instructorId) && request.resource.data.instructorId == resource.data.instructorId;
-            allow delete: if resource != null && isInstructor(resource.data.instructorId);
-          }
+            match /resources/{resourceId} {
+                allow read: if isAdmin() || isParentCoursePublished(courseId) || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
+                allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
+            }
         }
       }
     }
+    
+    match /coding_challenges/{challengeId} { 
+      allow read: if true; 
+      allow create: if isSignedIn() && request.resource.data.instructorId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.instructorId == request.auth.uid || isAdmin());
+    }
+
+    // ---------------------------------------------------------------------
+    // Actividad y Progreso
+    // ---------------------------------------------------------------------
+
+    match /users/{userId}/user_progress/{id} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    match /student_error_logs/{id} {
+      allow create: if isSignedIn();
+      allow read: if isAdmin() || (exists(/databases/$(database)/documents/student_error_logs/$(id)) && isOwner(get(/databases/$(database)/documents/student_error_logs/$(id)).data.userId));
+    }
+
+    // ---------------------------------------------------------------------
+    // Colecciones Públicas / Administradas
+    // ---------------------------------------------------------------------
+
+    match /careers/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /technology_trends/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /code_review_highlights/{id} { allow read: if true; allow write: if isAdmin(); }
   }
 }
