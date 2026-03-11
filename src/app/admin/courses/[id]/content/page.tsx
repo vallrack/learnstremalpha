@@ -11,23 +11,23 @@ import {
   ChevronLeft, 
   Loader2, 
   GripVertical, 
-  Video, 
-  FileText,
-  FileDown,
+  Paperclip,
+  Upload,
   Link as LinkIcon,
-  Presentation,
-  Paperclip
+  X
 } from 'lucide-react';
 import { 
   useCollection, 
   useDoc, 
   useFirestore, 
+  useStorage,
   useMemoFirebase, 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
   Dialog, 
   DialogContent, 
@@ -40,7 +40,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -52,19 +51,15 @@ export default function CourseContentAdminPage() {
 
   const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<any>(null);
-  
-  // Module Form
   const [moduleTitle, setModuleTitle] = useState('');
   const [moduleOrder, setModuleOrder] = useState('0');
 
-  // Fetch Course
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
     return doc(db, 'courses', courseId);
   }, [db, courseId]);
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
 
-  // Fetch Modules
   const modulesQuery = useMemoFirebase(() => {
     if (!db || !courseId) return null;
     return query(collection(db, 'courses', courseId, 'modules'), orderBy('orderIndex', 'asc'));
@@ -79,8 +74,8 @@ export default function CourseContentAdminPage() {
       title: moduleTitle,
       orderIndex: parseInt(moduleOrder),
       courseId: courseId,
-      instructorId: course.instructorId, // Denormalization
-      courseIsFree: course.isFree ?? true, // Denormalization
+      instructorId: course.instructorId,
+      courseIsFree: course.isFree ?? true,
       updatedAt: serverTimestamp(),
     };
 
@@ -232,7 +227,7 @@ function LessonManager({ course, moduleId }: { course: any, moduleId: string }) 
     return query(collection(db, 'courses', course.id, 'modules', moduleId, 'lessons'), orderBy('orderIndex', 'asc'));
   }, [db, course.id, moduleId]);
 
-  const { data: lessons, isLoading } = useCollection(lessonsQuery);
+  const { data: lessons } = useCollection(lessonsQuery);
 
   const handleSaveLesson = (e: React.FormEvent) => {
     e.preventDefault();
@@ -246,8 +241,8 @@ function LessonManager({ course, moduleId }: { course: any, moduleId: string }) 
       orderIndex: parseInt(order),
       isPremium,
       moduleId,
-      instructorId: course.instructorId, // Denormalization
-      courseIsFree: course.isFree ?? true, // Denormalization
+      instructorId: course.instructorId,
+      courseIsFree: course.isFree ?? true,
       updatedAt: serverTimestamp(),
     };
 
@@ -284,6 +279,11 @@ function LessonManager({ course, moduleId }: { course: any, moduleId: string }) 
     setIsDialogOpen(true);
   };
 
+  const handleDelete = (lessonId: string) => {
+    if (!db || !confirm('¿Eliminar lección?')) return;
+    deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lessonId));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -302,11 +302,11 @@ function LessonManager({ course, moduleId }: { course: any, moduleId: string }) 
               <DialogHeader><DialogTitle>Lección</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4">
                 <Input placeholder="Título" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                <Input placeholder="URL Video" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
-                <Textarea placeholder="Contenido" value={description} onChange={(e) => setDescription(e.target.value)} />
+                <Input placeholder="URL Video (YouTube)" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
+                <Textarea placeholder="Descripción o Contenido" value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[150px]" />
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="prem" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} />
-                  <Label htmlFor="prem">Premium</Label>
+                  <Label htmlFor="prem">Lección Premium (Requiere suscripción)</Label>
                 </div>
               </div>
               <DialogFooter><Button type="submit" className="w-full">Guardar</Button></DialogFooter>
@@ -317,10 +317,11 @@ function LessonManager({ course, moduleId }: { course: any, moduleId: string }) 
       <div className="space-y-4">
         {lessons?.map((lesson) => (
           <div key={lesson.id} className="bg-slate-50 p-4 rounded-2xl border">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <p className="font-bold text-sm">{lesson.title}</p>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" onClick={() => handleEdit(lesson)}><Edit className="h-3 w-3" /></Button>
+                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-3 w-3" /></Button>
               </div>
             </div>
             <ResourceManager course={course} moduleId={moduleId} lesson={lesson} />
@@ -333,8 +334,9 @@ function LessonManager({ course, moduleId }: { course: any, moduleId: string }) 
 
 function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: string, lesson: any }) {
   const db = useFirestore();
+  const storage = useStorage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingResource, setEditingResource] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState('pdf');
@@ -347,9 +349,33 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
 
   const { data: resources } = useCollection(resourcesQuery);
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage) return;
+
+    setUploading(true);
+    try {
+      const storageRef = ref(storage, `courses/${course.id}/resources/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      setContentUrl(url);
+      if (!title) setTitle(file.name);
+      
+      // Auto-detect type
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (ext === 'pdf') setType('pdf');
+      else if (['doc', 'docx'].includes(ext!)) setType('word');
+      else if (['ppt', 'pptx'].includes(ext!)) setType('ppt');
+    } catch (err) {
+      console.error("Upload failed", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSaveResource = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db) return;
+    if (!db || !contentUrl) return;
 
     const resourceData = {
       title,
@@ -357,61 +383,111 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
       contentUrl,
       orderIndex: 0,
       lessonId: lesson.id,
-      instructorId: course.instructorId, // Denormalization
-      courseIsFree: course.isFree ?? true, // Denormalization
-      lessonIsPremium: lesson.isPremium ?? false, // Denormalization
+      instructorId: course.instructorId,
+      courseIsFree: course.isFree ?? true,
+      lessonIsPremium: lesson.isPremium ?? false,
       updatedAt: serverTimestamp(),
     };
 
-    if (editingResource) {
-      updateDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lesson.id, 'resources', editingResource.id), resourceData);
-    } else {
-      addDocumentNonBlocking(collection(db, 'courses', course.id, 'modules', moduleId, 'lessons', lesson.id, 'resources'), {
-        ...resourceData,
-        createdAt: serverTimestamp(),
-      });
-    }
+    addDocumentNonBlocking(collection(db, 'courses', course.id, 'modules', moduleId, 'lessons', lesson.id, 'resources'), {
+      ...resourceData,
+      createdAt: serverTimestamp(),
+    });
+    
     setIsDialogOpen(false);
     resetForm();
   };
 
   const resetForm = () => {
-    setEditingResource(null);
     setTitle('');
     setType('pdf');
     setContentUrl('');
   };
 
+  const handleDeleteResource = (resourceId: string) => {
+    if (!db || !confirm('¿Eliminar recurso?')) return;
+    deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lesson.id, 'resources', resourceId));
+  };
+
   return (
     <div className="mt-4 border-t pt-2">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Paperclip className="h-3 w-3" /> Recursos</p>
+        <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Paperclip className="h-3 w-3" /> Material de Apoyo</p>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild><Button size="sm" variant="ghost" className="h-6 text-[10px] border">Añadir</Button></DialogTrigger>
+          <DialogTrigger asChild><Button size="sm" variant="ghost" className="h-6 text-[10px] border">Añadir Archivo/Link</Button></DialogTrigger>
           <DialogContent className="rounded-3xl">
             <form onSubmit={handleSaveResource}>
-              <DialogHeader><DialogTitle>Recurso</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Nuevo Recurso</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4">
-                <Input placeholder="Título" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pdf">PDF</SelectItem>
-                    <SelectItem value="word">Word</SelectItem>
-                    <SelectItem value="ppt">PowerPoint</SelectItem>
-                    <SelectItem value="link">Link</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input placeholder="URL" value={contentUrl} onChange={(e) => setContentUrl(e.target.value)} required />
+                <div className="space-y-2">
+                  <Label>Tipo de Recurso</Label>
+                  <Select value={type} onValueChange={setType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pdf">Documento PDF</SelectItem>
+                      <SelectItem value="word">Documento Word</SelectItem>
+                      <SelectItem value="ppt">Presentación PowerPoint</SelectItem>
+                      <SelectItem value="link">Enlace Externo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {type !== 'link' && (
+                  <div className="space-y-2">
+                    <Label>Subir Archivo</Label>
+                    <div className="border-2 border-dashed rounded-xl p-4 text-center">
+                      {uploading ? (
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+                      ) : contentUrl ? (
+                        <div className="flex items-center justify-center gap-2 text-emerald-600 text-xs font-bold">
+                          Archivo listo para guardar <X className="h-3 w-3 cursor-pointer" onClick={() => setContentUrl('')} />
+                        </div>
+                      ) : (
+                        <>
+                          <input type="file" id="file-upload" className="hidden" onChange={handleFileUpload} />
+                          <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                            <Upload className="h-6 w-6 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">Haz clic para seleccionar un archivo</span>
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Título del Recurso</Label>
+                  <Input placeholder="Ej: Guía de ejercicios" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{type === 'link' ? 'URL del Enlace' : 'URL del Archivo (Generada)'}</Label>
+                  <Input 
+                    placeholder="https://..." 
+                    value={contentUrl} 
+                    onChange={(e) => setContentUrl(e.target.value)} 
+                    required 
+                    readOnly={type !== 'link'}
+                    className={type !== 'link' ? 'bg-muted' : ''}
+                  />
+                </div>
               </div>
-              <DialogFooter><Button type="submit" className="w-full">Guardar</Button></DialogFooter>
+              <DialogFooter><Button type="submit" className="w-full" disabled={uploading || !contentUrl}>Guardar Recurso</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {resources?.map((res) => (
-          <div key={res.id} className="text-[10px] p-2 bg-white border rounded-lg truncate">{res.title}</div>
+          <div key={res.id} className="text-[10px] p-2 bg-white border rounded-lg flex items-center justify-between group">
+            <span className="truncate pr-2 flex items-center gap-1">
+              {res.type === 'link' ? <LinkIcon className="h-3 w-3" /> : <Paperclip className="h-3 w-3" />}
+              {res.title}
+            </span>
+            <Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => handleDeleteResource(res.id)}>
+              <Trash2 className="h-2.5 w-2.5" />
+            </Button>
+          </div>
         ))}
       </div>
     </div>
