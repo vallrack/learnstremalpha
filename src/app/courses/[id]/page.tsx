@@ -38,9 +38,9 @@ export default function CourseDetailPage() {
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <main className="flex-1 flex flex-col items-center justify-center gap-4">
-          <h1 className="text-2xl font-bold">Curso no encontrado</h1>
+          <h1 className="text-2xl font-bold font-headline">Curso no encontrado</h1>
           <Link href="/courses">
-            <Button variant="outline">Volver al catálogo</Button>
+            <Button variant="outline" className="rounded-xl">Volver al catálogo</Button>
           </Link>
         </main>
       </div>
@@ -55,10 +55,10 @@ export default function CourseDetailPage() {
         <div className="absolute inset-0 bg-black/10" />
         <div className="max-w-7xl mx-auto relative z-10 text-white">
           <div className="flex flex-wrap items-center gap-3 mb-6">
-            <Badge className="bg-white/20 hover:bg-white/30 text-white border-none rounded-lg">{course.category}</Badge>
+            <Badge className="bg-white/20 hover:bg-white/30 text-white border-none rounded-lg">{course.category || 'General'}</Badge>
             <div className="flex items-center gap-1 text-sm text-white/80">
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              <span className="font-bold text-white">4.9</span> (Nueva entrega)
+              <span className="font-bold text-white">Nuevo</span>
             </div>
           </div>
           <h1 className="text-3xl md:text-5xl font-headline font-bold mb-6 max-w-3xl leading-tight">
@@ -85,7 +85,7 @@ export default function CourseDetailPage() {
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="flex gap-3 text-sm">
                     <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
-                    <span>Dominio de conceptos fundamentales y prácticos de {course.category}.</span>
+                    <span>Dominio de conceptos fundamentales y prácticos de {course.category || 'esta área'}.</span>
                   </div>
                 ))}
               </div>
@@ -95,7 +95,8 @@ export default function CourseDetailPage() {
               <h2 className="text-2xl font-headline font-bold mb-6">Contenido del Curso</h2>
               <div className="p-12 text-center bg-muted/10 rounded-3xl border-2 border-dashed">
                 <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Los módulos y lecciones estarán disponibles próximamente.</p>
+                <p className="text-muted-foreground font-medium">Contenido en preparación.</p>
+                <p className="text-sm text-muted-foreground mt-2">Próximamente podrás gestionar módulos y lecciones desde el panel de administrador.</p>
               </div>
             </section>
           </div>
@@ -105,7 +106,7 @@ export default function CourseDetailPage() {
             <div className="bg-card rounded-2xl border shadow-xl overflow-hidden sticky top-24">
               <div className="relative aspect-video">
                 <Image 
-                  src={course.thumbnail} 
+                  src={course.thumbnail || 'https://picsum.photos/seed/course/800/450'} 
                   alt={course.title}
                   fill
                   className="object-cover"
@@ -117,11 +118,11 @@ export default function CourseDetailPage() {
               <div className="p-8">
                 <div className="text-3xl font-headline font-bold mb-6">
                   {course.isFree ? 'Gratis' : '$29.99'}
-                  {course.isFree && <span className="text-sm font-normal text-muted-foreground ml-2">por tiempo limitado</span>}
+                  {course.isFree && <span className="text-sm font-normal text-muted-foreground ml-2">por ahora</span>}
                 </div>
                 
                 <div className="space-y-4">
-                  <Button className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-xl">
+                  <Button className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20">
                     Comenzar ahora
                   </Button>
                   <Button variant="outline" className="w-full h-12 text-lg font-bold rounded-xl">
@@ -134,7 +135,7 @@ export default function CourseDetailPage() {
                   <ul className="space-y-3 text-sm text-muted-foreground">
                     <li className="flex items-center gap-3"><Clock className="h-4 w-4" /> Acceso ilimitado</li>
                     <li className="flex items-center gap-3"><BookOpen className="h-4 w-4" /> Material descargable</li>
-                    <li className="flex items-center gap-3"><Zap className="h-4 w-4" /> Asistente de IA integrado</li>
+                    <li className="flex items-center gap-3"><Zap className="h-4 w-4 text-primary" /> Asistente de IA integrado</li>
                   </ul>
                 </div>
               </div>
