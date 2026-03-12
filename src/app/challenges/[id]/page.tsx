@@ -23,7 +23,8 @@ import {
   Unlock,
   AlertTriangle,
   Crown,
-  LogIn
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
@@ -92,10 +93,10 @@ export default function ChallengeExecutionPage() {
   };
 
   const handleSubmit = async () => {
-    if (!challenge || !user || !db) return;
+    if (!challenge || !db) return;
     
     // Check access
-    const hasAccess = challenge.isFree || profile?.isPremiumSubscriber;
+    const hasAccess = challenge.isFree || (user && profile?.isPremiumSubscriber);
     if (!hasAccess) {
       toast({
         variant: "destructive",
@@ -117,15 +118,31 @@ export default function ChallengeExecutionPage() {
       });
       setResult(evaluation);
 
-      // Persist result
-      addDocumentNonBlocking(collection(db, 'users', user.uid, 'challenge_submissions'), {
-        challengeId: challenge.id,
-        challengeTitle: challenge.title,
-        score: evaluation.score,
-        feedback: evaluation.feedback,
-        passed: evaluation.passed,
-        submittedAt: serverTimestamp()
-      });
+      // Persist result ONLY if logged in
+      if (user) {
+        addDocumentNonBlocking(collection(db, 'users', user.uid, 'challenge_submissions'), {
+          challengeId: challenge.id,
+          challengeTitle: challenge.title,
+          score: evaluation.score,
+          feedback: evaluation.feedback,
+          passed: evaluation.passed,
+          submittedAt: serverTimestamp()
+        });
+      } else {
+        // Invitación a registrarse para usuarios invitados
+        toast({
+          title: "¡Buen trabajo!",
+          description: "Tu código fue evaluado con éxito. Regístrate para guardar tu progreso y ver tus estadísticas.",
+          action: (
+            <Link href="/login">
+              <Button size="sm" className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Registrarse
+              </Button>
+            </Link>
+          ),
+        });
+      }
 
     } catch (error) {
       console.error('Evaluation failed', error);
@@ -158,7 +175,7 @@ export default function ChallengeExecutionPage() {
     );
   }
 
-  // Lógica de acceso
+  // Lógica de acceso: permitir gratis siempre, premium solo logeados con suscripción
   const hasAccess = challenge.isFree || (user && profile?.isPremiumSubscriber);
 
   if (!hasAccess) {
@@ -220,6 +237,17 @@ export default function ChallengeExecutionPage() {
           </div>
           
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            {!user && (
+              <section className="bg-primary/5 p-4 rounded-2xl border border-primary/10 mb-2">
+                <div className="flex gap-3">
+                  <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-primary-foreground/70 text-slate-700 leading-normal">
+                    Estás en modo <strong>invitado</strong>. Tu código será evaluado por IA pero el progreso no se guardará.
+                  </p>
+                </div>
+              </section>
+            )}
+
             <section>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex gap-2">
