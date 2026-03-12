@@ -2,12 +2,13 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { CourseCard } from '@/components/courses/CourseCard';
 import { MOCK_COURSES } from '@/lib/mock-data';
-import { PlayCircle, Rocket, ShieldCheck, Zap, Sparkles } from 'lucide-react';
+import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 export default function Home() {
   const featuredCourses = MOCK_COURSES.slice(0, 3);
+  const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -128,8 +129,13 @@ export default function Home() {
       <footer className="border-t py-12 px-6 bg-card">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <div className="bg-primary p-1 rounded-lg">
-              <PlayCircle className="text-primary-foreground h-5 w-5" />
+            <div className="relative w-8 h-8 overflow-hidden rounded-lg">
+              <Image 
+                src={logoUrl} 
+                alt="LearnStream Logo" 
+                fill 
+                className="object-cover mix-blend-screen brightness-110" 
+              />
             </div>
             <span className="font-headline font-bold text-lg">LearnStream</span>
           </div>

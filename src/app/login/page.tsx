@@ -12,9 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlayCircle, LogIn, UserCircle, Loader2, AlertCircle } from 'lucide-react';
+import { LogIn, UserCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -47,12 +48,12 @@ export default function LoginPage() {
           email: authUser.email || null,
           profileImageUrl: authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/200/200`,
           createdAt: serverTimestamp(),
-          isPremiumSubscriber: false, // Los invitados no son premium por defecto
+          isPremiumSubscriber: false,
           role: 'student'
         }, { merge: true });
       }
     } catch (e) {
-      console.warn("Could not sync profile during login, might be a rules issue but proceed to dashboard", e);
+      console.warn("Could not sync profile during login", e);
     }
   };
 
@@ -65,17 +66,10 @@ export default function LoginPage() {
       await syncUserProfile(userCredential.user);
       router.push('/dashboard');
     } catch (err: any) {
-      console.error("Login error:", err);
       let message = 'Error al iniciar sesión. Por favor, verifica tus datos.';
-      
       if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
         message = 'Credenciales inválidas. Verifica tu correo y contraseña.';
-      } else if (err.code === 'auth/network-request-failed') {
-        message = 'Error de conexión. Revisa tu internet.';
-      } else if (err.code === 'auth/too-many-requests') {
-        message = 'Demasiados intentos. Tu cuenta ha sido temporalmente bloqueada.';
       }
-
       setError({ message, code: err.code });
       setLoading(false);
     }
@@ -106,6 +100,8 @@ export default function LoginPage() {
     );
   }
 
+  const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -113,8 +109,13 @@ export default function LoginPage() {
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-              <PlayCircle className="h-10 w-10 text-primary" />
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-slate-900 mb-4 overflow-hidden relative">
+              <Image 
+                src={logoUrl} 
+                alt="LearnStream Logo" 
+                fill 
+                className="object-cover mix-blend-screen" 
+              />
             </div>
             <h1 className="text-3xl font-headline font-bold">Bienvenido a LearnStream</h1>
             <p className="text-muted-foreground">Tu viaje de aprendizaje comienza aquí</p>
@@ -137,10 +138,7 @@ export default function LoginPage() {
                   <Alert variant="destructive" className="rounded-xl">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Error de Acceso</AlertTitle>
-                    <AlertDescription>
-                      {error.message}
-                      {error.code && <div className="text-[10px] mt-1 opacity-70">Código: {error.code}</div>}
-                    </AlertDescription>
+                    <AlertDescription>{error.message}</AlertDescription>
                   </Alert>
                 )}
 
@@ -159,10 +157,7 @@ export default function LoginPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="password">Contraseña</Label>
-                        <Link href="#" className="text-xs text-primary hover:underline">¿Olvidaste tu contraseña?</Link>
-                      </div>
+                      <Label htmlFor="password">Contraseña</Label>
                       <Input 
                         id="password" 
                         type="password" 
@@ -182,11 +177,8 @@ export default function LoginPage() {
 
                 <TabsContent value="register" className="mt-0 space-y-4">
                   <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground">El registro está temporalmente limitado. Por favor, usa una cuenta existente o entra como invitado.</p>
+                    <p className="text-sm text-muted-foreground">Usa una cuenta existente o entra como invitado.</p>
                   </div>
-                  <Button variant="outline" className="w-full h-11 rounded-xl" disabled>
-                    Crear Cuenta
-                  </Button>
                 </TabsContent>
 
                 <div className="relative py-4">
@@ -208,12 +200,6 @@ export default function LoginPage() {
                   Continuar como Invitado
                 </Button>
               </CardContent>
-              
-              <CardFooter className="bg-muted/10 border-t p-4 justify-center">
-                <p className="text-xs text-center text-muted-foreground">
-                  Al continuar, aceptas nuestros <Link href="#" className="underline">Términos de Servicio</Link> y <Link href="#" className="underline">Política de Privacidad</Link>.
-                </p>
-              </CardFooter>
             </Tabs>
           </Card>
         </div>

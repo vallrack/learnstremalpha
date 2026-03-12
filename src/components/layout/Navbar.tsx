@@ -1,9 +1,9 @@
-
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { PlayCircle, User, Crown, LayoutDashboard, LogOut, LogIn, Code2, Users } from 'lucide-react';
+import { Crown, User, LayoutDashboard, LogOut, LogIn, Code2, Users } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -30,12 +30,19 @@ export function Navbar() {
     router.push('/');
   };
 
+  const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
+
   return (
     <nav className="border-b bg-card px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-8">
         <Link href="/" className="flex items-center gap-2">
-          <div className="bg-primary p-1.5 rounded-lg">
-            <PlayCircle className="text-primary-foreground h-6 w-6" />
+          <div className="relative w-10 h-10 overflow-hidden rounded-xl">
+             <Image 
+                src={logoUrl} 
+                alt="LearnStream Logo" 
+                fill 
+                className="object-cover mix-blend-screen brightness-110" 
+             />
           </div>
           <span className="font-headline font-bold text-xl tracking-tight">LearnStream</span>
         </Link>

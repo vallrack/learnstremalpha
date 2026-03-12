@@ -22,10 +22,9 @@ export function CourseCertificate({
   completionDate,
   modulesCount,
 }: CourseCertificateProps) {
-  // URLs corregidas para descarga directa de Google Drive
   const logoUrl = "https://dprogramadores.com.co/img/logoD.png";
   const signatureUrl = "https://drive.google.com/uc?export=view&id=1w2nzR-tylvAKiHe02fzdTKpRD7icoJua";
-  const platformLogoUrl = "https://drive.google.com/uc?export=view&id=16rVeMusBLN_9Bga61xWscYAobdvptJy6";
+  const platformLogoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
 
   return (
     <div className="relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl">
@@ -56,8 +55,7 @@ export function CourseCertificate({
           </p>
         </div>
 
-        <div className="relative w-20 h-20 flex items-center justify-center">
-          {/* Aplicamos mix-blend-screen para quitar el fondo negro del logo de Drive */}
+        <div className="relative w-24 h-24 flex items-center justify-center">
           <Image 
             src={platformLogoUrl} 
             alt="LearnStream Logo" 
@@ -68,7 +66,7 @@ export function CourseCertificate({
       </header>
 
       {/* Cuerpo Principal del Certificado */}
-      <main className="relative z-10 flex flex-col items-center gap-4 py-2">
+      <main className="relative z-10 flex flex-col items-center gap-2 py-2">
         <div className="space-y-1">
           <p className="text-sm italic font-serif text-slate-500">Este diploma certifica que</p>
           <h2 className="text-4xl font-headline font-bold text-primary px-6 border-b border-slate-100 pb-1">
@@ -76,11 +74,11 @@ export function CourseCertificate({
           </h2>
         </div>
 
-        <div className="max-w-xl space-y-3">
+        <div className="max-w-xl space-y-2">
           <p className="text-sm leading-relaxed text-slate-600">
             Ha completado satisfactoriamente el programa de formación profesional en:
           </p>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <h3 className="text-2xl font-headline font-bold text-slate-900 leading-tight">
               {courseTitle}
             </h3>
