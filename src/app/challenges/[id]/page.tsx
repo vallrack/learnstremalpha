@@ -52,21 +52,17 @@ export default function ChallengeExecutionPage() {
   }, [challenge]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Soporte para la tecla TAB (Indentación manual)
     if (e.key === 'Tab') {
       e.preventDefault();
       const target = e.target as HTMLTextAreaElement;
       const start = target.selectionStart;
       const end = target.selectionEnd;
 
-      // Insertar 2 espacios (estándar para web) o 4 (estándar para Python)
-      // Usaremos 2 para mantener consistencia general
       const spaces = '  ';
       const newCode = code.substring(0, start) + spaces + code.substring(end);
       
       setCode(newCode);
 
-      // Reposicionar el cursor después de los espacios
       setTimeout(() => {
         if (target) {
           target.selectionStart = target.selectionEnd = start + spaces.length;
@@ -170,7 +166,7 @@ export default function ChallengeExecutionPage() {
                     <CardTitle className="text-sm font-headline font-bold flex items-center justify-between">
                       Resultado de la Evaluación
                       <span className={`text-xl font-bold ${result.passed ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {result.score}/100
+                        {result.score}/5
                       </span>
                     </CardTitle>
                   </CardHeader>
@@ -266,7 +262,7 @@ export default function ChallengeExecutionPage() {
           <div className="h-8 bg-primary/10 border-t border-primary/20 flex items-center justify-between px-6 shrink-0">
              <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
                <Trophy className="h-3 w-3" />
-               Gana +100 puntos al completar
+               Calificación máxima: 5.0
              </div>
              <div className="text-[10px] text-primary/60 font-medium">
                Usa la tecla Tab para indentar. El copiado de código está deshabilitado.

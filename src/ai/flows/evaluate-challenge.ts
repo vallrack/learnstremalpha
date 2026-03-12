@@ -20,9 +20,9 @@ const EvaluateChallengeInputSchema = z.object({
 export type EvaluateChallengeInput = z.infer<typeof EvaluateChallengeInputSchema>;
 
 const EvaluateChallengeOutputSchema = z.object({
-  score: z.number().describe('A score from 0 to 100.'),
-  passed: z.boolean().describe('Whether the student passed the challenge.'),
-  feedback: z.string().describe('Detailed technical feedback and suggestions for improvement.'),
+  score: z.number().describe('Una calificación numérica del 0 al 5, donde 5 es la máxima nota.'),
+  passed: z.boolean().describe('Indica si el estudiante aprobó el desafío (generalmente nota >= 3).'),
+  feedback: z.string().describe('Feedback técnico detallado y sugerencias de mejora, SIEMPRE EN ESPAÑOL.'),
 });
 export type EvaluateChallengeOutput = z.infer<typeof EvaluateChallengeOutputSchema>;
 
@@ -34,28 +34,32 @@ const prompt = ai.definePrompt({
   name: 'evaluateChallengePrompt',
   input: {schema: EvaluateChallengeInputSchema},
   output: {schema: EvaluateChallengeOutputSchema},
-  prompt: `You are an expert technical interviewer and senior developer. 
-Your task is to evaluate a student's submission for a coding/design challenge.
+  prompt: `Eres un experto revisor técnico y desarrollador senior. 
+Tu tarea es evaluar la entrega de un estudiante para un desafío de código o diseño.
 
-Challenge Context:
+REGLA CRÍTICA: Todo el feedback debe estar escrito en ESPAÑOL.
+
+Contexto del Desafío:
 ---
-Title: {{{challengeTitle}}}
-Technology: {{{technology}}}
-Description: {{{challengeDescription}}}
-Reference Solution (if available): {{{solutionReference}}}
+Título: {{{challengeTitle}}}
+Tecnología: {{{technology}}}
+Descripción: {{{challengeDescription}}}
+Solución de Referencia (si está disponible): {{{solutionReference}}}
 ---
 
-Student's Submission:
+Entrega del Estudiante:
 ---
 {{{studentCode}}}
 ---
 
-Evaluation Criteria:
-1. Logic and Correctness: Does the code solve the problem described?
-2. Best Practices: Is the code clean, efficient, and following the idiomatic patterns of {{{technology}}}?
-3. Visual/Structure (if UI/UX): Does the HTML/CSS/Design structure make sense for the goal?
+Criterios de Evaluación:
+1. Lógica y Correctitud: ¿El código resuelve el problema planteado?
+2. Mejores Prácticas: ¿Es código limpio, eficiente y sigue los patrones de {{{technology}}}?
+3. Estructura/Diseño: Si es UI, ¿la estructura tiene sentido para el objetivo?
 
-Provide a score from 0 to 100. Be encouraging but rigorous. If the code is completely empty or irrelevant, give a very low score.`,
+Proporciona una calificación del 0 al 5. Sé alentador pero riguroso. 
+Si el código está vacío o es irrelevante para el reto, califica con 0 o 1. 
+Considera que una nota de 3 o más significa que ha aprobado.`,
 });
 
 const evaluateChallengeFlow = ai.defineFlow(
@@ -66,7 +70,7 @@ const evaluateChallengeFlow = ai.defineFlow(
   },
   async (input) => {
     const {output} = await prompt(input);
-    if (!output) throw new Error('Evaluation failed.');
+    if (!output) throw new Error('La evaluación falló.');
     return output;
   }
 );
