@@ -35,8 +35,8 @@ export function Navbar() {
   return (
     <nav className="border-b bg-card px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-8">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="relative w-10 h-10 overflow-hidden rounded-xl">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="relative w-10 h-10 overflow-hidden rounded-xl bg-slate-900 shadow-lg shadow-primary/20">
              <Image 
                 src={logoUrl} 
                 alt="LearnStream Logo" 

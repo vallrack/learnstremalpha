@@ -55,12 +55,12 @@ export function CourseCertificate({
           </p>
         </div>
 
-        <div className="relative w-24 h-24 flex items-center justify-center">
+        <div className="relative w-24 h-24 flex items-center justify-center bg-slate-900 rounded-full p-2">
           <Image 
             src={platformLogoUrl} 
             alt="LearnStream Logo" 
             fill 
-            className="object-contain mix-blend-screen brightness-110 contrast-125" 
+            className="object-contain mix-blend-screen brightness-110 contrast-125 p-4" 
           />
         </div>
       </header>
