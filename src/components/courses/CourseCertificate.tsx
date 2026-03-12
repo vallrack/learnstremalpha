@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Crown, ShieldCheck, Award, Calendar, CheckCircle2 } from 'lucide-react';
+import { Crown, ShieldCheck, Award, Calendar } from 'lucide-react';
 
 interface CourseCertificateProps {
   studentName: string;
@@ -54,13 +54,13 @@ export function CourseCertificate({
             Excelencia en Tecnología
           </p>
         </div>
-        {/* Usamos mix-blend-screen para quitar el fondo negro de la imagen de Rawpixel */}
-        <div className="relative w-24 h-24 overflow-hidden flex items-center justify-center">
+        {/* Usamos filtros para asegurar que el fondo negro desaparezca totalmente en el certificado blanco */}
+        <div className="relative w-24 h-24 overflow-hidden flex items-center justify-center bg-black rounded-full shadow-inner border border-white/10">
           <Image 
             src={platformLogoUrl} 
             alt="LearnStream Logo" 
             fill 
-            className="object-contain mix-blend-screen" 
+            className="object-contain mix-blend-screen brightness-125 contrast-125 scale-125" 
           />
         </div>
       </header>
