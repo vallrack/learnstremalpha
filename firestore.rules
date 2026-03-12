@@ -3,10 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ---------------------------------------------------------------------
-    // Funciones de Ayuda (Helpers)
-    // ---------------------------------------------------------------------
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -15,26 +11,10 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Verifica si el usuario actual tiene el rol de administrador
-    // Nota: El get() sobre el propio documento del usuario funciona porque 
-    // la regla de /users/{userId} permite el 'get' al dueño (isOwner).
     function isAdmin() {
       return isSignedIn() && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-
-    function isCourseInstructor(instructorId) {
-      return isSignedIn() && request.auth.uid == instructorId;
-    }
-
-    function isParentCoursePublished(courseId) {
-      let courseDoc = get(/databases/$(database)/documents/courses/$(courseId));
-      return courseDoc != null && courseDoc.data.isPublished == true;
-    }
-
-    // ---------------------------------------------------------------------
-    // Colecciones de Usuario
-    // ---------------------------------------------------------------------
 
     match /users/{userId} {
       allow create: if isOwner(userId);
@@ -43,65 +23,39 @@ service cloud.firestore {
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
 
-      // Subcolecciones privadas del usuario
       match /courseProgress/{courseId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
       
-      match /subscriptions/{subscriptionId} {
-        allow read: if isOwner(userId) || isAdmin();
-        allow write: if isAdmin(); // Solo el sistema o admin gestiona pagos/suscripciones
-      }
-
-      match /transactions/{transactionId} {
-        allow read: if isOwner(userId) || isAdmin();
-        allow write: if false; // Las transacciones son registros históricos inmutables
+      match /challenge_submissions/{submissionId} {
+        allow read, write: if isOwner(userId) || isAdmin();
       }
     }
 
-    // ---------------------------------------------------------------------
-    // Contenido Educativo (Cursos, Módulos, Lecciones, Recursos)
-    // ---------------------------------------------------------------------
-
-    match /courses/{courseId} {
-      // Metadatos de cursos son públicos, pero el 'get' detallado puede requerir auth
-      allow read: if true;
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin() || isCourseInstructor(resource.data.instructorId);
-
-      match /modules/{moduleId} {
-        allow read: if true;
-        allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
-
-        match /lessons/{lessonId} {
-            allow read: if true;
-            allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
-
-            match /resources/{resourceId} {
-                allow read: if true;
-                allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
-            }
-        }
-      }
-    }
-    
-    // ---------------------------------------------------------------------
-    // Otras colecciones del ecosistema
-    // ---------------------------------------------------------------------
-
-    match /subscriptionPlans/{id} { allow read: if true; allow write: if isAdmin(); }
     match /coding_challenges/{challengeId} { 
       allow read: if true; 
       allow write: if isAdmin() || (isSignedIn() && request.resource.data.instructorId == request.auth.uid);
     }
-    match /careers/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /technology_trends/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /code_review_highlights/{id} { allow read: if true; allow write: if isAdmin(); }
-
-    // Logs de errores para soporte técnico
-    match /student_error_logs/{id} {
+    
+    match /courses/{courseId} {
+      allow read: if true;
       allow create: if isSignedIn();
-      allow read: if isAdmin();
+      allow update, delete: if isAdmin() || request.auth.uid == resource.data.instructorId;
+
+      match /modules/{moduleId} {
+        allow read: if true;
+        allow write: if isAdmin() || get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId == request.auth.uid;
+
+        match /lessons/{lessonId} {
+            allow read: if true;
+            allow write: if isAdmin() || get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId == request.auth.uid;
+
+            match /resources/{resourceId} {
+                allow read: if true;
+                allow write: if isAdmin() || get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId == request.auth.uid;
+            }
+        }
+      }
     }
   }
 }

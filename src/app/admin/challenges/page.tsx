@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, Code2, Loader2, Search, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Code2, Loader2, Search, Filter, Lock, Unlock } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { TECH_STACK } from '@/lib/languages';
 
 export default function AdminChallengesPage() {
@@ -36,6 +37,7 @@ export default function AdminChallengesPage() {
   const [technology, setTechnology] = useState('');
   const [initialCode, setInitialCode] = useState('');
   const [solution, setSolution] = useState('');
+  const [isFree, setIsFree] = useState(true);
 
   const challengesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -52,6 +54,7 @@ export default function AdminChallengesPage() {
     setTechnology('');
     setInitialCode('');
     setSolution('');
+    setIsFree(true);
   };
 
   const handleEditClick = (challenge: any) => {
@@ -62,6 +65,7 @@ export default function AdminChallengesPage() {
     setTechnology(challenge.technology || '');
     setInitialCode(challenge.initialCode || '');
     setSolution(challenge.solution || '');
+    setIsFree(challenge.isFree ?? true);
     setIsDialogOpen(true);
   };
 
@@ -76,6 +80,7 @@ export default function AdminChallengesPage() {
       technology,
       initialCode,
       solution,
+      isFree,
       updatedAt: serverTimestamp(),
     };
 
@@ -145,6 +150,13 @@ export default function AdminChallengesPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-2xl border">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">Reto Gratuito</Label>
+                        <p className="text-xs text-muted-foreground">Visible para todos los alumnos.</p>
+                      </div>
+                      <Switch checked={isFree} onCheckedChange={setIsFree} />
+                    </div>
                     <div className="grid gap-2">
                       <Label>Tecnología / Lenguaje</Label>
                       <Select value={technology} onValueChange={setTechnology}>
@@ -205,6 +217,7 @@ export default function AdminChallengesPage() {
               <TableHeader>
                 <TableRow className="bg-muted/30">
                   <TableHead>Título</TableHead>
+                  <TableHead>Acceso</TableHead>
                   <TableHead>Tecnología</TableHead>
                   <TableHead>Dificultad</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -214,6 +227,13 @@ export default function AdminChallengesPage() {
                 {challenges?.map(challenge => (
                   <TableRow key={challenge.id} className="group">
                     <TableCell className="font-bold">{challenge.title}</TableCell>
+                    <TableCell>
+                      {challenge.isFree ? (
+                        <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50"><Unlock className="h-3 w-3 mr-1" /> Gratis</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50"><Lock className="h-3 w-3 mr-1" /> Premium</Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="rounded-lg">{challenge.technology}</Badge>
                     </TableCell>
@@ -240,13 +260,6 @@ export default function AdminChallengesPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {challenges?.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-20 text-muted-foreground">
-                      No hay desafíos creados todavía.
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           )}

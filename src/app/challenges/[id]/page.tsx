@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -19,10 +20,12 @@ import {
   Sparkles,
   Terminal,
   Layout,
-  Lock
+  Lock,
+  Unlock,
+  AlertTriangle
 } from 'lucide-react';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
+import { doc, collection, serverTimestamp } from 'firebase/firestore';
 import { evaluateChallenge, type EvaluateChallengeOutput } from '@/ai/flows/evaluate-challenge';
 import Link from 'next/link';
 
@@ -31,6 +34,7 @@ export default function ChallengeExecutionPage() {
   const router = useRouter();
   const challengeId = params.id as string;
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -40,6 +44,12 @@ export default function ChallengeExecutionPage() {
   }, [db, challengeId]);
 
   const { data: challenge, isLoading } = useDoc(challengeRef);
+
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
 
   const [code, setCode] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -81,7 +91,19 @@ export default function ChallengeExecutionPage() {
   };
 
   const handleSubmit = async () => {
-    if (!challenge) return;
+    if (!challenge || !user || !db) return;
+    
+    // Check access
+    const hasAccess = challenge.isFree || profile?.isPremiumSubscriber;
+    if (!hasAccess) {
+      toast({
+        variant: "destructive",
+        title: "Acceso denegado",
+        description: "Este es un reto premium. Suscríbete para acceder.",
+      });
+      return;
+    }
+
     setIsEvaluating(true);
     setResult(null);
     try {
@@ -93,6 +115,17 @@ export default function ChallengeExecutionPage() {
         solutionReference: challenge.solution,
       });
       setResult(evaluation);
+
+      // Persist result
+      addDocumentNonBlocking(collection(db, 'users', user.uid, 'challenge_submissions'), {
+        challengeId: challenge.id,
+        challengeTitle: challenge.title,
+        score: evaluation.score,
+        feedback: evaluation.feedback,
+        passed: evaluation.passed,
+        submittedAt: serverTimestamp()
+      });
+
     } catch (error) {
       console.error('Evaluation failed', error);
       toast({
@@ -125,13 +158,29 @@ export default function ChallengeExecutionPage() {
   }
 
   const isUIChallenge = challenge.technology.includes('HTML') || challenge.technology.includes('CSS') || challenge.technology.includes('Figma');
+  const hasAccess = challenge.isFree || profile?.isPremiumSubscriber;
+
+  if (!hasAccess && !isLoading) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="w-20 h-20 bg-amber-100 rounded-3xl flex items-center justify-center mb-6">
+          <Lock className="h-10 w-10 text-amber-600" />
+        </div>
+        <h1 className="text-3xl font-headline font-bold mb-2">Contenido Premium</h1>
+        <p className="text-muted-foreground max-w-md mb-8">Este desafío requiere una suscripción activa para ser realizado. ¡Desbloquea todos los retos y potencia tu carrera!</p>
+        <div className="flex gap-4">
+          <Button onClick={() => router.back()} variant="outline" className="rounded-xl h-12 px-8">Volver</Button>
+          <Button className="rounded-xl h-12 px-8 bg-amber-500 hover:bg-amber-600">Ver Planes Premium</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-[#F8FAFC] overflow-hidden">
       <Navbar />
       
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left Panel: Instructions */}
         <aside className="w-full lg:w-[400px] border-r bg-white flex flex-col overflow-hidden shrink-0">
           <div className="p-6 border-b flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8">
@@ -143,7 +192,14 @@ export default function ChallengeExecutionPage() {
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <section>
               <div className="flex items-center justify-between mb-4">
-                <Badge variant="secondary" className="rounded-lg">{challenge.technology}</Badge>
+                <div className="flex gap-2">
+                  <Badge variant="secondary" className="rounded-lg">{challenge.technology}</Badge>
+                  {challenge.isFree ? (
+                    <Badge variant="outline" className="text-emerald-600 border-emerald-200"><Unlock className="h-3 w-3 mr-1" /> Gratis</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-600 border-amber-200"><Lock className="h-3 w-3 mr-1" /> Premium</Badge>
+                  )}
+                </div>
                 <Badge className={
                   challenge.difficulty === 'Principiante' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' :
                   challenge.difficulty === 'Intermedio' ? 'bg-amber-500/10 text-amber-600 border-amber-200' :
@@ -191,15 +247,11 @@ export default function ChallengeExecutionPage() {
           </div>
         </aside>
 
-        {/* Right Panel: Editor */}
         <section className="flex-1 flex flex-col bg-slate-950 relative min-w-0">
           <div className="h-12 bg-slate-900 border-b border-white/5 flex items-center justify-between px-6 shrink-0">
             <div className="flex items-center gap-2 text-white/50 text-xs font-mono">
               {isUIChallenge ? <Layout className="h-3 w-3" /> : <Terminal className="h-3 w-3" />}
               index.{challenge.technology.toLowerCase().includes('python') ? 'py' : challenge.technology.toLowerCase().includes('javascript') ? 'js' : 'code'}
-              <Badge variant="outline" className="ml-2 text-[10px] border-white/10 text-white/30 gap-1 h-5">
-                <Lock className="h-2 w-2" /> No pegado
-              </Badge>
             </div>
             <div className="flex items-center gap-3">
               <Button 
@@ -233,15 +285,8 @@ export default function ChallengeExecutionPage() {
               placeholder="// Escribe tu código aquí..."
               spellCheck={false}
               autoComplete="off"
-              autoCapitalize="off"
             />
             
-            {!result && !isEvaluating && (
-              <div className="absolute bottom-8 right-8 pointer-events-none opacity-20">
-                <Code2 className="h-32 w-32 text-white" />
-              </div>
-            )}
-
             {isEvaluating && (
               <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center z-20">
                 <div className="flex flex-col items-center gap-4 text-center p-8 bg-slate-900 rounded-3xl border border-white/10 shadow-2xl">
@@ -258,7 +303,6 @@ export default function ChallengeExecutionPage() {
             )}
           </div>
 
-          {/* Tips / Status Bar */}
           <div className="h-8 bg-primary/10 border-t border-primary/20 flex items-center justify-between px-6 shrink-0">
              <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
                <Trophy className="h-3 w-3" />

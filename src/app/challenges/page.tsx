@@ -5,14 +5,15 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Code2, Terminal, ArrowRight, Loader2, Sparkles, Layout } from 'lucide-react';
+import { Search, Code2, Terminal, ArrowRight, Loader2, Sparkles, Layout, Lock, Unlock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 
 export default function ChallengesCataloguePage() {
   const db = useFirestore();
+  const { user } = useUser();
 
   const challengesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -60,12 +61,19 @@ export default function ChallengesCataloguePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {challenges?.map(challenge => (
-              <Card key={challenge.id} className="group rounded-[2rem] overflow-hidden border-muted-foreground/10 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 flex flex-col bg-white">
+              <Card key={challenge.id} className="group rounded-[2rem] overflow-hidden border-muted-foreground/10 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 flex flex-col bg-white relative">
                 <CardHeader className="p-8 pb-4">
                   <div className="flex items-center justify-between mb-4">
-                    <Badge variant="outline" className={`rounded-xl border ${getDifficultyColor(challenge.difficulty)}`}>
-                      {challenge.difficulty}
-                    </Badge>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className={`rounded-xl border ${getDifficultyColor(challenge.difficulty)}`}>
+                        {challenge.difficulty}
+                      </Badge>
+                      {challenge.isFree ? (
+                        <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-emerald-100 rounded-xl"><Unlock className="h-3 w-3 mr-1" /> Libre</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-amber-50 text-amber-600 border-amber-100 rounded-xl"><Lock className="h-3 w-3 mr-1" /> Premium</Badge>
+                      )}
+                    </div>
                     <div className="p-2 bg-muted rounded-xl">
                       {challenge.technology.includes('HTML') || challenge.technology.includes('CSS') || challenge.technology.includes('Figma')
                         ? <Layout className="h-5 w-5 text-muted-foreground" />
@@ -90,21 +98,13 @@ export default function ChallengesCataloguePage() {
                 <CardFooter className="p-8 pt-0 mt-auto">
                   <Button className="w-full h-12 rounded-2xl gap-2 font-bold group-hover:bg-primary transition-all shadow-lg shadow-transparent group-hover:shadow-primary/20" asChild>
                     <Link href={`/challenges/${challenge.id}`}>
-                      Aceptar Desafío
+                      {challenge.isFree ? 'Aceptar Desafío' : 'Reto Premium'}
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 </CardFooter>
               </Card>
             ))}
-            
-            {challenges?.length === 0 && (
-              <div className="col-span-full py-20 text-center bg-muted/20 rounded-[3rem] border-4 border-dashed">
-                <Code2 className="h-16 w-16 text-muted-foreground/30 mx-auto mb-6" />
-                <p className="text-xl font-headline font-bold text-muted-foreground">Aún no hay desafíos disponibles.</p>
-                <p className="text-muted-foreground mt-2">Nuestros instructores están preparando nuevos retos para ti.</p>
-              </div>
-            )}
           </div>
         )}
       </main>

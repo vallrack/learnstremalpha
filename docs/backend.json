@@ -70,64 +70,23 @@
         "initialCode": { "type": "string" },
         "solution": { "type": "string" },
         "instructorId": { "type": "string" },
+        "isFree": { "type": "boolean", "default": true },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "title", "description", "difficulty", "technology", "instructorId"]
+      "required": ["id", "title", "description", "difficulty", "technology", "instructorId", "isFree"]
     },
-    "Course": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Course",
+    "ChallengeSubmission": {
+      "title": "ChallengeSubmission",
       "type": "object",
-      "description": "Represents a learning course offered on the LearnStream platform.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Course entity."
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the course."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the course content and objectives."
-        },
-        "imageUrl": {
-          "type": "string",
-          "description": "URL to the course's thumbnail or banner image.",
-          "format": "uri"
-        },
-        "isFree": {
-          "type": "boolean",
-          "description": "Indicates if the course is freely accessible without a subscription."
-        },
-        "difficultyLevel": {
-          "type": "string",
-          "description": "The perceived difficulty level of the course (e.g., 'Beginner', 'Intermediate', 'Advanced')."
-        },
-        "instructorId": {
-          "type": "string",
-          "description": "Reference to the UserProfile of the instructor who created or teaches this course. (Relationship: UserProfile 1:N Course)"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the course was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the course was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "description",
-        "isFree",
-        "instructorId",
-        "createdAt"
-      ]
+        "id": { "type": "string" },
+        "challengeId": { "type": "string" },
+        "challengeTitle": { "type": "string" },
+        "score": { "type": "number" },
+        "feedback": { "type": "string" },
+        "passed": { "type": "boolean" },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -144,8 +103,16 @@
           "entityName": "UserProfile",
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores individual user profiles."
+          }
+        }
+      },
+      {
+        "path": "/users/{userId}/challenge_submissions/{submissionId}",
+        "definition": {
+          "entityName": "ChallengeSubmission",
+          "schema": {
+            "$ref": "#/backend/entities/ChallengeSubmission"
+          }
         }
       },
       {
@@ -154,18 +121,7 @@
           "entityName": "CodingChallenge",
           "schema": {
             "$ref": "#/backend/entities/CodingChallenge"
-          },
-          "description": "Stores algorithmic and design challenges."
-        }
-      },
-      {
-        "path": "/courses/{courseId}",
-        "definition": {
-          "entityName": "Course",
-          "schema": {
-            "$ref": "#/backend/entities/Course"
-          },
-          "description": "Top-level collection for all courses."
+          }
         }
       }
     ]
