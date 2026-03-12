@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -22,7 +21,9 @@ import {
   Layout,
   Lock,
   Unlock,
-  AlertTriangle
+  AlertTriangle,
+  Crown,
+  LogIn
 } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
@@ -34,7 +35,7 @@ export default function ChallengeExecutionPage() {
   const router = useRouter();
   const challengeId = params.id as string;
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -43,7 +44,7 @@ export default function ChallengeExecutionPage() {
     return doc(db, 'coding_challenges', challengeId);
   }, [db, challengeId]);
 
-  const { data: challenge, isLoading } = useDoc(challengeRef);
+  const { data: challenge, isLoading: isChallengeLoading } = useDoc(challengeRef);
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -138,7 +139,7 @@ export default function ChallengeExecutionPage() {
     }
   };
 
-  if (isLoading) {
+  if (isUserLoading || isChallengeLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#F8FAFC]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -157,24 +158,53 @@ export default function ChallengeExecutionPage() {
     );
   }
 
-  const isUIChallenge = challenge.technology.includes('HTML') || challenge.technology.includes('CSS') || challenge.technology.includes('Figma');
-  const hasAccess = challenge.isFree || profile?.isPremiumSubscriber;
+  // Lógica de acceso
+  const hasAccess = challenge.isFree || (user && profile?.isPremiumSubscriber);
 
-  if (!hasAccess && !isLoading) {
+  if (!hasAccess) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
-        <div className="w-20 h-20 bg-amber-100 rounded-3xl flex items-center justify-center mb-6">
-          <Lock className="h-10 w-10 text-amber-600" />
-        </div>
-        <h1 className="text-3xl font-headline font-bold mb-2">Contenido Premium</h1>
-        <p className="text-muted-foreground max-w-md mb-8">Este desafío requiere una suscripción activa para ser realizado. ¡Desbloquea todos los retos y potencia tu carrera!</p>
-        <div className="flex gap-4">
-          <Button onClick={() => router.back()} variant="outline" className="rounded-xl h-12 px-8">Volver</Button>
-          <Button className="rounded-xl h-12 px-8 bg-amber-500 hover:bg-amber-600">Ver Planes Premium</Button>
-        </div>
+      <div className="h-screen flex flex-col bg-[#F8FAFC]">
+        <Navbar />
+        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-24 h-24 bg-amber-100 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-amber-500/10">
+            <Lock className="h-10 w-10 text-amber-600" />
+          </div>
+          <h1 className="text-4xl font-headline font-bold mb-4 text-foreground">Contenido Premium</h1>
+          <p className="text-muted-foreground max-w-md mb-10 text-lg leading-relaxed">
+            Este desafío requiere una suscripción activa. ¡Suscríbete ahora para desbloquear todos los retos evaluados por IA y acelerar tu carrera!
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            {!user ? (
+              <>
+                <Link href="/login">
+                  <Button className="rounded-2xl h-14 px-10 text-lg font-bold shadow-lg shadow-primary/20 gap-2">
+                    <LogIn className="h-5 w-5" />
+                    Ingresar para Continuar
+                  </Button>
+                </Link>
+                <Button variant="ghost" onClick={() => router.back()} className="rounded-2xl h-14 px-10 text-lg font-bold">
+                  Volver Atrás
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button className="rounded-2xl h-14 px-10 text-lg font-bold bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/20 gap-2">
+                  <Crown className="h-5 w-5" />
+                  Mejorar a Premium
+                </Button>
+                <Button variant="outline" onClick={() => router.back()} className="rounded-2xl h-14 px-10 text-lg font-bold">
+                  Explorar Gratuitos
+                </Button>
+              </>
+            )}
+          </div>
+        </main>
       </div>
     );
   }
+
+  const isUIChallenge = challenge.technology.includes('HTML') || challenge.technology.includes('CSS') || challenge.technology.includes('Figma');
 
   return (
     <div className="h-screen flex flex-col bg-[#F8FAFC] overflow-hidden">
@@ -186,7 +216,7 @@ export default function ChallengeExecutionPage() {
             <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8">
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <h2 className="font-headline font-bold text-lg truncate">{challenge.title}</h2>
+            <h2 className="font-headline font-bold text-lg truncate text-foreground">{challenge.title}</h2>
           </div>
           
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
@@ -209,7 +239,7 @@ export default function ChallengeExecutionPage() {
                 </Badge>
               </div>
               <div className="prose prose-slate max-w-none">
-                <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-wrap">
                   {challenge.description}
                 </p>
               </div>
@@ -217,12 +247,12 @@ export default function ChallengeExecutionPage() {
 
             {result && (
               <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <Card className={`rounded-2xl border-2 ${result.passed ? 'border-emerald-500/20 bg-emerald-50/50' : 'border-amber-500/20 bg-amber-50/50'}`}>
+                <Card className={`rounded-3xl border-2 ${result.passed ? 'border-emerald-500/20 bg-emerald-50/50' : 'border-amber-500/20 bg-amber-50/50'}`}>
                   <CardHeader className="p-4 pb-0">
                     <CardTitle className="text-sm font-headline font-bold flex items-center justify-between">
                       Resultado de la Evaluación
                       <span className={`text-xl font-bold ${result.passed ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {result.score}/5
+                        {result.score}/5.0
                       </span>
                     </CardTitle>
                   </CardHeader>
@@ -234,7 +264,7 @@ export default function ChallengeExecutionPage() {
                         <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-1" />
                       )}
                       <div className="space-y-2">
-                        <p className="text-xs font-bold uppercase tracking-wider opacity-60">Feedback de la IA:</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-60">Feedback de la IA:</p>
                         <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                           {result.feedback}
                         </p>
@@ -257,7 +287,7 @@ export default function ChallengeExecutionPage() {
               <Button 
                 onClick={handleSubmit} 
                 disabled={isEvaluating || !code.trim()}
-                className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold gap-2 px-4"
+                className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold gap-2 px-4 shadow-lg shadow-primary/20"
               >
                 {isEvaluating ? (
                   <>
@@ -289,7 +319,7 @@ export default function ChallengeExecutionPage() {
             
             {isEvaluating && (
               <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center z-20">
-                <div className="flex flex-col items-center gap-4 text-center p-8 bg-slate-900 rounded-3xl border border-white/10 shadow-2xl">
+                <div className="flex flex-col items-center gap-4 text-center p-8 bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-2xl">
                   <div className="relative">
                     <Sparkles className="h-12 w-12 text-primary animate-pulse" />
                     <Loader2 className="absolute -top-1 -right-1 h-14 w-14 animate-spin text-primary opacity-20" />
@@ -309,7 +339,7 @@ export default function ChallengeExecutionPage() {
                Calificación máxima: 5.0
              </div>
              <div className="text-[10px] text-primary/60 font-medium">
-               Usa la tecla Tab para indentar. El copiado de código está deshabilitado.
+               Usa Tab para indentar. El pegado de código está deshabilitado.
              </div>
           </div>
         </section>

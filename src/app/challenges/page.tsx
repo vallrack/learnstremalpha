@@ -1,11 +1,10 @@
-
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Code2, Terminal, ArrowRight, Loader2, Sparkles, Layout, Lock, Unlock } from 'lucide-react';
+import { Search, Code2, Terminal, ArrowRight, Loader2, Sparkles, Layout, Lock, Unlock, LogIn } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
@@ -49,15 +48,15 @@ export default function ChallengesCataloguePage() {
             <Sparkles className="h-4 w-4" />
             Supera tus límites técnicos
           </div>
-          <h1 className="text-4xl md:text-6xl font-headline font-bold mb-6">Desafíos de Código</h1>
-          <p className="text-lg text-muted-foreground mb-10">
+          <h1 className="text-4xl md:text-6xl font-headline font-bold mb-6 text-foreground">Desafíos de Código</h1>
+          <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
             Pon a prueba tu lógica con algoritmos o tu creatividad con retos de diseño UI/UX. 
-            Aprende practicando con problemas reales del mundo del software.
+            Aprende practicando con problemas reales.
           </p>
           
           <div className="relative max-w-xl mx-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input placeholder="Busca por lenguaje, dificultad o tema..." className="pl-12 h-14 rounded-2xl shadow-sm border-muted-foreground/20 focus:ring-primary" />
+            <Input placeholder="Busca por lenguaje, dificultad o tema..." className="pl-12 h-14 rounded-2xl shadow-sm border-muted-foreground/20 focus:ring-primary bg-white" />
           </div>
         </header>
 
@@ -70,54 +69,68 @@ export default function ChallengesCataloguePage() {
           <div className="space-y-20">
             {Object.entries(groupedChallenges || {}).map(([tech, techChallenges]) => (
               <section key={tech}>
-                <div className="flex items-center gap-4 mb-8 border-b pb-4">
-                  <div className="bg-primary p-2.5 rounded-2xl">
+                <div className="flex items-center gap-4 mb-8 border-b pb-4 border-slate-200">
+                  <div className="bg-primary p-2.5 rounded-2xl shadow-lg shadow-primary/20">
                     {tech.includes('HTML') || tech.includes('CSS') || tech.includes('Figma')
                       ? <Layout className="h-6 w-6 text-white" />
                       : <Terminal className="h-6 w-6 text-white" />
                     }
                   </div>
                   <div>
-                    <h2 className="text-2xl font-headline font-bold">{tech}</h2>
+                    <h2 className="text-2xl font-headline font-bold text-foreground">{tech}</h2>
                     <p className="text-sm text-muted-foreground">{techChallenges.length} {techChallenges.length === 1 ? 'desafío disponible' : 'desafíos disponibles'}</p>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {techChallenges.map(challenge => (
-                    <Card key={challenge.id} className="group rounded-[2rem] overflow-hidden border-muted-foreground/10 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 flex flex-col bg-white relative">
-                      <CardHeader className="p-8 pb-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex gap-2">
-                            <Badge variant="outline" className={`rounded-xl border ${getDifficultyColor(challenge.difficulty)}`}>
-                              {challenge.difficulty}
-                            </Badge>
-                            {challenge.isFree ? (
-                              <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-emerald-100 rounded-xl"><Unlock className="h-3 w-3 mr-1" /> Libre</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="bg-amber-50 text-amber-600 border-amber-100 rounded-xl"><Lock className="h-3 w-3 mr-1" /> Premium</Badge>
-                            )}
+                  {techChallenges.map(challenge => {
+                    const isPremium = !challenge.isFree;
+                    const canAccess = challenge.isFree || !!user;
+
+                    return (
+                      <Card key={challenge.id} className="group rounded-[2.5rem] overflow-hidden border-slate-200 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 flex flex-col bg-white relative">
+                        <CardHeader className="p-8 pb-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex gap-2">
+                              <Badge variant="outline" className={`rounded-xl border ${getDifficultyColor(challenge.difficulty)}`}>
+                                {challenge.difficulty}
+                              </Badge>
+                              {challenge.isFree ? (
+                                <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-emerald-100 rounded-xl"><Unlock className="h-3 w-3 mr-1" /> Libre</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-amber-50 text-amber-600 border-amber-100 rounded-xl"><Lock className="h-3 w-3 mr-1" /> Premium</Badge>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <CardTitle className="text-2xl font-headline font-bold line-clamp-1 group-hover:text-primary transition-colors">
-                          {challenge.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-8 pt-0 flex-1">
-                        <p className="text-muted-foreground text-sm line-clamp-3 leading-relaxed mb-6">
-                          {challenge.description}
-                        </p>
-                      </CardContent>
-                      <CardFooter className="p-8 pt-0 mt-auto">
-                        <Button className="w-full h-12 rounded-2xl gap-2 font-bold group-hover:bg-primary transition-all shadow-lg shadow-transparent group-hover:shadow-primary/20" asChild>
-                          <Link href={`/challenges/${challenge.id}`}>
-                            {challenge.isFree ? 'Aceptar Desafío' : 'Reto Premium'}
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
+                          <CardTitle className="text-2xl font-headline font-bold line-clamp-1 group-hover:text-primary transition-colors text-foreground">
+                            {challenge.title}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-8 pt-0 flex-1">
+                          <p className="text-muted-foreground text-sm line-clamp-3 leading-relaxed mb-6">
+                            {challenge.description}
+                          </p>
+                        </CardContent>
+                        <CardFooter className="p-8 pt-0 mt-auto">
+                          {isPremium && !user ? (
+                            <Link href="/login" className="w-full">
+                              <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 font-bold border-amber-200 text-amber-700 hover:bg-amber-50">
+                                <LogIn className="h-4 w-4" />
+                                Ingresa para Acceder
+                              </Button>
+                            </Link>
+                          ) : (
+                            <Button className="w-full h-12 rounded-2xl gap-2 font-bold group-hover:bg-primary transition-all shadow-lg shadow-transparent group-hover:shadow-primary/20" asChild>
+                              <Link href={`/challenges/${challenge.id}`}>
+                                {challenge.isFree ? 'Aceptar Desafío' : 'Reto Premium'}
+                                <ArrowRight className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
                 </div>
               </section>
             ))}
