@@ -1,24 +1,25 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Code2, 
   ChevronLeft, 
   Play, 
   Loader2, 
   Trophy, 
-  MessageSquare, 
   CheckCircle2, 
   AlertCircle,
   Sparkles,
   Terminal,
-  Layout
+  Layout,
+  Lock
 } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -30,6 +31,8 @@ export default function ChallengeExecutionPage() {
   const router = useRouter();
   const challengeId = params.id as string;
   const db = useFirestore();
+  const { toast } = useToast();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const challengeRef = useMemoFirebase(() => {
     if (!db || !challengeId) return null;
@@ -48,6 +51,39 @@ export default function ChallengeExecutionPage() {
     }
   }, [challenge]);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Soporte para la tecla TAB (Indentación manual)
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const target = e.target as HTMLTextAreaElement;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+
+      // Insertar 2 espacios (estándar para web) o 4 (estándar para Python)
+      // Usaremos 2 para mantener consistencia general
+      const spaces = '  ';
+      const newCode = code.substring(0, start) + spaces + code.substring(end);
+      
+      setCode(newCode);
+
+      // Reposicionar el cursor después de los espacios
+      setTimeout(() => {
+        if (target) {
+          target.selectionStart = target.selectionEnd = start + spaces.length;
+        }
+      }, 0);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    toast({
+      variant: "destructive",
+      title: "Acción no permitida",
+      description: "Por integridad del aprendizaje, debes escribir el código manualmente. ¡Tú puedes!",
+    });
+  };
+
   const handleSubmit = async () => {
     if (!challenge) return;
     setIsEvaluating(true);
@@ -63,6 +99,11 @@ export default function ChallengeExecutionPage() {
       setResult(evaluation);
     } catch (error) {
       console.error('Evaluation failed', error);
+      toast({
+        variant: "destructive",
+        title: "Error de IA",
+        description: "No pudimos evaluar tu código en este momento. Inténtalo de nuevo.",
+      });
     } finally {
       setIsEvaluating(false);
     }
@@ -159,7 +200,10 @@ export default function ChallengeExecutionPage() {
           <div className="h-12 bg-slate-900 border-b border-white/5 flex items-center justify-between px-6 shrink-0">
             <div className="flex items-center gap-2 text-white/50 text-xs font-mono">
               {isUIChallenge ? <Layout className="h-3 w-3" /> : <Terminal className="h-3 w-3" />}
-              index.{challenge.technology.toLowerCase().includes('javascript') ? 'js' : 'code'}
+              index.{challenge.technology.toLowerCase().includes('python') ? 'py' : challenge.technology.toLowerCase().includes('javascript') ? 'js' : 'code'}
+              <Badge variant="outline" className="ml-2 text-[10px] border-white/10 text-white/30 gap-1 h-5">
+                <Lock className="h-2 w-2" /> No pegado
+              </Badge>
             </div>
             <div className="flex items-center gap-3">
               <Button 
@@ -184,11 +228,16 @@ export default function ChallengeExecutionPage() {
           
           <div className="flex-1 relative overflow-hidden flex flex-col">
             <Textarea 
+              ref={textareaRef}
               value={code} 
               onChange={(e) => setCode(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               className="flex-1 bg-slate-950 text-emerald-400 font-mono text-sm p-8 focus-visible:ring-0 border-none resize-none leading-relaxed selection:bg-primary/30"
               placeholder="// Escribe tu código aquí..."
               spellCheck={false}
+              autoComplete="off"
+              autoCapitalize="off"
             />
             
             {!result && !isEvaluating && (
@@ -220,7 +269,7 @@ export default function ChallengeExecutionPage() {
                Gana +100 puntos al completar
              </div>
              <div className="text-[10px] text-primary/60 font-medium">
-               Presiona "Enviar" para que la IA revise tu respuesta.
+               Usa la tecla Tab para indentar. El copiado de código está deshabilitado.
              </div>
           </div>
         </section>
