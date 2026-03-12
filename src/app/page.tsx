@@ -21,29 +21,29 @@ export default function Home() {
             <div className="flex-1 text-center lg:text-left z-10">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6">
                 <Sparkles className="h-4 w-4" />
-                AI-Powered Learning Platform
+                Plataforma de Aprendizaje con IA
               </div>
               <h1 className="text-4xl lg:text-7xl font-headline font-bold mb-6 leading-tight flex flex-wrap items-center justify-center lg:justify-start gap-x-4">
-                Master New Skills with 
+                Domina nuevas habilidades con 
                 <span className="text-primary flex items-center gap-3">
-                  <div className="relative w-16 h-16 rounded-2xl p-1">
+                  <div className="relative w-16 h-16 rounded-2xl p-1 bg-white shadow-sm">
                     <Image src={logoUrl} alt="Logo" fill className="object-contain" />
                   </div>
                   LearnStream
                 </span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto lg:mx-0">
-                Join thousands of students learning from experts in development, design, and business. Start for free and unlock your potential.
+                Únete a miles de estudiantes que aprenden de expertos en desarrollo, diseño y negocios. Empieza gratis y desbloquea tu potencial.
               </p>
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
                 <Link href="/courses">
                   <Button size="lg" className="h-14 px-8 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90">
-                    Browse Courses
+                    Explorar Cursos
                   </Button>
                 </Link>
                 <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold rounded-full gap-2">
                   <PlayCircle className="h-5 w-5" />
-                  Watch Demo
+                  Ver Demo
                 </Button>
               </div>
             </div>
@@ -71,22 +71,22 @@ export default function Home() {
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Rocket className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-headline font-semibold mb-3">Accelerated Learning</h3>
-                <p className="text-muted-foreground">Expert-led courses designed to take you from beginner to pro efficiently.</p>
+                <h3 className="text-xl font-headline font-semibold mb-3">Aprendizaje Acelerado</h3>
+                <p className="text-muted-foreground">Cursos dirigidos por expertos diseñados para llevarte de principiante a profesional eficientemente.</p>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
                   <ShieldCheck className="h-8 w-8 text-accent" />
                 </div>
-                <h3 className="text-xl font-headline font-semibold mb-3">Certified Courses</h3>
-                <p className="text-muted-foreground">Earn recognized certificates upon completion to showcase your expertise.</p>
+                <h3 className="text-xl font-headline font-semibold mb-3">Cursos Certificados</h3>
+                <p className="text-muted-foreground">Obtén certificados reconocidos al finalizar para demostrar tu experiencia.</p>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Zap className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-headline font-semibold mb-3">AI Powered Assistant</h3>
-                <p className="text-muted-foreground">Get instant summaries and answers from our integrated AI lesson assistant.</p>
+                <h3 className="text-xl font-headline font-semibold mb-3">Asistente con IA</h3>
+                <p className="text-muted-foreground">Obtén resúmenes y respuestas al instante con nuestro asistente de lecciones integrado.</p>
               </div>
             </div>
           </div>
@@ -97,11 +97,11 @@ export default function Home() {
           <div className="max-w-7xl mx-auto">
             <div className="flex items-end justify-between mb-12">
               <div>
-                <h2 className="text-3xl font-headline font-bold mb-4">Start Learning Today</h2>
-                <p className="text-muted-foreground">Choose from our most popular free and premium courses.</p>
+                <h2 className="text-3xl font-headline font-bold mb-4">Empieza a aprender hoy</h2>
+                <p className="text-muted-foreground">Elige entre nuestros cursos gratuitos y premium más populares.</p>
               </div>
               <Link href="/courses">
-                <Button variant="link" className="text-primary font-semibold p-0 h-auto">View All Courses →</Button>
+                <Button variant="link" className="text-primary font-semibold p-0 h-auto">Ver todos los cursos →</Button>
               </Link>
             </div>
             
@@ -120,12 +120,12 @@ export default function Home() {
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
             
             <div className="relative z-10">
-              <h2 className="text-3xl lg:text-5xl font-headline font-bold text-white mb-6">Ready to upgrade your career?</h2>
+              <h2 className="text-3xl lg:text-5xl font-headline font-bold text-white mb-6">¿Listo para impulsar tu carrera?</h2>
               <p className="text-primary-foreground/80 text-lg mb-10 max-w-2xl mx-auto">
-                Get unlimited access to all courses, projects, and our exclusive AI learning features with a premium subscription.
+                Obtén acceso ilimitado a todos los cursos, proyectos y nuestras funciones exclusivas de IA con una suscripción premium.
               </p>
               <Button size="lg" className="bg-white text-primary hover:bg-white/90 h-14 px-10 text-lg font-bold rounded-full">
-                Get Unlimited Access
+                Obtener Acceso Ilimitado
               </Button>
             </div>
           </div>
@@ -146,12 +146,12 @@ export default function Home() {
             <span className="font-headline font-bold text-lg">LearnStream</span>
           </div>
           <div className="flex gap-8 text-sm text-muted-foreground">
-            <Link href="#" className="hover:text-primary transition-colors">Terms</Link>
-            <Link href="#" className="hover:text-primary transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-primary transition-colors">Support</Link>
-            <Link href="#" className="hover:text-primary transition-colors">Contact</Link>
+            <Link href="#" className="hover:text-primary transition-colors">Términos</Link>
+            <Link href="#" className="hover:text-primary transition-colors">Privacidad</Link>
+            <Link href="#" className="hover:text-primary transition-colors">Soporte</Link>
+            <Link href="#" className="hover:text-primary transition-colors">Contacto</Link>
           </div>
-          <p className="text-sm text-muted-foreground">© 2024 LearnStream. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2024 LearnStream. Todos los derechos reservados.</p>
         </div>
       </footer>
     </div>

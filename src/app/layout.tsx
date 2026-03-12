@@ -3,8 +3,8 @@ import './globals.css';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'LearnStream - Modern Course Platform',
-  description: 'Create and consume interactive courses with AI assistance.',
+  title: 'LearnStream - Academia Digital Moderna',
+  description: 'Crea y consume cursos interactivos con asistencia de IA.',
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

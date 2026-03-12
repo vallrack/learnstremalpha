@@ -30,7 +30,7 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
       });
       setChat(prev => [...prev, { role: 'ai', text: answer }]);
     } catch (error) {
-      setChat(prev => [...prev, { role: 'ai', text: "Sorry, I couldn't process that question." }]);
+      setChat(prev => [...prev, { role: 'ai', text: "Lo siento, no pude procesar tu pregunta en este momento." }]);
     } finally {
       setLoading(false);
     }
@@ -40,9 +40,9 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
     setSummarizing(true);
     try {
       const { summary } = await summarizeLessonContent({ lessonContent });
-      setChat(prev => [...prev, { role: 'ai', text: `**Summary:** ${summary}` }]);
+      setChat(prev => [...prev, { role: 'ai', text: `**Resumen de la lección:** ${summary}` }]);
     } catch (error) {
-      setChat(prev => [...prev, { role: 'ai', text: "Sorry, I couldn't generate a summary." }]);
+      setChat(prev => [...prev, { role: 'ai', text: "Lo siento, no pude generar el resumen." }]);
     } finally {
       setSummarizing(false);
     }
@@ -53,7 +53,7 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
       <CardHeader className="border-b py-3 px-4">
         <CardTitle className="text-sm font-headline flex items-center gap-2">
           <Bot className="h-4 w-4 text-primary" />
-          Lesson Assistant
+          Asistente LearnStream
         </CardTitle>
       </CardHeader>
       
@@ -66,7 +66,7 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
                 <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">
-                  Ask me anything about this lesson or request a summary.
+                  Pregúntame cualquier cosa sobre esta lección o solicita un resumen rápido.
                 </p>
                 <Button 
                   variant="outline" 
@@ -76,7 +76,7 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
                   className="gap-2 text-xs"
                 >
                   {summarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                  Summarize Lesson
+                  Resumir Lección
                 </Button>
               </div>
             )}
@@ -106,7 +106,7 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
         <div className="p-4 border-t bg-card">
           <div className="relative">
             <Textarea
-              placeholder="Ask a question..."
+              placeholder="Haz una pregunta sobre el tema..."
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => {

@@ -36,7 +36,7 @@ export function Navbar() {
     <nav className="border-b bg-card px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-8">
         <Link href="/" className="flex items-center gap-3">
-          <div className="relative w-12 h-12 overflow-hidden rounded-xl">
+          <div className="relative w-12 h-12 overflow-hidden rounded-xl bg-slate-900 p-1">
              <Image 
                 src={logoUrl} 
                 alt="LearnStream Logo" 
@@ -98,7 +98,7 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full overflow-hidden border">
                 {user.photoURL ? (
-                  <img src={user.photoURL} alt={user.displayName || 'User'} className="h-full w-full object-cover" />
+                  <img src={user.photoURL} alt={user.displayName || 'Usuario'} className="h-full w-full object-cover" />
                 ) : (
                   <User className="h-5 w-5" />
                 )}
@@ -113,7 +113,7 @@ export function Navbar() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="cursor-pointer">Perfil</Link>
+                <Link href="/profile" className="cursor-pointer">Mi Perfil</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard" className="cursor-pointer">Mis Cursos</Link>
