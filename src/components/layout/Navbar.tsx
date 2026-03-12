@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { PlayCircle, User, Crown, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
+import { PlayCircle, User, Crown, LayoutDashboard, LogOut, LogIn, Code2 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -40,6 +41,7 @@ export function Navbar() {
         </Link>
         <div className="hidden md:flex items-center gap-6">
           <Link href="/courses" className="text-sm font-medium hover:text-primary transition-colors">Cursos</Link>
+          <Link href="/challenges" className="text-sm font-medium hover:text-primary transition-colors">Desafíos</Link>
           {user && (
             <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">Mi Aprendizaje</Link>
           )}
@@ -48,12 +50,20 @@ export function Navbar() {
       
       <div className="flex items-center gap-4">
         {user && isAdmin && (
-          <Link href="/admin">
-            <Button variant="ghost" size="sm" className="hidden lg:flex gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              Panel Admin
-            </Button>
-          </Link>
+          <div className="hidden lg:flex items-center gap-2">
+            <Link href="/admin/challenges">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Code2 className="h-4 w-4" />
+                Gestionar Desafíos
+              </Button>
+            </Link>
+            <Link href="/admin">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                Panel Admin
+              </Button>
+            </Link>
+          </div>
         )}
         
         {!user && !isUserLoading && (

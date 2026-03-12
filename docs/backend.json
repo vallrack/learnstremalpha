@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -24,6 +25,11 @@
           "description": "URL to the user's profile picture.",
           "format": "uri"
         },
+        "role": {
+          "type": "string",
+          "description": "User role (admin, instructor, student)",
+          "enum": ["admin", "instructor", "student"]
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp when the user profile was created.",
@@ -34,9 +40,9 @@
           "description": "Timestamp of the user's last login.",
           "format": "date-time"
         },
-        "activeSubscriptionId": {
-          "type": "string",
-          "description": "Reference to the user's currently active Subscription. (Relationship: UserProfile 1:1 Subscription)"
+        "isPremiumSubscriber": {
+          "type": "boolean",
+          "description": "Indicates if the user has an active premium subscription."
         }
       },
       "required": [
@@ -45,6 +51,28 @@
         "email",
         "createdAt"
       ]
+    },
+    "CodingChallenge": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CodingChallenge",
+      "type": "object",
+      "description": "Represents a coding challenge or algorithmic problem.",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "difficulty": { 
+          "type": "string",
+          "enum": ["Principiante", "Intermedio", "Avanzado"]
+        },
+        "category": { "type": "string" },
+        "technology": { "type": "string" },
+        "initialCode": { "type": "string" },
+        "solution": { "type": "string" },
+        "instructorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "description", "difficulty", "technology", "instructorId"]
     },
     "Course": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -100,349 +128,6 @@
         "instructorId",
         "createdAt"
       ]
-    },
-    "Module": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Module",
-      "type": "object",
-      "description": "Represents a logical grouping of lessons within a specific course.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Module entity."
-        },
-        "courseId": {
-          "type": "string",
-          "description": "Reference to the Course this module belongs to. (Relationship: Course 1:N Module)"
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the module."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the module's content."
-        },
-        "order": {
-          "type": "number",
-          "description": "The sequential order of the module within its course."
-        }
-      },
-      "required": [
-        "id",
-        "courseId",
-        "title",
-        "order"
-      ]
-    },
-    "Lesson": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Lesson",
-      "type": "object",
-      "description": "Represents a single unit of learning content within a module.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Lesson entity."
-        },
-        "moduleId": {
-          "type": "string",
-          "description": "Reference to the Module this lesson belongs to. (Relationship: Module 1:N Lesson)"
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the lesson."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description or summary of the lesson's content."
-        },
-        "order": {
-          "type": "number",
-          "description": "The sequential order of the lesson within its module."
-        },
-        "durationInMinutes": {
-          "type": "number",
-          "description": "The estimated duration of the lesson in minutes."
-        },
-        "isPremium": {
-          "type": "boolean",
-          "description": "Indicates if this specific lesson requires a premium subscription, potentially overriding the course's 'isFree' status."
-        }
-      },
-      "required": [
-        "id",
-        "moduleId",
-        "title",
-        "order",
-        "isPremium"
-      ]
-    },
-    "Resource": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Resource",
-      "type": "object",
-      "description": "Represents a specific piece of content (e.g., video, text, external link) associated with a lesson.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Resource entity."
-        },
-        "lessonId": {
-          "type": "string",
-          "description": "Reference to the Lesson this resource belongs to. (Relationship: Lesson 1:N Resource)"
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of content (e.g., 'video', 'text', 'quiz', 'externalLink')."
-        },
-        "contentUrl": {
-          "type": "string",
-          "description": "URL for video content, external links, or downloadable files.",
-          "format": "uri"
-        },
-        "contentText": {
-          "type": "string",
-          "description": "Textual content, typically for 'text' type resources."
-        },
-        "order": {
-          "type": "number",
-          "description": "The sequential order of the resource within its lesson."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the resource was created.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "lessonId",
-        "type",
-        "order",
-        "createdAt"
-      ]
-    },
-    "SubscriptionPlan": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SubscriptionPlan",
-      "type": "object",
-      "description": "Defines different subscription tiers available to users.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SubscriptionPlan entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the subscription plan (e.g., 'Monthly Premium', 'Annual Pro')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the plan's benefits and features."
-        },
-        "price": {
-          "type": "number",
-          "description": "The price of the subscription plan."
-        },
-        "currency": {
-          "type": "string",
-          "description": "The currency of the subscription price (e.g., 'USD', 'EUR')."
-        },
-        "durationInDays": {
-          "type": "number",
-          "description": "The duration of the subscription plan in days (e.g., 30, 365)."
-        },
-        "features": {
-          "type": "array",
-          "description": "A list of features included in this subscription plan.",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "price",
-        "currency",
-        "durationInDays",
-        "features"
-      ]
-    },
-    "Subscription": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Subscription",
-      "type": "object",
-      "description": "Tracks a user's active or historical subscription to a plan.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Subscription entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who owns this subscription. (Relationship: UserProfile 1:N Subscription)"
-        },
-        "planId": {
-          "type": "string",
-          "description": "Reference to the SubscriptionPlan for this subscription. (Relationship: SubscriptionPlan 1:1 Subscription)"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the subscription (e.g., 'active', 'cancelled', 'expired', 'pending')."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The date when the subscription started.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "The date when the subscription is set to end or has ended.",
-          "format": "date-time"
-        },
-        "autoRenew": {
-          "type": "boolean",
-          "description": "Indicates if the subscription is set to auto-renew."
-        },
-        "paymentProviderSubscriptionId": {
-          "type": "string",
-          "description": "The identifier for this subscription within the integrated payment gateway (e.g., Stripe)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the subscription record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the subscription record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "planId",
-        "status",
-        "startDate",
-        "endDate",
-        "autoRenew",
-        "paymentProviderSubscriptionId",
-        "createdAt"
-      ]
-    },
-    "Transaction": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Transaction",
-      "type": "object",
-      "description": "Records details of a financial transaction, typically related to subscription payments.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Transaction entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who made the transaction. (Relationship: UserProfile 1:N Transaction)"
-        },
-        "subscriptionId": {
-          "type": "string",
-          "description": "Reference to the Subscription this transaction is for, if applicable. (Relationship: Subscription 1:N Transaction)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of money involved in the transaction."
-        },
-        "currency": {
-          "type": "string",
-          "description": "The currency of the transaction amount (e.g., 'USD', 'EUR')."
-        },
-        "status": {
-          "type": "string",
-          "description": "The status of the transaction (e.g., 'completed', 'failed', 'pending', 'refunded')."
-        },
-        "transactionDate": {
-          "type": "string",
-          "description": "The date and time when the transaction occurred.",
-          "format": "date-time"
-        },
-        "paymentMethodType": {
-          "type": "string",
-          "description": "The type of payment method used (e.g., 'Credit Card', 'PayPal', 'Bank Transfer')."
-        },
-        "paymentProviderTransactionId": {
-          "type": "string",
-          "description": "The identifier for this transaction within the integrated payment gateway (e.g., Stripe)."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "amount",
-        "currency",
-        "status",
-        "transactionDate",
-        "paymentProviderTransactionId"
-      ]
-    },
-    "CourseProgress": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "CourseProgress",
-      "type": "object",
-      "description": "Tracks a specific user's progress within a particular course.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the CourseProgress entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile tracking their progress. (Relationship: UserProfile N:N Course via CourseProgress)"
-        },
-        "courseId": {
-          "type": "string",
-          "description": "Reference to the Course being tracked. (Relationship: Course N:N UserProfile via CourseProgress)"
-        },
-        "progressPercentage": {
-          "type": "number",
-          "description": "The overall percentage of the course completed by the user (0-100)."
-        },
-        "lastAccessedLessonId": {
-          "type": "string",
-          "description": "Reference to the last Lesson the user accessed in this course. (Relationship: Lesson 1:N CourseProgress)"
-        },
-        "completedLessonIds": {
-          "type": "array",
-          "description": "An array of IDs of lessons that the user has completed in this course.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "startedAt": {
-          "type": "string",
-          "description": "Timestamp when the user started the course.",
-          "format": "date-time"
-        },
-        "completedAt": {
-          "type": "string",
-          "description": "Timestamp when the user completed the course, if applicable.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the user's progress in the course (e.g., 'not_started', 'in_progress', 'completed')."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "courseId",
-        "progressPercentage",
-        "startedAt",
-        "status"
-      ]
     }
   },
   "auth": {
@@ -460,83 +145,17 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores individual user profiles. The document ID `{userId}` matches `request.auth.uid`. Includes 'isPremiumSubscriber' boolean, updated by backend, for subscription access checks."
+          "description": "Stores individual user profiles."
         }
       },
       {
-        "path": "/users/{userId}/subscriptions/{subscriptionId}",
+        "path": "/coding_challenges/{challengeId}",
         "definition": {
-          "entityName": "Subscription",
+          "entityName": "CodingChallenge",
           "schema": {
-            "$ref": "#/backend/entities/Subscription"
+            "$ref": "#/backend/entities/CodingChallenge"
           },
-          "description": "Subcollection for a user's subscription records. `userId` matches parent `{userId}`.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user (owner of the subscription)."
-            },
-            {
-              "name": "subscriptionId",
-              "description": "The unique identifier of the subscription."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/transactions/{transactionId}",
-        "definition": {
-          "entityName": "Transaction",
-          "schema": {
-            "$ref": "#/backend/entities/Transaction"
-          },
-          "description": "Subcollection for a user's financial transactions. `userId` matches parent `{userId}`.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user (initiator of the transaction)."
-            },
-            {
-              "name": "transactionId",
-              "description": "The unique identifier of the transaction."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/courseProgress/{courseId}",
-        "definition": {
-          "entityName": "CourseProgress",
-          "schema": {
-            "$ref": "#/backend/entities/CourseProgress"
-          },
-          "description": "Subcollection tracking a specific user's progress in a given course. The document ID `{courseId}` maps directly to the Course being tracked, simplifying unique access per user-course pair. `userId` matches parent `{userId}`.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user tracking progress."
-            },
-            {
-              "name": "courseId",
-              "description": "The unique identifier of the course, also used as the document ID for CourseProgress."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/subscriptionPlans/{planId}",
-        "definition": {
-          "entityName": "SubscriptionPlan",
-          "schema": {
-            "$ref": "#/backend/entities/SubscriptionPlan"
-          },
-          "description": "Stores definitions of various subscription plans. Publicly readable.",
-          "params": [
-            {
-              "name": "planId",
-              "description": "The unique identifier of the subscription plan."
-            }
-          ]
+          "description": "Stores algorithmic and design challenges."
         }
       },
       {
@@ -546,88 +165,9 @@
           "schema": {
             "$ref": "#/backend/entities/Course"
           },
-          "description": "Top-level collection for all courses. Contains `instructorId` for ownership checks. All documents are publicly readable (metadata).",
-          "params": [
-            {
-              "name": "courseId",
-              "description": "The unique identifier of the course."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/courses/{courseId}/modules/{moduleId}",
-        "definition": {
-          "entityName": "Module",
-          "schema": {
-            "$ref": "#/backend/entities/Module"
-          },
-          "description": "Modules within a specific course. Includes denormalized `instructorId` (from Course) and `courseIsFree` (from Course's isFree property) for authorization independence.",
-          "params": [
-            {
-              "name": "courseId",
-              "description": "The unique identifier of the parent course."
-            },
-            {
-              "name": "moduleId",
-              "description": "The unique identifier of the module."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/courses/{courseId}/modules/{moduleId}/lessons/{lessonId}",
-        "definition": {
-          "entityName": "Lesson",
-          "schema": {
-            "$ref": "#/backend/entities/Lesson"
-          },
-          "description": "Lessons within a specific module. Includes denormalized `instructorId` (from Course), `courseIsFree` (from Course's isFree property), and its own `isPremium` for authorization independence.",
-          "params": [
-            {
-              "name": "courseId",
-              "description": "The unique identifier of the parent course."
-            },
-            {
-              "name": "moduleId",
-              "description": "The unique identifier of the parent module."
-            },
-            {
-              "name": "lessonId",
-              "description": "The unique identifier of the lesson."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/courses/{courseId}/modules/{moduleId}/lessons/{lessonId}/resources/{resourceId}",
-        "definition": {
-          "entityName": "Resource",
-          "schema": {
-            "$ref": "#/backend/entities/Resource"
-          },
-          "description": "Resources associated with a specific lesson. Includes denormalized `instructorId` (from Course), `courseIsFree` (from Course's isFree property), and `lessonIsPremium` (from Lesson's isPremium property) for authorization independence.",
-          "params": [
-            {
-              "name": "courseId",
-              "description": "The unique identifier of the parent course."
-            },
-            {
-              "name": "moduleId",
-              "description": "The unique identifier of the parent module."
-            },
-            {
-              "name": "lessonId",
-              "description": "The unique identifier of the parent lesson."
-            },
-            {
-              "name": "resourceId",
-              "description": "The unique identifier of the resource."
-            }
-          ]
+          "description": "Top-level collection for all courses."
         }
       }
-    ],
-    "reasoning": "The recommended Firestore structure for LearnStream prioritizes security, scalability, and debuggability by strictly adhering to the core design principles and strategy mandates. The design leverages path-based ownership for user-specific data and a hierarchical subcollection structure for course content, enhanced with crucial denormalization.\n\n**Authorization Independence (CRITICAL) via Denormalization:**\nTo eliminate `get()` calls in security rules, especially for authorization decisions involving parent documents, the following denormalization strategy is applied:\n1.  **Instructor Write Access:** For course content (Modules, Lessons, Resources), the `instructorId` from the parent `Course` document will be denormalized and stored directly within each `Module`, `Lesson`, and `Resource` document. This allows security rules for these subcollections to directly check `request.auth.uid == resource.instructorId` without needing to perform a `get()` operation on the parent `Course` document. This is critical for robust atomic operations and simplified rule debugging.\n2.  **Course/Lesson Read Access (Free/Premium Status):**\n    *   The `isFree` status from the `Course` document will be denormalized as `courseIsFree` into all child `Module`, `Lesson`, and `Resource` documents.\n    *   The `isPremium` status from the `Lesson` document will be denormalized as `lessonIsPremium` into its child `Resource` documents.\n    *   For the user's subscription status, a dedicated boolean field, `isPremiumSubscriber`, will be added to the `UserProfile` document. This field will be updated by a Cloud Function whenever a user's `Subscription` status changes. This allows read rules for course content to check `get(/users/$(request.auth.uid)).data.isPremiumSubscriber` which is a `get()` call to the *current user's own profile*, a commonly accepted and efficient pattern, rather than a `get()` to a related (non-parent) collection or complex, chained `get()` operations. This ensures that authorization logic does not rely on arbitrary parent document data or complex lookups during rule evaluation.\n\n**QAPs (Rules are not Filters) Support:**\n1.  **Public Collections:** Collections like `/courses` (for course metadata) and `/subscriptionPlans` allow `list` operations for all authenticated users, with rules ensuring data integrity and potentially basic authentication (`request.auth.uid != null`).\n2.  **Private User Data:** Collections under `/users/{userId}/...` (e.g., `subscriptions`, `transactions`, `courseProgress`) inherently support QAPs because the `list` operation is implicitly filtered by `request.auth.uid`. Rules like `allow list: request.auth.uid == userId` ensure users can only list their own data.\n3.  **Course Content (Modules, Lessons, Resources):** The denormalized `courseIsFree` and `lessonIsPremium` fields directly on the `Module`, `Lesson`, and `Resource` documents, combined with the `isPremiumSubscriber` field on the user's `UserProfile`, allow security rules to evaluate read access directly on each document. This structure prevents unauthorized documents from being returned in `list` operations. For instance, a rule for lessons could be `allow read: request.auth.uid != null && (resource.courseIsFree || (resource.isPremium && get(/users/$(request.auth.uid)).data.isPremiumSubscriber));`. This ensures that only free lessons or premium lessons for subscribers are returned, satisfying QAP requirements without client-side filtering or inefficient rule logic."
+    ]
   }
 }
