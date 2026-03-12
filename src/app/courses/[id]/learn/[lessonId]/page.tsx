@@ -6,12 +6,10 @@ import { LessonAssistant } from '@/components/player/LessonAssistant';
 import { Button } from '@/components/ui/button';
 import { 
   ChevronLeft, 
-  ChevronRight, 
   CheckCircle, 
   Menu, 
   MoreVertical, 
   Loader2, 
-  BookOpen, 
   PlayCircle,
   Paperclip,
   FileDown,
@@ -21,25 +19,31 @@ import {
   Download,
   Eye,
   ExternalLink,
-  X,
   Lock,
   Award
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 
 export default function LessonPlayerPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <LessonPlayerContent />
+    </Suspense>
+  );
+}
+
+function LessonPlayerContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -77,9 +81,6 @@ export default function LessonPlayerPage() {
 
     const progressRef = doc(db, 'users', user.uid, 'courseProgress', courseId);
     
-    // Simulating a "Complete All" or at least tracking this lesson
-    // For MVP, we'll mark the entire course as completed for demo purposes when they finish any lesson
-    // In a real app, this would be more granular
     setDocumentNonBlocking(progressRef, {
       courseId,
       status: 'completed',
@@ -392,10 +393,10 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
       <Dialog open={!!previewResource} onOpenChange={(open) => !open && setPreviewResource(null)}>
         <DialogContent className="max-w-[95vw] lg:max-w-6xl h-[92vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
           <DialogHeader className="p-4 md:p-6 border-b flex flex-row items-center justify-between space-y-0 bg-white">
-            <DialogTitle className="font-headline font-bold text-lg md:text-xl flex items-center gap-3 truncate max-w-[70%]">
+            <div className="font-headline font-bold text-lg md:text-xl flex items-center gap-3 truncate max-w-[70%]">
               {previewResource && getIcon(previewResource.type)}
               <span className="truncate">{previewResource?.title}</span>
-            </DialogTitle>
+            </div>
             <div className="flex items-center gap-2 pr-10">
                {previewResource && !isGuest && (
                  <a href={previewResource.contentUrl} target="_blank" rel="noopener noreferrer">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -8,9 +7,17 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, Printer, Share2, Loader2, AlertCircle, Eye } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 
 export default function CertificatePage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <CertificateContent />
+    </Suspense>
+  );
+}
+
+function CertificateContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,6 +25,11 @@ export default function CertificatePage() {
   const isPreview = searchParams.get('preview') === 'true';
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -47,7 +59,7 @@ export default function CertificatePage() {
     window.print();
   };
 
-  if (isUserLoading || isCourseLoading) {
+  if (!mounted || isUserLoading || isCourseLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

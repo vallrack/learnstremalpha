@@ -1,10 +1,9 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock, Users, Award, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock, Users, Eye } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -23,6 +22,13 @@ export default function AdminCoursesPage() {
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    setNow(new Date());
+  }, []);
   
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -134,6 +140,18 @@ export default function AdminCoursesPage() {
     }
   };
 
+  if (!mounted || isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC]">
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-6 py-12 flex flex-col items-center justify-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground font-medium">Cargando catálogo...</p>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <Navbar />
@@ -239,111 +257,105 @@ export default function AdminCoursesPage() {
         </header>
 
         <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
-          {isLoading ? (
-            <div className="p-20 flex flex-col items-center justify-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground font-medium">Cargando catálogo...</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50 border-none">
-                  <TableHead className="pl-8 h-14">Curso</TableHead>
-                  <TableHead>Tecnología</TableHead>
-                  <TableHead>Vigencia</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right pr-8">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {courses?.map(course => {
-                  const isExpired = course.closingDate && (course.closingDate instanceof Timestamp ? course.closingDate.toDate() : new Date(course.closingDate)) < new Date();
-                  
-                  return (
-                    <TableRow key={course.id} className="border-slate-100">
-                      <TableCell className="font-bold pl-8 py-5">
-                        <div className="flex flex-col">
-                          <span>{course.title}</span>
-                          <span className="text-[10px] text-muted-foreground font-normal">{course.category}</span>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50 border-none">
+                <TableHead className="pl-8 h-14">Curso</TableHead>
+                <TableHead>Tecnología</TableHead>
+                <TableHead>Vigencia</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right pr-8">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {courses?.map(course => {
+                const cDate = course.closingDate && (course.closingDate instanceof Timestamp ? course.closingDate.toDate() : new Date(course.closingDate));
+                const isExpired = cDate && now && cDate < now;
+                
+                return (
+                  <TableRow key={course.id} className="border-slate-100">
+                    <TableCell className="font-bold pl-8 py-5">
+                      <div className="flex flex-col">
+                        <span>{course.title}</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">{course.category}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="rounded-lg font-bold border-primary/20 bg-primary/5 text-primary">
+                        {course.technology}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {course.closingDate ? (
+                        <div className={`flex items-center gap-1.5 text-xs font-medium ${isExpired ? 'text-rose-600' : 'text-slate-600'}`}>
+                          <Clock className="h-3 w-3" />
+                          {new Date(course.closingDate instanceof Timestamp ? course.closingDate.toDate() : course.closingDate).toLocaleDateString()}
+                          {isExpired && <span className="text-[10px] font-bold uppercase">(Cerrado)</span>}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="rounded-lg font-bold border-primary/20 bg-primary/5 text-primary">
-                          {course.technology}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {course.closingDate ? (
-                          <div className={`flex items-center gap-1.5 text-xs font-medium ${isExpired ? 'text-rose-600' : 'text-slate-600'}`}>
-                            <Clock className="h-3 w-3" />
-                            {new Date(course.closingDate instanceof Timestamp ? course.closingDate.toDate() : course.closingDate).toLocaleDateString()}
-                            {isExpired && <span className="text-[10px] font-bold uppercase">(Cerrado)</span>}
-                          </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">De por vida</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {course.isActive ? (
+                            <Badge className="bg-emerald-500 text-white border-none rounded-lg text-[10px]">Activo</Badge>
                         ) : (
-                          <span className="text-xs text-muted-foreground">De por vida</span>
+                            <Badge className="bg-slate-300 text-slate-700 border-none rounded-lg text-[10px]">Borrador</Badge>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {course.isActive ? (
-                             <Badge className="bg-emerald-500 text-white border-none rounded-lg text-[10px]">Activo</Badge>
-                          ) : (
-                             <Badge className="bg-slate-300 text-slate-700 border-none rounded-lg text-[10px]">Borrador</Badge>
-                          )}
-                          {course.isFree ? (
-                            <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg text-[10px]">Gratis</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg text-[10px]">Premium</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right pr-8">
-                        <div className="flex items-center justify-end gap-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Link href={`/courses/${course.id}/certificate?preview=true`}>
-                                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-amber-600 hover:bg-amber-50">
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </Link>
-                              </TooltipTrigger>
-                              <TooltipContent>Vista Previa Certificado</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                        {course.isFree ? (
+                          <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg text-[10px]">Gratis</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg text-[10px]">Premium</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right pr-8">
+                      <div className="flex items-center justify-end gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link href={`/courses/${course.id}/certificate?preview=true`}>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-amber-600 hover:bg-amber-50">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                            </TooltipTrigger>
+                            <TooltipContent>Vista Previa Certificado</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
 
-                          <Link href={`/admin/courses/${course.id}/content`}>
-                            <Button variant="ghost" size="sm" className="gap-2 rounded-xl text-xs h-9">
-                              <BookOpen className="h-3.5 w-3.5" />
-                              Contenido
-                            </Button>
-                          </Link>
+                        <Link href={`/admin/courses/${course.id}/content`}>
+                          <Button variant="ghost" size="sm" className="gap-2 rounded-xl text-xs h-9">
+                            <BookOpen className="h-3.5 w-3.5" />
+                            Contenido
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-9 w-9 rounded-xl"
+                          onClick={() => handleEditClick(course)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {isAdmin && (
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-9 w-9 rounded-xl"
-                            onClick={() => handleEditClick(course)}
+                            className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl"
+                            onClick={() => handleDeleteCourse(course.id)}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                          {isAdmin && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl"
-                              onClick={() => handleDeleteCourse(course.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       </main>
     </div>

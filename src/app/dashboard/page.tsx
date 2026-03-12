@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
@@ -10,11 +9,17 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 1. Obtener el progreso del usuario
   const progressQuery = useMemoFirebase(() => {
@@ -51,7 +56,7 @@ export default function DashboardPage() {
 
   const displayName = user?.displayName || user?.email?.split('@')[0] || 'Estudiante';
 
-  if (isUserLoading || isProgressLoading || isCoursesLoading) {
+  if (!mounted || isUserLoading || isProgressLoading || isCoursesLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
