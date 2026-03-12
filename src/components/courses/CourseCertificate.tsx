@@ -25,7 +25,8 @@ export function CourseCertificate({
   // Direct links as requested
   const logoUrl = "https://dprogramadores.com.co/img/logoD.png";
   const signatureUrl = "https://drive.google.com/uc?export=view&id=1w2nzR-tylvAKiHe02fzdTKpRD7icoJua";
-  const platformLogoUrl = "https://images.rawpixel.com/dark_image_png_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcm0zNzNiYXRjaDUtMTAucG5n.png";
+  // Updated platform logo URL from the provided Google Drive link
+  const platformLogoUrl = "https://drive.google.com/uc?export=view&id=16rVeMusBLN_9Bga61xWscYAobdvptJy6";
 
   return (
     <div className="relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[16px] border-slate-900 p-12 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl">
@@ -50,17 +51,18 @@ export function CourseCertificate({
           <h1 className="text-3xl font-headline font-bold tracking-tighter text-slate-900 uppercase">
             DProgramadores Academy
           </h1>
-          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">
-            Excelencia en Tecnología
+          <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
+            La vida en un código
           </p>
         </div>
-        {/* Usamos filtros para asegurar que el fondo negro desaparezca totalmente en el certificado blanco */}
-        <div className="relative w-24 h-24 overflow-hidden flex items-center justify-center bg-black rounded-full shadow-inner border border-white/10">
+        {/* Usamos un filtro de inversión si el logo es claro sobre oscuro para que aparezca oscuro sobre el fondo blanco del certificado */}
+        <div className="relative w-28 h-28 overflow-hidden flex items-center justify-center">
           <Image 
             src={platformLogoUrl} 
             alt="LearnStream Logo" 
             fill 
-            className="object-contain mix-blend-screen brightness-125 contrast-125 scale-125" 
+            className="object-contain contrast-125 brightness-110" 
+            style={{ mixBlendMode: 'multiply' }}
           />
         </div>
       </header>
