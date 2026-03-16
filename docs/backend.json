@@ -30,6 +30,16 @@
           "description": "User role (admin, instructor, student)",
           "enum": ["admin", "instructor", "student"]
         },
+        "xp": {
+          "type": "number",
+          "description": "Experience points earned by the user.",
+          "default": 0
+        },
+        "level": {
+          "type": "number",
+          "description": "Current level of the user based on XP.",
+          "default": 1
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp when the user profile was created.",
@@ -43,6 +53,11 @@
         "isPremiumSubscriber": {
           "type": "boolean",
           "description": "Indicates if the user has an active premium subscription."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates if the account is active.",
+          "default": true
         }
       },
       "required": [
@@ -67,7 +82,7 @@
         "instructorId": { "type": "string" },
         "instructorName": { "type": "string" },
         "isFree": { "type": "boolean" },
-        "closingDate": { "type": "string", "format": "date-time", "description": "Fecha en la que el curso deja de estar disponible para no-pagos." },
+        "closingDate": { "type": "string", "format": "date-time" },
         "isActive": { "type": "boolean", "default": true },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
@@ -75,27 +90,20 @@
       "required": ["id", "title", "technology", "instructorId"]
     },
     "CodingChallenge": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CodingChallenge",
       "type": "object",
-      "description": "Represents a coding challenge or algorithmic problem.",
       "properties": {
         "id": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
-        "difficulty": { 
-          "type": "string",
-          "enum": ["Principiante", "Intermedio", "Avanzado"]
-        },
-        "category": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["Principiante", "Intermedio", "Avanzado"] },
         "technology": { "type": "string" },
         "initialCode": { "type": "string" },
         "solution": { "type": "string" },
         "instructorId": { "type": "string" },
         "isFree": { "type": "boolean", "default": true },
         "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "title", "description", "difficulty", "technology", "instructorId", "isFree"]
+      }
     },
     "ChallengeSubmission": {
       "title": "ChallengeSubmission",
@@ -107,53 +115,23 @@
         "score": { "type": "number" },
         "feedback": { "type": "string" },
         "passed": { "type": "boolean" },
+        "studentCode": { "type": "string" },
         "submittedAt": { "type": "string", "format": "date-time" }
       }
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
       {
         "path": "/users/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          }
-        }
+        "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" } }
       },
       {
         "path": "/users/{userId}/challenge_submissions/{submissionId}",
-        "definition": {
-          "entityName": "ChallengeSubmission",
-          "schema": {
-            "$ref": "#/backend/entities/ChallengeSubmission"
-          }
-        }
-      },
-      {
-        "path": "/coding_challenges/{challengeId}",
-        "definition": {
-          "entityName": "CodingChallenge",
-          "schema": {
-            "$ref": "#/backend/entities/CodingChallenge"
-          }
-        }
-      },
-      {
-        "path": "/courses/{courseId}",
-        "definition": {
-          "entityName": "Course",
-          "schema": {
-            "$ref": "#/backend/entities/Course"
-          }
-        }
+        "definition": { "entityName": "ChallengeSubmission", "schema": { "$ref": "#/backend/entities/ChallengeSubmission" } }
       }
     ]
   }

@@ -1,15 +1,16 @@
+
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Trophy, Clock, PlayCircle, Loader2, Sparkles, Code2, BarChart3 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { BookOpen, Trophy, Clock, PlayCircle, Loader2, Sparkles, Code2, BarChart3, Star, Zap, ChevronRight, Award } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export default function DashboardPage() {
@@ -21,40 +22,48 @@ export default function DashboardPage() {
     setMounted(true);
   }, []);
 
-  // 1. Obtener el progreso del usuario
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+
   const progressQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return collection(db, 'users', user.uid, 'courseProgress');
   }, [db, user?.uid]);
   const { data: userProgress, isLoading: isProgressLoading } = useCollection(progressQuery);
 
-  // 2. Obtener todos los cursos
   const coursesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return collection(db, 'courses');
   }, [db]);
   const { data: allCourses, isLoading: isCoursesLoading } = useCollection(coursesQuery);
 
-  // 3. Obtener envíos de desafíos
   const submissionsQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'users', user.uid, 'challenge_submissions'), orderBy('submittedAt', 'desc'), limit(10));
   }, [db, user?.uid]);
   const { data: submissions } = useCollection(submissionsQuery);
 
-  // Combinar progreso con datos del curso
-  const enrolledCourses = useMemoFirebase(() => {
+  const enrolledCourses = useMemo(() => {
     if (!userProgress || !allCourses) return [];
     return userProgress.map(progress => {
       const courseDetails = allCourses.find(c => c.id === progress.courseId);
-      return {
-        ...progress,
-        courseDetails
-      };
+      return { ...progress, courseDetails };
     }).filter(item => item.courseDetails);
   }, [userProgress, allCourses]);
 
-  const displayName = user?.displayName || user?.email?.split('@')[0] || 'Estudiante';
+  const activeCourse = enrolledCourses.find(c => c.status !== 'completed');
+
+  // Gamificación
+  const completedCount = enrolledCourses.filter(c => c.status === 'completed').length;
+  const passedChallenges = submissions?.filter(s => s.passed).length || 0;
+  const xp = (completedCount * 500) + (passedChallenges * 100) + (enrolledCourses.length * 50);
+  const level = Math.floor(xp / 1000) + 1;
+  const xpInCurrentLevel = xp % 1000;
+
+  const displayName = profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Estudiante';
 
   if (!mounted || isUserLoading || isProgressLoading || isCoursesLoading) {
     return (
@@ -67,12 +76,8 @@ export default function DashboardPage() {
     );
   }
 
-  const coursesInProgressCount = enrolledCourses.filter(c => c.status !== 'completed').length;
-  const completedCoursesCount = enrolledCourses.filter(c => c.status === 'completed').length;
-  
-  // Chart data
   const chartData = submissions?.map(s => ({
-    name: s.challengeTitle?.substring(0, 10) + '...',
+    name: s.challengeTitle?.substring(0, 8) + '...',
     score: s.score
   })).reverse() || [];
 
@@ -81,178 +86,172 @@ export default function DashboardPage() {
       <Navbar />
       
       <main className="max-w-7xl mx-auto px-6 py-12">
-        <header className="mb-12">
-          <h1 className="text-4xl font-headline font-bold mb-2">¡Bienvenido de nuevo, {displayName}!</h1>
-          <p className="text-muted-foreground">Tu progreso académico y técnico en un solo lugar.</p>
+        <header className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+          <div className="flex-1">
+            <h1 className="text-4xl font-headline font-bold mb-2 flex items-center gap-3">
+              ¡Hola, {displayName}! 
+              <span className="animate-bounce">👋</span>
+            </h1>
+            <p className="text-muted-foreground">Tu camino al éxito técnico está al {Math.round((completedCount / (allCourses?.length || 1)) * 100)}% de completarse.</p>
+          </div>
+
+          <div className="flex items-center gap-4 bg-white p-4 rounded-[2rem] border shadow-sm">
+            <div className="relative h-16 w-16 flex items-center justify-center">
+              <svg className="absolute inset-0 h-full w-full -rotate-90">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" className="text-slate-100" />
+                <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={`${(xpInCurrentLevel / 1000) * 176} 176`} className="text-primary" />
+              </svg>
+              <span className="text-xl font-bold">{level}</span>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Nivel de Programador</p>
+              <p className="text-sm font-bold text-slate-900">{xpInCurrentLevel} / 1000 XP</p>
+            </div>
+          </div>
         </header>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <Card className="rounded-3xl border-none shadow-sm bg-white">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Cursos Activos</CardTitle>
-              <BookOpen className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{coursesInProgressCount}</div>
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-none shadow-sm bg-white">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Certificados</CardTitle>
-              <Trophy className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{completedCoursesCount}</div>
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-none shadow-sm bg-white">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Desafíos Superados</CardTitle>
-              <Code2 className="h-4 w-4 text-emerald-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{submissions?.length || 0}</div>
-            </CardContent>
-          </Card>
-          <Card className="rounded-3xl border-none shadow-sm bg-primary text-primary-foreground">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-primary-foreground/70">Puntos Totales</CardTitle>
-              <Sparkles className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{(enrolledCourses.length * 100) + ((submissions?.length || 0) * 50)}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          {/* Progress Chart */}
-          <Card className="lg:col-span-2 rounded-3xl border-none shadow-sm bg-white p-6">
-            <CardHeader className="px-0 pt-0">
-              <div className="flex items-center gap-2 mb-1">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <CardTitle className="text-xl font-headline">Rendimiento en Desafíos</CardTitle>
-              </div>
-              <CardDescription>Tus últimas 10 calificaciones de IA (Escala 0-5)</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px] px-0">
-              {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                    <Tooltip 
-                      cursor={{ fill: '#f8fafc' }} 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.score >= 4 ? '#10b981' : entry.score >= 3 ? '#3b82f6' : '#f59e0b'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                  <Code2 className="h-10 w-10 mb-2 opacity-20" />
-                  <p className="text-sm">No hay datos de desafíos todavía.</p>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
+          {/* Resume learning */}
+          <div className="lg:col-span-3 space-y-8">
+            {activeCourse ? (
+              <Card className="rounded-[2.5rem] border-none shadow-xl bg-slate-900 text-white overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Zap className="h-32 w-32" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Activity Feed */}
-          <Card className="rounded-3xl border-none shadow-sm bg-white p-6">
-            <CardHeader className="px-0 pt-0">
-              <CardTitle className="text-xl font-headline">Actividad Reciente</CardTitle>
-            </CardHeader>
-            <CardContent className="px-0 space-y-4">
-              {submissions?.slice(0, 5).map((sub, i) => (
-                <div key={i} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-muted/30 transition-colors">
-                  <div className={`p-2 rounded-xl ${sub.passed ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                    <Code2 className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate">{sub.challengeTitle}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase">{new Date(sub.submittedAt?.toDate()).toLocaleDateString()}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-bold ${sub.score >= 4 ? 'text-emerald-600' : 'text-primary'}`}>{sub.score}/5</p>
-                  </div>
-                </div>
-              ))}
-              {(!submissions || submissions.length === 0) && (
-                <p className="text-sm text-center text-muted-foreground py-8">No hay actividad reciente.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <section>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-headline font-bold">Continuar Aprendiendo</h2>
-            <Link href="/courses">
-              <Button variant="ghost" size="sm" className="rounded-xl">Ver catálogo</Button>
-            </Link>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {enrolledCourses.length > 0 ? (
-              enrolledCourses.map((item) => {
-                const progress = item.progressPercentage || 0;
-                const course = item.courseDetails;
-                const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
-                
-                return (
-                  <Card key={item.id} className="overflow-hidden border-none rounded-[2rem] shadow-sm bg-white hover:shadow-md transition-shadow">
-                    <div className="flex flex-col sm:flex-row">
-                      <div className="w-full sm:w-40 h-40 sm:h-auto relative shrink-0">
-                        <Image 
-                          src={imageSrc} 
-                          alt={course.title}
-                          fill
-                          className="object-cover"
-                          unoptimized={imageSrc.startsWith('data:')}
-                        />
+                <CardContent className="p-8 md:p-12 relative z-10">
+                  <div className="flex flex-col md:flex-row gap-8 items-center">
+                    <div className="relative w-48 h-32 rounded-2xl overflow-hidden shadow-2xl shrink-0">
+                      <Image 
+                        src={activeCourse.courseDetails.thumbnailDataUrl || activeCourse.courseDetails.imageUrl || 'https://picsum.photos/seed/learn/400/300'} 
+                        alt="Course" 
+                        fill 
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                    <div className="flex-1 space-y-4 text-center md:text-left">
+                      <Badge className="bg-primary hover:bg-primary border-none text-[10px] py-1 px-3">SIGUIENTE PASO</Badge>
+                      <h2 className="text-2xl md:text-3xl font-headline font-bold">{activeCourse.courseDetails.title}</h2>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex justify-between text-xs font-bold text-slate-400">
+                          <span>Progreso del Curso</span>
+                          <span>{Math.round(activeCourse.progressPercentage || 0)}%</span>
+                        </div>
+                        <Progress value={activeCourse.progressPercentage || 0} className="h-2 bg-white/10" />
                       </div>
-                      <div className="p-6 flex-1 flex flex-col justify-between">
-                        <div>
-                          <h3 className="font-headline font-bold text-lg mb-4 line-clamp-1">{course.title}</h3>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-xs font-bold text-muted-foreground">
-                              <span>Progreso</span>
-                              <span>{Math.round(progress)}%</span>
-                            </div>
-                            <Progress value={progress} className="h-2 bg-muted" />
-                          </div>
-                        </div>
-                        <div className="mt-6 flex items-center justify-end">
-                          <Link href={`/courses/${course.id}`}>
-                            <Button size="sm" className="gap-2 rounded-xl h-9 bg-primary">
-                              <PlayCircle className="h-4 w-4" />
-                              Continuar
-                            </Button>
-                          </Link>
-                        </div>
+                      <Link href={`/courses/${activeCourse.courseId}`} className="inline-block">
+                        <Button className="h-12 px-8 rounded-xl font-bold gap-2 shadow-lg shadow-primary/20">
+                          Continuar Ahora
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="rounded-[2.5rem] border-2 border-dashed p-12 text-center space-y-4">
+                <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                  <Star className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-headline font-bold">¿Listo para un nuevo desafío?</h3>
+                <p className="text-muted-foreground">Explora nuestro catálogo y empieza a ganar XP.</p>
+                <Link href="/courses">
+                  <Button className="rounded-xl font-bold">Explorar Cursos</Button>
+                </Link>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="rounded-[2rem] border-none shadow-sm bg-white p-6">
+                <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-headline">Rendimiento Técnico</CardTitle>
+                    <CardDescription className="text-xs">Últimos desafíos evaluados</CardDescription>
+                  </div>
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </CardHeader>
+                <CardContent className="px-0 h-[200px]">
+                  {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData}>
+                        <XAxis dataKey="name" hide />
+                        <YAxis domain={[0, 5]} hide />
+                        <Tooltip />
+                        <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.score >= 4 ? '#10b981' : '#3b82f6'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">Completa retos para ver estadísticas</div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[2rem] border-none shadow-sm bg-white p-6">
+                <CardHeader className="px-0 pt-0">
+                  <CardTitle className="text-lg font-headline">Logros Recientes</CardTitle>
+                </CardHeader>
+                <CardContent className="px-0 space-y-4">
+                  {completedCount > 0 && (
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                      <Award className="h-5 w-5 text-emerald-600" />
+                      <div>
+                        <p className="text-xs font-bold text-emerald-900">Graduado en 1er Curso</p>
+                        <p className="text-[10px] text-emerald-600">¡Ya puedes generar tu primer certificado!</p>
                       </div>
                     </div>
-                  </Card>
-                );
-              })
-            ) : (
-              <div className="col-span-full text-center py-20 bg-muted/20 rounded-[3rem] border-4 border-dashed">
-                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground font-medium">Comienza tu viaje hoy mismo.</p>
-                <Link href="/courses" className="mt-4 inline-block">
-                  <Button variant="link" className="text-primary font-bold">Explorar catálogo →</Button>
-                </Link>
-              </div>
-            )}
+                  )}
+                  {passedChallenges > 0 && (
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+                      <Code2 className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="text-xs font-bold text-blue-900">Cazador de Bugs</p>
+                        <p className="text-[10px] text-blue-600">{passedChallenges} retos técnicos superados.</p>
+                      </div>
+                    </div>
+                  )}
+                  {completedCount === 0 && passedChallenges === 0 && (
+                    <p className="text-sm text-muted-foreground italic text-center py-8">Tus insignias aparecerán aquí.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </section>
+
+          {/* Activity sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+             <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+                <CardHeader className="p-6 bg-slate-50 border-b">
+                  <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500">Actividad</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 space-y-4">
+                  {submissions?.map((sub, i) => (
+                    <div key={i} className="flex gap-3 border-b border-slate-50 pb-3 last:border-0">
+                      <div className={`p-2 h-fit rounded-lg ${sub.passed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <CheckCircle2 className="h-3 w-3" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold truncate">{sub.challengeTitle}</p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(sub.submittedAt?.toDate()).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {(!submissions || submissions.length === 0) && <p className="text-xs text-center py-4 text-muted-foreground italic">Empieza a codear hoy</p>}
+                </CardContent>
+             </Card>
+          </div>
+        </div>
       </main>
     </div>
+  );
+}
+
+function CheckCircle2({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
   );
 }
