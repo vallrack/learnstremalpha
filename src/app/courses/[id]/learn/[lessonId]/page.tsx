@@ -424,10 +424,10 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
       <Dialog open={!!previewResource} onOpenChange={(open) => !open && setPreviewResource(null)}>
         <DialogContent className="max-w-[95vw] lg:max-w-6xl h-[92vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
           <DialogHeader className="p-4 md:p-6 border-b flex flex-row items-center justify-between space-y-0 bg-white">
-            <div className="font-headline font-bold text-lg md:text-xl flex items-center gap-3 truncate max-w-[70%]">
+            <DialogTitle className="font-headline font-bold text-lg md:text-xl flex items-center gap-3 truncate max-w-[70%]">
               {previewResource && getIcon(previewResource.type)}
               <span className="truncate">{previewResource?.title}</span>
-            </div>
+            </DialogTitle>
             <div className="flex items-center gap-2 pr-10">
                {previewResource && !isGuest && (
                  <a href={previewResource.contentUrl} target="_blank" rel="noopener noreferrer">
