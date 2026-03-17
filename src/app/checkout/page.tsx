@@ -132,7 +132,7 @@ export default function CheckoutPage() {
     try {
       const handler = (window as any).ePayco.checkout.configure({
         key: publicKey,
-        test: false 
+        test: false // MODO PRODUCCIÓN ACTIVADO
       });
 
       const data = {
@@ -324,16 +324,16 @@ export default function CheckoutPage() {
             <CardFooter className="bg-slate-50/50 p-8 flex flex-col gap-8 border-t border-dashed">
               <div className="flex flex-wrap justify-center items-center gap-8">
                 <div className="relative w-12 h-12">
-                  <Image src="https://www.viajescircular.com.co/wp-content/uploads/2021/06/PSE.png" alt="PSE" fill className="object-contain" />
+                  <Image src="https://www.viajescircular.com.co/wp-content/uploads/2021/06/PSE.png" alt="PSE" fill className="object-contain" unoptimized />
                 </div>
                 <div className="relative w-20 h-8">
-                  <Image src="https://images.seeklogo.com/logo-png/40/2/nequi-logo-png_seeklogo-404357.png" alt="Nequi" fill className="object-contain" />
+                  <Image src="https://images.seeklogo.com/logo-png/40/2/nequi-logo-png_seeklogo-404357.png" alt="Nequi" fill className="object-contain" unoptimized />
                 </div>
                 <div className="relative w-24 h-8">
-                  <Image src="https://colombiafintech.co/wp-content/uploads/2025/03/NM_DaviPlata_Color.png" alt="Daviplata" fill className="object-contain" />
+                  <Image src="https://colombiafintech.co/wp-content/uploads/2025/03/NM_DaviPlata_Color.png" alt="Daviplata" fill className="object-contain" unoptimized />
                 </div>
                 <div className="relative w-20 h-8">
-                  <Image src="https://images.seeklogo.com/logo-png/49/2/efecty-logo-png_seeklogo-491332.png" alt="Efecty" fill className="object-contain" />
+                  <Image src="https://images.seeklogo.com/logo-png/49/2/efecty-logo-png_seeklogo-491332.png" alt="Efecty" fill className="object-contain" unoptimized />
                 </div>
               </div>
               <p className="text-[10px] text-center text-muted-foreground leading-relaxed px-4 max-w-sm font-medium">
