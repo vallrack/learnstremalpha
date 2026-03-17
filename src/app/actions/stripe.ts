@@ -1,4 +1,3 @@
-
 'use server';
 
 import { stripe } from '@/lib/stripe';
@@ -9,6 +8,11 @@ import { headers } from 'next/headers';
  * This is a server-side action that returns the secure URL to redirect the user.
  */
 export async function createCheckoutSession(userId: string, userEmail: string) {
+  // Validar configuración antes de proceder
+  if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === 'sk_test_placeholder_key_missing') {
+    throw new Error('La pasarela de pagos no está configurada correctamente (Falta STRIPE_SECRET_KEY). Contacta al administrador.');
+  }
+
   try {
     const origin = (await headers()).get('origin');
 
@@ -40,6 +44,6 @@ export async function createCheckoutSession(userId: string, userEmail: string) {
     return { url: session.url };
   } catch (error: any) {
     console.error('Stripe Session Error:', error);
-    throw new Error('No pudimos iniciar el proceso de pago. Intenta más tarde.');
+    throw new Error('No pudimos iniciar el proceso de pago. Verifica la configuración de tu cuenta de Stripe.');
   }
 }
