@@ -15,7 +15,8 @@ export default function Home() {
   const { t } = useTranslation();
   const db = useFirestore();
   const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
-  const instructorImageUrl = "https://drive.google.com/uc?export=view&id=1FujdqLfrqmCYNzP-TfuGlO9SKaBN8HIh";
+  // Usamos el formato lh3 que es más fiable para incrustar imágenes de Drive directamente
+  const instructorImageUrl = "https://lh3.googleusercontent.com/d/1FujdqLfrqmCYNzP-TfuGlO9SKaBN8HIh";
 
   // Consulta real de cursos desde Firestore (limitado a 3 para el Home)
   const coursesQuery = useMemoFirebase(() => {
@@ -180,14 +181,15 @@ export default function Home() {
                   </Button>
                 </Link>
               </div>
-              <div className="flex-1 relative w-full aspect-square lg:aspect-auto h-full min-h-[400px]">
+              {/* Cambiamos aspect-square por aspect-video para que la imagen personalizada luzca mejor */}
+              <div className="flex-1 relative w-full aspect-video lg:aspect-auto h-full min-h-[400px]">
                 <Image 
                   src={instructorImageUrl} 
-                  alt="Instructor" 
+                  alt="Expert Mastered Skills" 
                   fill 
                   className="object-cover transition-all duration-700"
                   unoptimized
-                  data-ai-hint="instructor teacher"
+                  data-ai-hint="expert teacher logo"
                 />
               </div>
             </div>
