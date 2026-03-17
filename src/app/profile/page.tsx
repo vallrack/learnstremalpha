@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { User, CreditCard, Shield, Crown, CheckCircle, Loader2, Save, UserCircle, ShieldAlert, Code2, Award, Terminal, Star, ExternalLink } from 'lucide-react';
+import { User, CreditCard, Shield, Crown, CheckCircle, Loader2, Save, UserCircle, ShieldAlert, Code2, Award, Terminal, Star, ExternalLink, Share2, Copy } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useCollection } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -57,6 +57,16 @@ export default function ProfilePage() {
     }, 500);
   };
 
+  const copyPortfolioLink = () => {
+    if (!user?.uid) return;
+    const link = `${window.location.origin}/p/${user.uid}`;
+    navigator.clipboard.writeText(link);
+    toast({
+      title: "¡Enlace copiado!",
+      description: "Ya puedes compartir tu portfolio con reclutadores.",
+    });
+  };
+
   if (isUserLoading || isProfileLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col"><Navbar /><main className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></main></div>
@@ -87,6 +97,12 @@ export default function ProfilePage() {
                 <Badge variant="outline" className="text-slate-500 rounded-xl px-4 py-1.5 font-bold h-auto">Cuenta Estándar</Badge>
               )}
             </div>
+          </div>
+          <div className="shrink-0">
+            <Button onClick={copyPortfolioLink} className="rounded-2xl h-14 px-8 gap-3 font-bold shadow-xl shadow-primary/20">
+              <Share2 className="h-5 w-5" />
+              Compartir Portfolio
+            </Button>
           </div>
         </header>
 
@@ -151,6 +167,13 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <Label className="font-bold uppercase text-[10px] text-muted-foreground tracking-widest">Email Académico</Label>
                       <Input value={user?.email || ''} disabled className="rounded-xl h-12 bg-slate-50 opacity-60" />
+                    </div>
+                    <div className="pt-4 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                       <p className="text-xs font-bold text-primary mb-2 flex items-center gap-2"><Share2 className="h-3 w-3" /> Tu Enlace Público:</p>
+                       <div className="flex gap-2">
+                         <Input value={`${window.location.origin}/p/${user?.uid}`} readOnly className="h-9 text-[10px] rounded-lg bg-white" />
+                         <Button size="icon" variant="outline" onClick={copyPortfolioLink} className="h-9 w-9 rounded-lg"><Copy className="h-3 w-3" /></Button>
+                       </div>
                     </div>
                   </div>
                   <div className="bg-slate-50 p-6 rounded-2xl space-y-4 border border-slate-100">
