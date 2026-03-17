@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -24,7 +25,8 @@ import {
   AlertTriangle,
   Crown,
   LogIn,
-  UserPlus
+  UserPlus,
+  Medal
 } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
@@ -95,7 +97,6 @@ export default function ChallengeExecutionPage() {
   const handleSubmit = async () => {
     if (!challenge || !db) return;
     
-    // Check access
     const hasAccess = challenge.isFree || (user && profile?.isPremiumSubscriber);
     if (!hasAccess) {
       toast({
@@ -118,8 +119,8 @@ export default function ChallengeExecutionPage() {
       });
       setResult(evaluation);
 
-      // Persist result ONLY if logged in and NOT anonymous (strict check)
       if (user && !user.isAnonymous) {
+        // Guardar entrega
         addDocumentNonBlocking(collection(db, 'users', user.uid, 'challenge_submissions'), {
           challengeId: challenge.id,
           challengeTitle: challenge.title,
@@ -128,8 +129,22 @@ export default function ChallengeExecutionPage() {
           passed: evaluation.passed,
           submittedAt: serverTimestamp()
         });
+
+        // Guardar Insignia si la IA la otorgó
+        if (evaluation.awardedBadge) {
+          addDocumentNonBlocking(collection(db, 'users', user.uid, 'achievements'), {
+            ...evaluation.awardedBadge,
+            challengeId: challenge.id,
+            unlockedAt: serverTimestamp(),
+          });
+          
+          toast({
+            title: "¡Insignia Desbloqueada!",
+            description: `Has ganado la insignia: ${evaluation.awardedBadge.title}`,
+            action: <Medal className="h-8 w-8 text-amber-500" />,
+          });
+        }
       } else {
-        // Invitación a registrarse para usuarios invitados o anónimos
         toast({
           title: "¡Buen trabajo!",
           description: user?.isAnonymous 
@@ -177,7 +192,6 @@ export default function ChallengeExecutionPage() {
     );
   }
 
-  // Lógica de acceso: permitir gratis siempre, premium solo logeados con suscripción
   const hasAccess = challenge.isFree || (user && profile?.isPremiumSubscriber);
 
   if (!hasAccess) {
@@ -277,6 +291,21 @@ export default function ChallengeExecutionPage() {
 
             {result && (
               <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {result.awardedBadge && (
+                  <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-[2rem] text-white shadow-xl shadow-amber-500/20 mb-4 animate-bounce-slow">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
+                        <Medal className="h-10 w-10 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">¡NUEVO LOGRO!</p>
+                        <h3 className="text-xl font-headline font-bold leading-tight">{result.awardedBadge.title}</h3>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-white/90 leading-relaxed font-medium">"{result.awardedBadge.description}"</p>
+                  </div>
+                )}
+
                 <Card className={`rounded-3xl border-2 ${result.passed ? 'border-emerald-500/20 bg-emerald-50/50' : 'border-amber-500/20 bg-amber-50/50'}`}>
                   <CardHeader className="p-4 pb-0">
                     <CardTitle className="text-sm font-headline font-bold flex items-center justify-between">

@@ -5,7 +5,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Trophy, Clock, PlayCircle, Loader2, Sparkles, Code2, BarChart3, Star, Zap, ChevronRight, Award } from 'lucide-react';
+import { BookOpen, Trophy, Clock, PlayCircle, Loader2, Sparkles, Code2, BarChart3, Star, Zap, ChevronRight, Award, Medal } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 import Image from 'next/image';
@@ -46,6 +46,12 @@ export default function DashboardPage() {
   }, [db, user?.uid]);
   const { data: submissions } = useCollection(submissionsQuery);
 
+  const achievementsQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return query(collection(db, 'users', user.uid, 'achievements'), orderBy('unlockedAt', 'desc'));
+  }, [db, user?.uid]);
+  const { data: achievements } = useCollection(achievementsQuery);
+
   const enrolledCourses = useMemo(() => {
     if (!userProgress || !allCourses) return [];
     return userProgress.map(progress => {
@@ -56,10 +62,10 @@ export default function DashboardPage() {
 
   const activeCourse = enrolledCourses.find(c => c.status !== 'completed');
 
-  // Gamificación
+  // Gamificación mejorada con insignias
   const completedCount = enrolledCourses.filter(c => c.status === 'completed').length;
   const passedChallenges = submissions?.filter(s => s.passed).length || 0;
-  const xp = (completedCount * 500) + (passedChallenges * 100) + (enrolledCourses.length * 50);
+  const xp = (completedCount * 500) + (passedChallenges * 100) + ((achievements?.length || 0) * 250);
   const level = Math.floor(xp / 1000) + 1;
   const xpInCurrentLevel = xp % 1000;
 
@@ -111,7 +117,6 @@ export default function DashboardPage() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
-          {/* Resume learning */}
           <div className="lg:col-span-3 space-y-8">
             {activeCourse ? (
               <Card className="rounded-[2.5rem] border-none shadow-xl bg-slate-900 text-white overflow-hidden relative group">
@@ -193,40 +198,34 @@ export default function DashboardPage() {
 
               <Card className="rounded-[2rem] border-none shadow-sm bg-white p-6">
                 <CardHeader className="px-0 pt-0">
-                  <CardTitle className="text-lg font-headline">Logros Recientes</CardTitle>
+                  <CardTitle className="text-lg font-headline">Insignias de Maestría</CardTitle>
+                  <CardDescription className="text-xs">Logros otorgados por la IA</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0 space-y-4">
-                  {completedCount > 0 && (
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                      <Award className="h-5 w-5 text-emerald-600" />
-                      <div>
-                        <p className="text-xs font-bold text-emerald-900">Graduado en 1er Curso</p>
-                        <p className="text-[10px] text-emerald-600">¡Ya puedes generar tu primer certificado!</p>
+                <CardContent className="px-0 pt-4 overflow-y-auto max-h-[200px]">
+                  <div className="grid grid-cols-2 gap-3">
+                    {achievements?.map((ach) => (
+                      <div key={ach.id} className="flex flex-col items-center text-center p-3 rounded-2xl bg-amber-50 border border-amber-100 group hover:bg-amber-100 transition-colors">
+                        <div className="bg-amber-500 p-2 rounded-xl text-white mb-2 shadow-sm group-hover:scale-110 transition-transform">
+                          <Medal className="h-5 w-5" />
+                        </div>
+                        <p className="text-[10px] font-bold leading-tight">{ach.title}</p>
                       </div>
-                    </div>
-                  )}
-                  {passedChallenges > 0 && (
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
-                      <Code2 className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="text-xs font-bold text-blue-900">Cazador de Bugs</p>
-                        <p className="text-[10px] text-blue-600">{passedChallenges} retos técnicos superados.</p>
+                    ))}
+                    {(!achievements || achievements.length === 0) && (
+                      <div className="col-span-2 text-center py-8">
+                        <p className="text-xs text-muted-foreground italic">Supera retos con 4.5+ para ganar insignias</p>
                       </div>
-                    </div>
-                  )}
-                  {completedCount === 0 && passedChallenges === 0 && (
-                    <p className="text-sm text-muted-foreground italic text-center py-8">Tus insignias aparecerán aquí.</p>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </div>
 
-          {/* Activity sidebar */}
           <div className="lg:col-span-1 space-y-6">
              <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
                 <CardHeader className="p-6 bg-slate-50 border-b">
-                  <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500">Actividad</CardTitle>
+                  <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500">Actividad Reciente</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 space-y-4">
                   {submissions?.map((sub, i) => (

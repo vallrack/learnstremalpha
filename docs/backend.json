@@ -118,6 +118,18 @@
         "studentCode": { "type": "string" },
         "submittedAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "Achievement": {
+      "title": "Achievement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "iconType": { "type": "string" },
+        "unlockedAt": { "type": "string", "format": "date-time" },
+        "challengeId": { "type": "string" }
+      }
     }
   },
   "auth": {
@@ -132,6 +144,10 @@
       {
         "path": "/users/{userId}/challenge_submissions/{submissionId}",
         "definition": { "entityName": "ChallengeSubmission", "schema": { "$ref": "#/backend/entities/ChallengeSubmission" } }
+      },
+      {
+        "path": "/users/{userId}/achievements/{achievementId}",
+        "definition": { "entityName": "Achievement", "schema": { "$ref": "#/backend/entities/Achievement" } }
       }
     ]
   }

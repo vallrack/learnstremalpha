@@ -4,7 +4,7 @@
 import { useParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
-import { Loader2, Award, Code2, Terminal, Star, Crown, ExternalLink, Trophy, CheckCircle2, UserCircle } from 'lucide-react';
+import { Loader2, Award, Code2, Terminal, Star, Crown, ExternalLink, Trophy, CheckCircle2, UserCircle, Medal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -28,6 +28,12 @@ export default function PublicPortfolioPage() {
     return query(collection(db, 'users', studentId, 'challenge_submissions'), orderBy('submittedAt', 'desc'));
   }, [db, studentId]);
   const { data: submissions } = useCollection(submissionsQuery);
+
+  const achievementsQuery = useMemoFirebase(() => {
+    if (!db || !studentId) return null;
+    return query(collection(db, 'users', studentId, 'achievements'), orderBy('unlockedAt', 'desc'));
+  }, [db, studentId]);
+  const { data: achievements } = useCollection(achievementsQuery);
 
   const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
 
@@ -54,7 +60,6 @@ export default function PublicPortfolioPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-20">
-      {/* Header Estilo CV */}
       <header className="bg-slate-900 text-white pt-20 pb-32 px-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-20 opacity-5 rotate-12"><Terminal className="h-64 w-64" /></div>
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-8 relative z-10">
@@ -86,29 +91,27 @@ export default function PublicPortfolioPage() {
 
       <main className="max-w-5xl mx-auto px-6 -mt-16 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Sidebar Stats */}
           <div className="lg:col-span-1 space-y-6">
             <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden">
               <CardHeader className="bg-slate-50 border-b">
-                <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-500">Progreso Académico</CardTitle>
+                <CardTitle className="text-xs font-bold uppercase tracking-widest text-slate-500">Logros de Maestría</CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span>Nivel {level}</span>
-                    <span className="text-muted-foreground">{xpInLevel}/1000 XP</span>
-                  </div>
-                  <Progress value={xpInLevel / 10} className="h-2" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 p-4 rounded-2xl text-center border">
-                    <p className="text-2xl font-bold text-primary">{submissions?.length || 0}</p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Retos</p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl text-center border">
-                    <p className="text-2xl font-bold text-emerald-600">{submissions?.filter(s => s.passed).length || 0}</p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Aprobados</p>
-                  </div>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {achievements?.map(ach => (
+                    <div key={ach.id} className="flex gap-3 items-center bg-amber-50 p-3 rounded-2xl border border-amber-100">
+                      <div className="bg-amber-500 p-2 rounded-xl text-white shadow-sm">
+                        <Medal className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Insignia</p>
+                        <p className="text-xs font-bold leading-tight">{ach.title}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {(!achievements || achievements.length === 0) && (
+                    <p className="text-xs text-center text-muted-foreground italic py-4">Sin insignias de maestría aún.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -116,16 +119,12 @@ export default function PublicPortfolioPage() {
             <div className="p-6 bg-slate-900 rounded-[2.5rem] text-white space-y-4">
                <h4 className="text-sm font-bold flex items-center gap-2">
                  <Award className="h-4 w-4 text-primary" />
-                 Certificación Oficial
+                 Perfil Verificado
                </h4>
-               <p className="text-xs text-slate-400 leading-relaxed">Este perfil valida las habilidades técnicas adquiridas a través de desafíos evaluados por Inteligencia Artificial en tiempo real.</p>
-               <Link href="/courses">
-                 <Button className="w-full rounded-xl h-10 text-xs font-bold bg-white text-slate-900 hover:bg-slate-100">Ver Catálogo LearnStream</Button>
-               </Link>
+               <p className="text-xs text-slate-400 leading-relaxed">Este portfolio demuestra habilidades técnicas reales validadas por la IA de LearnStream a través de desafíos de código prácticos.</p>
             </div>
           </div>
 
-          {/* Main Content: Submissions/Portfolio */}
           <div className="lg:col-span-2 space-y-8">
             <section>
               <h2 className="text-2xl font-headline font-bold mb-6 flex items-center gap-3">

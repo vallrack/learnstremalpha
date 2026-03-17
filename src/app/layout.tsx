@@ -3,6 +3,8 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { TranslationProvider } from '@/lib/i18n/use-translation';
+import { InactivityLogout } from '@/components/auth/InactivityLogout';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'LearnStream - Academia Digital Moderna',
@@ -24,7 +26,9 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <TranslationProvider>
           <FirebaseClientProvider>
+            <InactivityLogout />
             {children}
+            <Toaster />
           </FirebaseClientProvider>
         </TranslationProvider>
       </body>

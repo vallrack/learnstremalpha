@@ -1,10 +1,11 @@
+
 'use server';
 /**
- * @fileOverview AI flow to evaluate student coding challenges.
+ * @fileOverview AI flow to evaluate student coding challenges and award technical badges.
  *
  * - evaluateChallenge - A function that grades and provides feedback for a student's solution.
  * - EvaluateChallengeInput - Input type (student code, challenge context).
- * - EvaluateChallengeOutput - Output type (score, feedback, passed status).
+ * - EvaluateChallengeOutput - Output type (score, feedback, passed status, awarded badge).
  */
 
 import {ai} from '@/ai/genkit';
@@ -23,6 +24,11 @@ const EvaluateChallengeOutputSchema = z.object({
   score: z.number().describe('Una calificación numérica del 0 al 5, donde 5 es la máxima nota.'),
   passed: z.boolean().describe('Indica si el estudiante aprobó el desafío (generalmente nota >= 3).'),
   feedback: z.string().describe('Feedback técnico detallado y sugerencias de mejora, SIEMPRE EN ESPAÑOL.'),
+  awardedBadge: z.object({
+    title: z.string().describe('Un título creativo para la insignia lograda, ej: "Maestro de Bucles en Python" o "Arquitecto de Sombras CSS".'),
+    description: z.string().describe('Una breve explicación de por qué ganó esta insignia.'),
+    iconType: z.enum(['logic', 'style', 'data', 'architecture', 'speed']).describe('El tipo de habilidad demostrada.')
+  }).optional().describe('Solo se otorga si el puntaje es alto (4.5+) y demuestra maestría en un concepto específico.'),
 });
 export type EvaluateChallengeOutput = z.infer<typeof EvaluateChallengeOutputSchema>;
 
@@ -56,6 +62,8 @@ Criterios de Evaluación:
 1. Lógica y Correctitud: ¿El código resuelve el problema planteado?
 2. Mejores Prácticas: ¿Es código limpio, eficiente y sigue los patrones de {{{technology}}}?
 3. Estructura/Diseño: Si es UI, ¿la estructura tiene sentido para el objetivo?
+
+Si el estudiante demuestra un dominio excepcional (puntaje 4.5 o más), inventa una "Insignia de Maestría" específica para la habilidad que demostró (ej: "Maestro de bucles", "Ninja de Funciones Asíncronas").
 
 Proporciona una calificación del 0 al 5. Sé alentador pero riguroso. 
 Si el código está vacío o es irrelevante para el reto, califica con 0 o 1. 
