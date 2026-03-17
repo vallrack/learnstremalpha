@@ -16,7 +16,9 @@ import {
   Menu, 
   BookOpen, 
   ChevronRight,
-  Home
+  Home,
+  Settings,
+  ChevronDown
 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -82,7 +84,7 @@ export function Navbar() {
   return (
     <nav className="border-b bg-white px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-4 md:gap-8">
-        {/* Mobile Menu Trigger */}
+        {/* Mobile Menu Trigger (Visible only on small screens < 768px) */}
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden rounded-xl">
@@ -179,12 +181,46 @@ export function Navbar() {
           <span className="font-headline font-bold text-lg md:text-xl tracking-tight hidden xs:block">LearnStream</span>
         </Link>
 
-        {/* Desktop Links */}
+        {/* Desktop Links (Visible starting from 768px) */}
         <div className="hidden md:flex items-center gap-6">
           <Link href="/courses" className="text-sm font-medium hover:text-primary transition-colors">{t.common.courses}</Link>
           <Link href="/challenges" className="text-sm font-medium hover:text-primary transition-colors">{t.common.challenges}</Link>
           {user && (
             <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">{t.common.myLearning}</Link>
+          )}
+          
+          {/* Admin Tools Dropdown (Visible starting from 768px to avoid missing menu) */}
+          {user && isAdmin && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 rounded-xl text-amber-600 hover:text-amber-700 hover:bg-amber-50">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden lg:inline">Gestión Académica</span>
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 rounded-2xl shadow-xl border-amber-100">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-amber-600 px-4 pt-3 pb-1">Administración</DropdownMenuLabel>
+                <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
+                  <Link href="/admin/students" className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-amber-600" />
+                    Alumnos
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
+                  <Link href="/admin/challenges" className="flex items-center gap-2">
+                    <Code2 className="h-4 w-4 text-amber-600" />
+                    Desafíos
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
+                  <Link href="/admin" className="flex items-center gap-2">
+                    <LayoutDashboard className="h-4 w-4 text-amber-600" />
+                    Catálogo
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>
@@ -206,30 +242,6 @@ export function Navbar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {/* Desktop Admin Links */}
-        {user && isAdmin && (
-          <div className="hidden lg:flex items-center gap-2">
-            <Link href="/admin/students">
-              <Button variant="ghost" size="sm" className="gap-2 rounded-xl text-xs">
-                <Users className="h-4 w-4" />
-                {t.common.language === 'es' ? 'Alumnos' : 'Students'}
-              </Button>
-            </Link>
-            <Link href="/admin/challenges">
-              <Button variant="ghost" size="sm" className="gap-2 rounded-xl text-xs">
-                <Code2 className="h-4 w-4" />
-                {t.common.challenges}
-              </Button>
-            </Link>
-            <Link href="/admin">
-              <Button variant="ghost" size="sm" className="gap-2 rounded-xl text-xs">
-                <LayoutDashboard className="h-4 w-4" />
-                {t.common.courses}
-              </Button>
-            </Link>
-          </div>
-        )}
         
         {!user && !isUserLoading && (
           <Link href="/login" className="hidden sm:block">
