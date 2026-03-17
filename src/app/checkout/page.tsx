@@ -17,8 +17,7 @@ import {
   Tag,
   CheckCircle2,
   XCircle,
-  AlertTriangle,
-  Globe
+  AlertTriangle
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
@@ -183,7 +182,10 @@ export default function CheckoutPage() {
             </div>
             <div className="text-sm text-rose-900 space-y-3">
               <p className="text-lg font-bold">¡Acción Requerida para habilitar el Pago!</p>
-              <p>La pasarela se queda cargando porque **ePayco bloquea dominios no autorizados**. Copia el siguiente dominio y agrégalo en tu panel de ePayco (**Configuración > Propiedades > Dominios Permitidos**):</p>
+              <p>
+                La pasarela se queda cargando porque <strong>ePayco bloquea dominios no autorizados</strong>. 
+                Copia el siguiente dominio y agrégalo en tu panel de ePayco (<strong>Configuración &gt; Propiedades &gt; Dominios Permitidos</strong>):
+              </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 bg-white/80 p-3 rounded-xl border border-rose-200 font-mono text-xs break-all shadow-inner">
                   {typeof window !== 'undefined' ? window.location.origin : 'Cargando dominio...'}
@@ -322,17 +324,17 @@ export default function CheckoutPage() {
             </CardContent>
             <CardFooter className="bg-slate-50/50 p-8 flex flex-col gap-8 border-t border-dashed">
               <div className="flex flex-wrap justify-center items-center gap-8">
-                <div className="relative w-12 h-12 grayscale hover:grayscale-0 transition-all">
-                  <Image src="https://dashboard.epayco.co/img/pse.png" alt="PSE" fill className="object-contain" />
+                <div className="relative w-12 h-12">
+                  <Image src="https://multimedia.epayco.co/epayco-landing/btns/pse.png" alt="PSE" fill className="object-contain" />
                 </div>
-                <div className="relative w-16 h-8 grayscale hover:grayscale-0 transition-all">
-                  <Image src="https://dashboard.epayco.co/img/nequi.png" alt="Nequi" fill className="object-contain" />
+                <div className="relative w-16 h-8">
+                  <Image src="https://static.epayco.co/logo/nequi.png" alt="Nequi" fill className="object-contain" />
                 </div>
-                <div className="relative w-20 h-8 grayscale hover:grayscale-0 transition-all">
-                  <Image src="https://dashboard.epayco.co/img/daviplata.png" alt="Daviplata" fill className="object-contain" />
+                <div className="relative w-20 h-8">
+                  <Image src="https://static.epayco.co/logo/daviplata.png" alt="Daviplata" fill className="object-contain" />
                 </div>
-                <div className="relative w-16 h-8 grayscale hover:grayscale-0 transition-all">
-                  <Image src="https://dashboard.epayco.co/img/efecty.png" alt="Efecty" fill className="object-contain" />
+                <div className="relative w-16 h-8">
+                  <Image src="https://static.epayco.co/logo/efecty.png" alt="Efecty" fill className="object-contain" />
                 </div>
               </div>
               <p className="text-[10px] text-center text-muted-foreground leading-relaxed px-4 max-w-sm font-medium">
