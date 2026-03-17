@@ -36,6 +36,11 @@ service cloud.firestore {
       }
     }
 
+    match /instructor_applications/{appId} {
+      allow create: if isSignedIn();
+      allow read, write: if isAdmin();
+    }
+
     match /promotions/{promoId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
@@ -49,7 +54,7 @@ service cloud.firestore {
     match /courses/{courseId} {
       allow read: if true;
       allow create: if isSignedIn();
-      allow update, delete: if isAdmin() || request.auth.uid == resource.data.instructorId;
+      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.instructorId == request.auth.uid);
 
       match /modules/{moduleId} {
         allow read: if true;
