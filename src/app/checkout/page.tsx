@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -12,11 +13,15 @@ import {
   Zap,
   Star,
   Award,
-  CreditCard
+  CreditCard,
+  Tag,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
 
 export default function CheckoutPage() {
   const { user, isUserLoading } = useUser();
@@ -25,6 +30,11 @@ export default function CheckoutPage() {
   const { toast } = useToast();
   
   const [isProcessing, setIsProcessing] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+
+  const BASE_PRICE = 120000; // Valor base en COP
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -40,6 +50,54 @@ export default function CheckoutPage() {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router, profile]);
+
+  const finalPrice = useMemo(() => {
+    if (!appliedCoupon) return BASE_PRICE;
+    const discount = (BASE_PRICE * appliedCoupon.discountPercentage) / 100;
+    return Math.max(0, BASE_PRICE - discount);
+  }, [appliedCoupon]);
+
+  const handleValidateCoupon = async () => {
+    if (!couponCode.trim() || !db) return;
+    
+    setIsValidatingCoupon(true);
+    try {
+      const q = query(
+        collection(db, 'promotions'), 
+        where('code', '==', couponCode.toUpperCase().trim()),
+        where('isActive', '==', true),
+        limit(1)
+      );
+      
+      const snap = await getDocs(q);
+      
+      if (snap.empty) {
+        toast({ variant: "destructive", title: "Cupón inválido", description: "El código no existe o ha expirado." });
+        setAppliedCoupon(null);
+      } else {
+        const promo = { id: snap.docs[0].id, ...snap.docs[0].data() } as any;
+        
+        // Validar expiración
+        if (promo.expiresAt && promo.expiresAt.toDate() < new Date()) {
+          toast({ variant: "destructive", title: "Cupón vencido", description: "Esta oferta ya no está disponible." });
+          return;
+        }
+
+        // Validar límite de uso
+        if (promo.usageLimit > 0 && (promo.timesUsed || 0) >= promo.usageLimit) {
+          toast({ variant: "destructive", title: "Cupón agotado", description: "Se ha alcanzado el límite máximo de usos para este código." });
+          return;
+        }
+
+        setAppliedCoupon(promo);
+        toast({ title: "¡Cupón aplicado!", description: `Se ha descontado un ${promo.discountPercentage}% de tu total.` });
+      }
+    } catch (error) {
+      console.error("Error validating coupon", error);
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
 
   const handleStartPayment = () => {
     if (!user?.uid || !user.email) return;
@@ -57,22 +115,23 @@ export default function CheckoutPage() {
 
     setIsProcessing(true);
 
-    // Cargar dinámicamente el script de ePayco
     const script = document.createElement('script');
     script.src = 'https://checkout.epayco.co/checkout.js';
     script.async = true;
     script.onload = () => {
       const handler = (window as any).ePayco.checkout.configure({
         key: publicKey,
-        test: false // ACTIVADO: MODO REAL PARA RECIBIR DINERO
+        test: false 
       });
 
       const data = {
         name: "LearnStream Premium - Acceso Ilimitado",
-        description: "Acceso de por vida a todos los cursos y desafíos de IA",
+        description: appliedCoupon 
+          ? `Acceso vitalicio (Cupón: ${appliedCoupon.code})` 
+          : "Acceso de por vida a todos los cursos y desafíos de IA",
         invoice: `LS-${Date.now()}`,
         currency: "cop",
-        amount: "120000", // Valor en pesos colombianos ($120.000 COP)
+        amount: finalPrice.toString(),
         tax_base: "0",
         tax: "0",
         country: "co",
@@ -81,7 +140,8 @@ export default function CheckoutPage() {
         response: `${window.location.origin}/checkout/success`,
         name_billing: user.displayName || "Estudiante",
         email_billing: user.email,
-        extra1: user.uid, // ID del estudiante para la activación automática
+        extra1: user.uid, 
+        extra2: appliedCoupon?.id || "", // Pasamos el ID del cupón para tracking
       };
 
       handler.open(data);
@@ -101,7 +161,7 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           <div className="space-y-8">
             <div>
-              <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">Potencia tu carrera en Colombia</h1>
+              <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">Potencia tu carrera hoy</h1>
               <p className="text-lg text-muted-foreground">Desbloquea herramientas profesionales con medios de pago locales a través de ePayco.</p>
             </div>
 
@@ -125,10 +185,15 @@ export default function CheckoutPage() {
 
             <div className="p-6 bg-slate-900 rounded-[2rem] text-white">
               <div className="flex justify-between items-center mb-4">
-                <span className="text-slate-400">Inversión total:</span>
-                <span className="text-3xl font-bold">$120.000<span className="text-sm font-normal opacity-60"> COP</span></span>
+                <span className="text-slate-400">Inversión vitalicia:</span>
+                <div className="text-right">
+                  {appliedCoupon && (
+                    <p className="text-xs text-rose-400 line-through font-bold opacity-60">$120.000 COP</p>
+                  )}
+                  <span className="text-3xl font-bold">${finalPrice.toLocaleString()}<span className="text-sm font-normal opacity-60"> COP</span></span>
+                </div>
               </div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Un solo pago para acceso vitalicio</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Un solo pago para siempre</p>
             </div>
           </div>
 
@@ -145,9 +210,44 @@ export default function CheckoutPage() {
                   <span className="text-slate-600 font-medium">Plan Premium Vitalicio</span>
                   <span className="font-bold">$120.000</span>
                 </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase ml-1">¿Tienes un cupón?</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="CÓDIGO" 
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        className="pl-10 rounded-xl h-11 font-mono font-bold" 
+                        disabled={!!appliedCoupon || isValidatingCoupon}
+                      />
+                    </div>
+                    {appliedCoupon ? (
+                      <Button variant="outline" onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="rounded-xl h-11 border-rose-200 text-rose-600 hover:bg-rose-50">
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handleValidateCoupon} 
+                        disabled={isValidatingCoupon || !couponCode.trim()} 
+                        className="rounded-xl h-11 bg-slate-900"
+                      >
+                        {isValidatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                      </Button>
+                    )}
+                  </div>
+                  {appliedCoupon && (
+                    <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
+                      <CheckCircle2 className="h-3 w-3" /> Cupón "{appliedCoupon.code}" aplicado (-{appliedCoupon.discountPercentage}%)
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex justify-between items-center pt-4">
                   <span className="text-xl font-headline font-bold">Total a pagar</span>
-                  <span className="text-3xl font-headline font-bold">$120.000</span>
+                  <span className="text-3xl font-headline font-bold text-primary">${finalPrice.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -184,7 +284,7 @@ export default function CheckoutPage() {
                 <img src="https://multimedia.epayco.co/epayco-landing/v2/efecty.png" alt="Efecty" className="h-full" />
               </div>
               <p className="text-[10px] text-center text-muted-foreground leading-relaxed px-4">
-                Al pagar, aceptas nuestros <span className="text-primary cursor-pointer hover:underline">Términos de Servicio</span>. Tu acceso Premium se activará automáticamente una vez confirmado el pago.
+                Tu acceso Premium se activará automáticamente una vez confirmado el pago por ePayco.
               </p>
             </CardFooter>
           </Card>

@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Home,
   Settings,
-  ChevronDown
+  ChevronDown,
+  Tag
 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -76,15 +77,15 @@ export function Navbar() {
   }
 
   const adminLinks = [
-    { href: '/admin/students', label: t.common.language === 'es' ? 'Estudiantes' : 'Students', icon: Users },
-    { href: '/admin/challenges', label: t.common.challenges, icon: Code2 },
-    { href: '/admin', label: t.common.courses, icon: LayoutDashboard },
+    { href: '/admin/students', label: 'Estudiantes', icon: Users },
+    { href: '/admin/challenges', label: 'Desafíos', icon: Code2 },
+    { href: '/admin/promotions', label: 'Promociones', icon: Tag },
+    { href: '/admin', label: 'Catálogo Cursos', icon: LayoutDashboard },
   ];
 
   return (
     <nav className="border-b bg-white px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-4 md:gap-8">
-        {/* Mobile Menu Trigger (Visible only on small screens < 768px) */}
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden rounded-xl">
@@ -181,7 +182,6 @@ export function Navbar() {
           <span className="font-headline font-bold text-lg md:text-xl tracking-tight hidden xs:block">LearnStream</span>
         </Link>
 
-        {/* Desktop Links (Visible starting from 768px) */}
         <div className="hidden md:flex items-center gap-6">
           <Link href="/courses" className="text-sm font-medium hover:text-primary transition-colors">{t.common.courses}</Link>
           <Link href="/challenges" className="text-sm font-medium hover:text-primary transition-colors">{t.common.challenges}</Link>
@@ -189,7 +189,6 @@ export function Navbar() {
             <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">{t.common.myLearning}</Link>
           )}
           
-          {/* Admin Tools Dropdown */}
           {user && isAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -214,6 +213,12 @@ export function Navbar() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
+                  <Link href="/admin/promotions" className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-amber-600" />
+                    Promociones
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
                   <Link href="/admin" className="flex items-center gap-2">
                     <LayoutDashboard className="h-4 w-4 text-amber-600" />
                     Catálogo
@@ -226,7 +231,6 @@ export function Navbar() {
       </div>
       
       <div className="flex items-center gap-2 md:gap-4">
-        {/* Language Switcher */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
@@ -235,10 +239,10 @@ export function Navbar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-xl">
             <DropdownMenuItem onClick={() => setLanguage('es')} className={language === 'es' ? 'bg-primary/10 font-bold' : ''}>
-              {t.common.spanish}
+              Español
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setLanguage('en')} className={language === 'en' ? 'bg-primary/10 font-bold' : ''}>
-              {t.common.english}
+              English
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -254,8 +258,7 @@ export function Navbar() {
 
         <Button variant="outline" size="sm" className="gap-2 text-primary border-primary hover:bg-primary/5 rounded-xl hidden xs:flex">
           <Crown className="h-4 w-4 fill-primary" />
-          <span className="hidden sm:inline">{user ? t.common.upgrade : (t.common.language === 'es' ? 'Ver Planes' : 'See Plans')}</span>
-          <span className="sm:hidden">{t.common.language === 'es' ? 'PRO' : 'PRO'}</span>
+          <span className="hidden sm:inline">{user ? t.common.upgrade : 'Ver Planes'}</span>
         </Button>
 
         {user ? (

@@ -7,65 +7,18 @@
       "type": "object",
       "description": "Represents a user's profile information within the LearnStream application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "The user's public display name."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address.",
-          "format": "email"
-        },
-        "profileImageUrl": {
-          "type": "string",
-          "description": "URL to the user's profile picture.",
-          "format": "uri"
-        },
-        "role": {
-          "type": "string",
-          "description": "User role (admin, instructor, student)",
-          "enum": ["admin", "instructor", "student"]
-        },
-        "xp": {
-          "type": "number",
-          "description": "Experience points earned by the user.",
-          "default": 0
-        },
-        "level": {
-          "type": "number",
-          "description": "Current level of the user based on XP.",
-          "default": 1
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the user profile was created.",
-          "format": "date-time"
-        },
-        "lastLoginAt": {
-          "type": "string",
-          "description": "Timestamp of the user's last login.",
-          "format": "date-time"
-        },
-        "isPremiumSubscriber": {
-          "type": "boolean",
-          "description": "Indicates if the user has an active premium subscription."
-        },
-        "isActive": {
-          "type": "boolean",
-          "description": "Indicates if the account is active.",
-          "default": true
-        }
+        "id": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "profileImageUrl": { "type": "string", "format": "uri" },
+        "role": { "type": "string", "enum": ["admin", "instructor", "student"] },
+        "xp": { "type": "number", "default": 0 },
+        "level": { "type": "number", "default": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isPremiumSubscriber": { "type": "boolean" },
+        "isActive": { "type": "boolean", "default": true }
       },
-      "required": [
-        "id",
-        "displayName",
-        "email",
-        "createdAt"
-      ]
+      "required": ["id", "displayName", "email", "createdAt"]
     },
     "Course": {
       "title": "Course",
@@ -74,20 +27,30 @@
         "id": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
-        "category": { "type": "string" },
         "technology": { "type": "string" },
         "imageUrl": { "type": "string" },
-        "thumbnailDataUrl": { "type": "string" },
-        "previewVideoUrl": { "type": "string" },
         "instructorId": { "type": "string" },
-        "instructorName": { "type": "string" },
         "isFree": { "type": "boolean" },
         "closingDate": { "type": "string", "format": "date-time" },
-        "isActive": { "type": "boolean", "default": true },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
+        "isActive": { "type": "boolean", "default": true }
       },
       "required": ["id", "title", "technology", "instructorId"]
+    },
+    "Promotion": {
+      "title": "Promotion",
+      "type": "object",
+      "description": "Descuentos y cupones de campaña creados por el admin.",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string", "description": "Código del cupón (ej: PROMO50)" },
+        "discountPercentage": { "type": "number", "description": "Porcentaje de descuento (1-100)" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "usageLimit": { "type": "number", "description": "Máximo de usos permitidos" },
+        "timesUsed": { "type": "number", "default": 0 },
+        "isActive": { "type": "boolean", "default": true },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "code", "discountPercentage"]
     },
     "CodingChallenge": {
       "title": "CodingChallenge",
@@ -101,8 +64,7 @@
         "initialCode": { "type": "string" },
         "solution": { "type": "string" },
         "instructorId": { "type": "string" },
-        "isFree": { "type": "boolean", "default": true },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "isFree": { "type": "boolean", "default": true }
       }
     },
     "ChallengeSubmission": {
@@ -111,42 +73,9 @@
       "properties": {
         "id": { "type": "string" },
         "challengeId": { "type": "string" },
-        "challengeTitle": { "type": "string" },
         "score": { "type": "number" },
-        "feedback": { "type": "string" },
         "passed": { "type": "boolean" },
-        "studentCode": { "type": "string" },
         "submittedAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "Achievement": {
-      "title": "Achievement",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "iconType": { "type": "string" },
-        "unlockedAt": { "type": "string", "format": "date-time" },
-        "challengeId": { "type": "string" }
-      }
-    },
-    "Quiz": {
-      "title": "Quiz",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "questions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "question": { "type": "string" },
-              "options": { "type": "array", "items": { "type": "string" } },
-              "correctAnswer": { "type": "number" }
-            }
-          }
-        }
       }
     }
   },
@@ -160,16 +89,16 @@
         "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" } }
       },
       {
-        "path": "/users/{userId}/challenge_submissions/{submissionId}",
-        "definition": { "entityName": "ChallengeSubmission", "schema": { "$ref": "#/backend/entities/ChallengeSubmission" } }
+        "path": "/courses/{courseId}",
+        "definition": { "entityName": "Course", "schema": { "$ref": "#/backend/entities/Course" } }
       },
       {
-        "path": "/users/{userId}/achievements/{achievementId}",
-        "definition": { "entityName": "Achievement", "schema": { "$ref": "#/backend/entities/Achievement" } }
+        "path": "/promotions/{promoId}",
+        "definition": { "entityName": "Promotion", "schema": { "$ref": "#/backend/entities/Promotion" } }
       },
       {
-        "path": "/courses/{courseId}/modules/{moduleId}/lessons/{lessonId}",
-        "definition": { "entityName": "Lesson", "schema": { "type": "object" } }
+        "path": "/coding_challenges/{challengeId}",
+        "definition": { "entityName": "CodingChallenge", "schema": { "$ref": "#/backend/entities/CodingChallenge" } }
       }
     ]
   }
