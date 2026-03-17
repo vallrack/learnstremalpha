@@ -12,16 +12,11 @@ import {
   Loader2, 
   Search, 
   Filter, 
-  Lock, 
-  Unlock, 
   Info, 
-  ChevronRight,
   Layout,
   Terminal,
-  Trophy,
   Eye,
-  EyeOff,
-  BookOpen
+  EyeOff
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +30,7 @@ import {
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase';
-import { collection, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, query, where } from 'firebase/firestore';
 import { 
   Dialog, 
   DialogContent, 
@@ -71,7 +66,6 @@ export default function AdminChallengesPage() {
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('all');
-  const [filterTech, setFilterTech] = useState('all');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -79,6 +73,7 @@ export default function AdminChallengesPage() {
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
   const isAdmin = profile?.role === 'admin';
+  const isInstructor = profile?.role === 'instructor';
 
   // Form state
   const [title, setTitle] = useState('');
@@ -92,15 +87,22 @@ export default function AdminChallengesPage() {
   const [courseId, setCourseId] = useState<string>('none');
 
   const challengesQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, 'coding_challenges');
-  }, [db]);
+    if (!db || !profile) return null;
+    if (profile.role === 'admin') {
+      return collection(db, 'coding_challenges');
+    }
+    if (profile.role === 'instructor' && user?.uid) {
+      return query(collection(db, 'coding_challenges'), where('instructorId', '==', user.uid));
+    }
+    return null;
+  }, [db, profile, user?.uid]);
   const { data: challenges, isLoading: isChallengesLoading } = useCollection(challengesQuery);
 
   const coursesQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, 'courses');
-  }, [db]);
+    if (!db || !profile) return null;
+    if (profile.role === 'admin') return collection(db, 'courses');
+    return query(collection(db, 'courses'), where('instructorId', '==', user?.uid));
+  }, [db, profile, user?.uid]);
   const { data: courses } = useCollection(coursesQuery);
 
   const resetForm = () => {
@@ -151,6 +153,7 @@ export default function AdminChallengesPage() {
       updateDocumentNonBlocking(doc(db, 'coding_challenges', editingId), challengeData);
     } else {
       challengeData.instructorId = user.uid;
+      challengeData.instructorName = profile?.displayName || user.displayName || user.email;
       challengeData.createdAt = serverTimestamp();
       addDocumentNonBlocking(collection(db, 'coding_challenges'), challengeData);
     }
@@ -170,8 +173,7 @@ export default function AdminChallengesPage() {
     const matchesSearch = challenge.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           challenge.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDifficulty = filterDifficulty === 'all' || challenge.difficulty === filterDifficulty;
-    const matchesTech = filterTech === 'all' || challenge.technology === filterTech;
-    return matchesSearch && matchesDifficulty && matchesTech;
+    return matchesSearch && matchesDifficulty;
   }) || [];
 
   const groupedChallenges = filteredChallenges.reduce((acc, challenge) => {
@@ -194,7 +196,9 @@ export default function AdminChallengesPage() {
               <Code2 className="h-8 w-8 text-primary" />
               Gestión de Desafíos
             </h1>
-            <p className="text-muted-foreground">Configura algoritmos y ejercicios prácticos evaluados por IA.</p>
+            <p className="text-muted-foreground">
+              {isAdmin ? "Panel de Admin: Gestionando todos los retos del sistema." : "Panel de Instructor: Administrando tus retos prácticos."}
+            </p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -372,7 +376,7 @@ export default function AdminChallengesPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button variant="ghost" onClick={() => { setSearchTerm(''); setFilterDifficulty('all'); setFilterTech('all'); }} className="h-11 px-4 rounded-xl text-xs text-muted-foreground">
+          <Button variant="ghost" onClick={() => { setSearchTerm(''); setFilterDifficulty('all'); }} className="h-11 px-4 rounded-xl text-xs text-muted-foreground">
             Limpiar
           </Button>
         </section>
@@ -464,7 +468,7 @@ export default function AdminChallengesPage() {
           ) : (
             <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto">
               <Filter className="h-12 w-12 text-muted-foreground opacity-20 mb-4 mx-auto" />
-              <p className="text-muted-foreground font-medium">No se encontraron desafíos.</p>
+              <p className="text-muted-foreground font-medium">No se encontraron desafíos propios.</p>
             </div>
           )}
         </div>

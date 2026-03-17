@@ -8,17 +8,18 @@ import {
   Users, 
   Search, 
   Mail, 
-  Calendar, 
-  BookOpen, 
   ChevronRight, 
   Loader2, 
   UserCircle,
   Crown,
-  Trophy,
   ArrowLeft,
   UserCheck,
   UserX,
-  ShieldAlert
+  ShieldAlert,
+  ShieldCheck,
+  GraduationCap,
+  BookOpen,
+  Trophy
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminStudentsPage() {
   const db = useFirestore();
@@ -48,9 +50,7 @@ export default function AdminStudentsPage() {
   }, [db]);
   const { data: allCourses } = useCollection(coursesQuery);
 
-  // FILTRO CLAVE: 
-  // 1. Solo mostramos usuarios registrados (con email).
-  // 2. EXCLUIMOS a los administradores de la lista de gestión académica.
+  // Filtramos para mostrar usuarios registrados y NO administradores (para evitar auto-modificación accidental)
   const filteredStudents = students?.filter(s => 
     s.email && 
     s.role !== 'admin' &&
@@ -79,9 +79,9 @@ export default function AdminStudentsPage() {
                   <div className="bg-primary/10 p-2.5 rounded-2xl">
                     <Users className="h-6 w-6 text-primary" />
                   </div>
-                  <h1 className="text-4xl font-headline font-bold">Gestión de Estudiantes</h1>
+                  <h1 className="text-4xl font-headline font-bold">Gestión de Usuarios</h1>
                 </div>
-                <p className="text-muted-foreground">Monitorea el progreso y activa/desactiva cuentas de estudiantes reales.</p>
+                <p className="text-muted-foreground">Monitorea el progreso, gestiona roles y estados de cuenta.</p>
               </div>
               
               <div className="relative w-full md:w-80">
@@ -99,15 +99,15 @@ export default function AdminStudentsPage() {
               {isLoading ? (
                 <div className="p-20 flex flex-col items-center justify-center gap-4">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-muted-foreground font-medium">Cargando base de datos de estudiantes...</p>
+                  <p className="text-muted-foreground font-medium">Cargando base de datos...</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50 border-none hover:bg-slate-50">
-                      <TableHead className="pl-8 h-14">Estudiante</TableHead>
+                      <TableHead className="pl-8 h-14">Usuario</TableHead>
+                      <TableHead>Rol Actual</TableHead>
                       <TableHead>Estado</TableHead>
-                      <TableHead>Nivel</TableHead>
                       <TableHead>Registrado</TableHead>
                       <TableHead className="text-right pr-8">Acciones</TableHead>
                     </TableRow>
@@ -129,6 +129,17 @@ export default function AdminStudentsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
+                            {student.role === 'instructor' ? (
+                              <Badge className="bg-purple-100 text-purple-700 border-purple-200 gap-1 rounded-lg">
+                                <GraduationCap className="h-3 w-3" /> Instructor
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="rounded-lg gap-1">
+                                <Users className="h-3 w-3" /> Estudiante
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             {student.isActive === false ? (
                               <Badge variant="destructive" className="rounded-lg gap-1">
                                 <UserX className="h-3 w-3" /> Inactivo
@@ -137,15 +148,6 @@ export default function AdminStudentsPage() {
                               <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg gap-1">
                                 <UserCheck className="h-3 w-3" /> Activo
                               </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {student.isPremiumSubscriber ? (
-                              <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 gap-1 rounded-lg">
-                                <Crown className="h-3 w-3" /> Premium
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-slate-500 rounded-lg">Estándar</Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-slate-500 text-sm">
@@ -167,7 +169,7 @@ export default function AdminStudentsPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
-                          No hay estudiantes registrados que coincidan con la búsqueda.
+                          No se encontraron usuarios que coincidan con la búsqueda.
                         </TableCell>
                       </TableRow>
                     )}
@@ -197,16 +199,17 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
   }, [db, studentId]);
   const { data: enrollments, isLoading: isProgressLoading } = useCollection(progressQuery);
 
-  const submissionsQuery = useMemoFirebase(() => {
-    if (!db || !studentId) return null;
-    return collection(db, 'users', studentId, 'challenge_submissions');
-  }, [db, studentId]);
-  const { data: submissions } = useCollection(submissionsQuery);
-
   const handleToggleStatus = (active: boolean) => {
     if (!db || !studentId) return;
     updateDocumentNonBlocking(doc(db, 'users', studentId), {
       isActive: active
+    });
+  };
+
+  const handleRoleChange = (newRole: string) => {
+    if (!db || !studentId) return;
+    updateDocumentNonBlocking(doc(db, 'users', studentId), {
+      role: newRole
     });
   };
 
@@ -220,7 +223,7 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
       <header className="flex flex-col gap-6">
         <Button variant="ghost" onClick={onBack} className="w-fit -ml-4 gap-2 text-muted-foreground hover:text-slate-900">
           <ArrowLeft className="h-4 w-4" />
-          Volver a Estudiantes
+          Volver a Usuarios
         </Button>
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -228,11 +231,11 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
             <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
               <AvatarImage src={student?.profileImageUrl} />
               <AvatarFallback className="bg-primary/10 text-primary text-3xl font-bold">
-                {student?.displayName?.[0] || 'E'}
+                {student?.displayName?.[0] || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
-              <h2 className="text-4xl font-headline font-bold text-slate-900">{student?.displayName || 'Estudiante'}</h2>
+              <h2 className="text-4xl font-headline font-bold text-slate-900">{student?.displayName || 'Usuario'}</h2>
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5"><Mail className="h-4 w-4" /> {student?.email}</span>
                 {student?.isPremiumSubscriber && (
@@ -244,31 +247,41 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
             </div>
           </div>
 
-          <Card className="rounded-2xl border-slate-200 bg-white p-4 flex items-center gap-4">
-            <div className="flex flex-col">
-              <Label className="text-xs font-bold uppercase text-muted-foreground mb-1">Estado de la Cuenta</Label>
-              <span className={`text-sm font-bold ${student?.isActive !== false ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {student?.isActive !== false ? 'Cuenta Activa' : 'Cuenta Suspendida'}
-              </span>
-            </div>
-            <Switch 
-              checked={student?.isActive !== false} 
-              onCheckedChange={handleToggleStatus}
-              className="data-[state=checked]:bg-emerald-500"
-            />
-          </Card>
-        </div>
-      </header>
+          <div className="flex gap-4">
+            <Card className="rounded-2xl border-slate-200 bg-white p-4 flex items-center gap-4">
+              <div className="flex flex-col">
+                <Label className="text-xs font-bold uppercase text-muted-foreground mb-1">Estado de la Cuenta</Label>
+                <span className={`text-sm font-bold ${student?.isActive !== false ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {student?.isActive !== false ? 'Cuenta Activa' : 'Cuenta Suspendida'}
+                </span>
+              </div>
+              <Switch 
+                checked={student?.isActive !== false} 
+                onCheckedChange={handleToggleStatus}
+                className="data-[state=checked]:bg-emerald-500"
+              />
+            </Card>
 
-      {student?.isActive === false && (
-        <div className="p-6 bg-rose-50 border border-rose-200 rounded-[2rem] flex items-center gap-4 text-rose-700">
-          <ShieldAlert className="h-8 w-8 shrink-0" />
-          <div>
-            <p className="font-bold text-lg">Cuenta Inactiva</p>
-            <p className="text-sm opacity-80">El acceso a los cursos para este estudiante ha sido revocado. El estudiante verá un mensaje de suspensión al intentar ingresar.</p>
+            <Card className="rounded-2xl border-slate-200 bg-white p-4 flex items-center gap-4 min-w-[200px]">
+              <div className="flex flex-col flex-1">
+                <Label className="text-xs font-bold uppercase text-muted-foreground mb-1">Rol de Usuario</Label>
+                <Select value={student?.role || 'student'} onValueChange={handleRoleChange}>
+                  <SelectTrigger className="h-8 border-none p-0 focus:ring-0 font-bold text-sm bg-transparent">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="student">Estudiante</SelectItem>
+                    <SelectItem value="instructor">Instructor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="p-2 bg-slate-100 rounded-lg">
+                {student?.role === 'instructor' ? <GraduationCap className="h-5 w-5 text-purple-600" /> : <Users className="h-5 w-5 text-slate-600" />}
+              </div>
+            </Card>
           </div>
         </div>
-      )}
+      </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 space-y-6">
@@ -298,8 +311,8 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
         <div className="lg:col-span-2 space-y-8">
           <section>
             <h3 className="text-xl font-headline font-bold mb-6 flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" />
-              Inscripciones Actuales
+              <GraduationCap className="h-5 w-5 text-primary" />
+              Progreso Académico
             </h3>
             
             <div className="space-y-4">

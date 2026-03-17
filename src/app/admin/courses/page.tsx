@@ -8,7 +8,7 @@ import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock,
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc, Timestamp } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, Timestamp, query, where } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,6 +37,7 @@ export default function AdminCoursesPage() {
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
   const isAdmin = profile?.role === 'admin';
+  const isInstructor = profile?.role === 'instructor';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -48,10 +49,17 @@ export default function AdminCoursesPage() {
   const [closingDate, setClosingDate] = useState('');
   const [isActive, setIsActive] = useState(true);
 
+  // Consulta inteligente: Si es admin ve todo, si es instructor solo ve lo suyo
   const coursesQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, 'courses');
-  }, [db]);
+    if (!db || !profile) return null;
+    if (profile.role === 'admin') {
+      return collection(db, 'courses');
+    }
+    if (profile.role === 'instructor' && user?.uid) {
+      return query(collection(db, 'courses'), where('instructorId', '==', user.uid));
+    }
+    return null;
+  }, [db, profile, user?.uid]);
 
   const { data: courses, isLoading } = useCollection(coursesQuery);
 
@@ -91,7 +99,7 @@ export default function AdminCoursesPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !user) return;
+    if (!db || !user || !profile) return;
 
     const courseData: any = {
       title,
@@ -122,7 +130,7 @@ export default function AdminCoursesPage() {
       updateDocumentNonBlocking(doc(db, 'courses', editingCourseId), courseData);
     } else {
       courseData.instructorId = user.uid;
-      courseData.instructorName = user.displayName || user.email;
+      courseData.instructorName = profile.displayName || user.displayName || user.email;
       courseData.createdAt = serverTimestamp();
       if (!courseData.imageUrl && !courseData.thumbnailDataUrl) {
         courseData.imageUrl = `https://picsum.photos/seed/${Math.random()}/800/450`;
@@ -135,7 +143,7 @@ export default function AdminCoursesPage() {
   };
 
   const handleDeleteCourse = (courseId: string) => {
-    if (!db || !isAdmin) return;
+    if (!db || !isAdmin) return; // Solo el administrador puede borrar permanentemente
     if (confirm('¿Eliminar curso permanentemente?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', courseId));
     }
@@ -147,7 +155,7 @@ export default function AdminCoursesPage() {
         <Navbar />
         <main className="max-w-7xl mx-auto px-6 py-12 flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground font-medium">Cargando catálogo...</p>
+          <p className="text-muted-foreground font-medium">Cargando catálogo académico...</p>
         </main>
       </div>
     );
@@ -161,16 +169,20 @@ export default function AdminCoursesPage() {
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-12">
           <div>
             <h1 className="text-4xl font-headline font-bold mb-2">Gestionar Cursos</h1>
-            <p className="text-muted-foreground">Configura acceso, vigencia y certificaciones académicas.</p>
+            <p className="text-muted-foreground">
+              {isAdmin ? "Panel de Administrador: Supervisando todos los cursos." : "Panel de Instructor: Gestionando tus programas de formación."}
+            </p>
           </div>
           
           <div className="flex gap-3">
-            <Link href="/admin/students">
-              <Button variant="outline" className="rounded-xl h-11 gap-2 shadow-sm">
-                <Users className="h-4 w-4" />
-                Estudiantes
-              </Button>
-            </Link>
+            {isAdmin && (
+              <Link href="/admin/students">
+                <Button variant="outline" className="rounded-xl h-11 gap-2 shadow-sm">
+                  <Users className="h-4 w-4" />
+                  Usuarios
+                </Button>
+              </Link>
+            )}
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
               if (!open) resetForm();
@@ -248,7 +260,7 @@ export default function AdminCoursesPage() {
                   </div>
                   <DialogFooter>
                     <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold">
-                      {editingCourseId ? 'Guardar Cambios' : 'Publicar'}
+                      {editingCourseId ? 'Guardar Cambios' : 'Publicar Curso'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -263,7 +275,7 @@ export default function AdminCoursesPage() {
               <TableRow className="bg-slate-50 border-none">
                 <TableHead className="pl-8 h-14">Curso</TableHead>
                 <TableHead>Tecnología</TableHead>
-                <TableHead>Vigencia</TableHead>
+                <TableHead>Autor</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right pr-8">Acciones</TableHead>
               </TableRow>
@@ -287,15 +299,12 @@ export default function AdminCoursesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {course.closingDate ? (
-                        <div className={`flex items-center gap-1.5 text-xs font-medium ${isExpired ? 'text-rose-600' : 'text-slate-600'}`}>
-                          <Clock className="h-3 w-3" />
-                          {new Date(course.closingDate instanceof Timestamp ? course.closingDate.toDate() : course.closingDate).toLocaleDateString()}
-                          {isExpired && <span className="text-[10px] font-bold uppercase">(Cerrado)</span>}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">De por vida</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6 border">
+                          <AvatarFallback className="text-[8px] font-bold">{course.instructorName?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-medium text-slate-600">{course.instructorName}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">

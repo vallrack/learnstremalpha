@@ -19,7 +19,8 @@ import {
   Home,
   Settings,
   ChevronDown,
-  Tag
+  Tag,
+  GraduationCap
 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -58,6 +59,8 @@ export function Navbar() {
   const { data: profile } = useDoc(profileRef);
 
   const isAdmin = profile?.role === 'admin';
+  const isInstructor = profile?.role === 'instructor';
+  const hasManagementAccess = isAdmin || isInstructor;
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -77,11 +80,13 @@ export function Navbar() {
   }
 
   const adminLinks = [
-    { href: '/admin/students', label: 'Estudiantes', icon: Users },
-    { href: '/admin/challenges', label: 'Desafíos', icon: Code2 },
-    { href: '/admin/promotions', label: 'Promociones', icon: Tag },
-    { href: '/admin', label: 'Catálogo Cursos', icon: LayoutDashboard },
+    { href: '/admin/challenges', label: 'Desafíos', icon: Code2, roles: ['admin', 'instructor'] },
+    { href: '/admin', label: 'Catálogo Cursos', icon: LayoutDashboard, roles: ['admin', 'instructor'] },
+    { href: '/admin/students', label: 'Usuarios y Roles', icon: Users, roles: ['admin'] },
+    { href: '/admin/promotions', label: 'Promociones', icon: Tag, roles: ['admin'] },
   ];
+
+  const visibleAdminLinks = adminLinks.filter(link => link.roles.includes(profile?.role || ''));
 
   return (
     <nav className="border-b bg-white px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-50">
@@ -124,11 +129,11 @@ export function Navbar() {
                 </div>
               </section>
 
-              {isAdmin && (
+              {hasManagementAccess && (
                 <section className="space-y-3">
-                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest px-2">Administración</p>
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest px-2">Gestión Académica</p>
                   <div className="grid gap-1">
-                    {adminLinks.map((link) => (
+                    {visibleAdminLinks.map((link) => (
                       <Link 
                         key={link.href} 
                         href={link.href} 
@@ -189,41 +194,25 @@ export function Navbar() {
             <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">{t.common.myLearning}</Link>
           )}
           
-          {user && isAdmin && (
+          {user && hasManagementAccess && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 rounded-xl text-amber-600 hover:text-amber-700 hover:bg-amber-50">
-                  <Settings className="h-4 w-4" />
-                  <span className="hidden lg:inline">Gestión Académica</span>
+                  <GraduationCap className="h-4 w-4" />
+                  <span className="hidden lg:inline">{isAdmin ? 'Gestión Admin' : 'Panel Instructor'}</span>
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 rounded-2xl shadow-xl border-amber-100">
                 <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-amber-600 px-4 pt-3 pb-1">Administración</DropdownMenuLabel>
-                <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
-                  <Link href="/admin/students" className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-amber-600" />
-                    Estudiantes
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
-                  <Link href="/admin/challenges" className="flex items-center gap-2">
-                    <Code2 className="h-4 w-4 text-amber-600" />
-                    Desafíos
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
-                  <Link href="/admin/promotions" className="flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-amber-600" />
-                    Promociones
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
-                  <Link href="/admin" className="flex items-center gap-2">
-                    <LayoutDashboard className="h-4 w-4 text-amber-600" />
-                    Catálogo
-                  </Link>
-                </DropdownMenuItem>
+                {visibleAdminLinks.map((link) => (
+                  <DropdownMenuItem key={link.href} asChild className="p-3 cursor-pointer rounded-xl mx-1">
+                    <Link href={link.href} className="flex items-center gap-2">
+                      <link.icon className="h-4 w-4 text-amber-600" />
+                      {link.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -265,8 +254,8 @@ export function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full overflow-hidden border h-9 w-9">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt={user.displayName || 'Usuario'} className="h-full w-full object-cover" />
+                {profile?.profileImageUrl ? (
+                  <img src={profile.profileImageUrl} alt={displayName} className="h-full w-full object-cover" />
                 ) : (
                   <User className="h-5 w-5" />
                 )}
@@ -275,7 +264,7 @@ export function Navbar() {
             <DropdownMenuContent align="end" className="w-56 rounded-2xl shadow-xl border-muted/50">
               <DropdownMenuLabel className="p-4">
                 <div className="flex flex-col gap-1">
-                  <span className="font-bold text-sm">{user.displayName || 'Estudiante'}</span>
+                  <span className="font-bold text-sm">{profile?.displayName || 'Estudiante'}</span>
                   <span className="text-[10px] text-muted-foreground truncate">{user.email || 'Invitado'}</span>
                 </div>
               </DropdownMenuLabel>
