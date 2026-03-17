@@ -4,7 +4,7 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { CourseCard } from '@/components/courses/CourseCard';
-import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, Loader2, BookOpen, GraduationCap, CheckCircle2 } from 'lucide-react';
+import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, Loader2, BookOpen, GraduationCap, CheckCircle2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
@@ -15,10 +15,8 @@ export default function Home() {
   const { t } = useTranslation();
   const db = useFirestore();
   const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
-  // Usamos el formato lh3 que es más fiable para incrustar imágenes de Drive directamente
   const instructorImageUrl = "https://lh3.googleusercontent.com/d/1FujdqLfrqmCYNzP-TfuGlO9SKaBN8HIh";
 
-  // Consulta real de cursos desde Firestore (limitado a 3 para el Home)
   const coursesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(
@@ -136,7 +134,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto flex flex-col items-center gap-4">
-                <BookOpen className="h-12 w-12 text-muted-foreground opacity-20" />
+                < BookOpen className="h-12 w-12 text-muted-foreground opacity-20" />
                 <p className="text-muted-foreground font-medium">Estamos preparando contenido increíble para ti.</p>
                 <Link href="/admin">
                   <Button variant="outline">Crear primer curso</Button>
@@ -146,50 +144,60 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Instructor Invitation Section */}
-        <section className="py-24 px-6">
+        {/* Instructor Invitation Section (Improved Design) */}
+        <section className="py-24 px-6 relative">
           <div className="max-w-7xl mx-auto">
-            <div className="bg-slate-900 rounded-[3rem] overflow-hidden flex flex-col lg:flex-row items-center shadow-2xl">
-              <div className="flex-1 p-12 lg:p-20 space-y-8">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 text-sm font-bold">
-                  <GraduationCap className="h-4 w-4" />
-                  Conviértete en Instructor
+            <div className="bg-[#0F172A] rounded-[3.5rem] overflow-hidden flex flex-col lg:flex-row items-stretch shadow-2xl border border-white/5 relative">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30" />
+              
+              <div className="flex-1 p-10 lg:p-24 space-y-10 z-10">
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] uppercase tracking-widest font-black">
+                    <GraduationCap className="h-3.5 w-3.5" />
+                    Conviértete en Instructor
+                  </div>
+                  <h2 className="text-4xl lg:text-6xl font-headline font-extrabold text-white leading-[1.1] tracking-tight">
+                    ¿Eres un experto <br/>en tu campo?
+                  </h2>
+                  <p className="text-slate-400 text-lg lg:text-xl leading-relaxed max-w-lg">
+                    Únete a nuestra comunidad de instructores y monetiza tu conocimiento compartiendo lo que sabes con miles de estudiantes.
+                  </p>
                 </div>
-                <h2 className="text-3xl lg:text-5xl font-headline font-bold text-white">
-                  {t.home.instructorSection.title}
-                </h2>
-                <p className="text-slate-400 text-lg leading-relaxed">
-                  {t.home.instructorSection.subtitle}
-                </p>
-                <ul className="space-y-4">
+
+                <div className="space-y-5">
                   {[
-                    t.home.instructorSection.benefit1,
-                    t.home.instructorSection.benefit2,
-                    t.home.instructorSection.benefit3
+                    "Gana el 70% de cada venta generada",
+                    "Herramientas de IA para evaluar desafíos",
+                    "Potencia tu marca personal en la industria"
                   ].map((benefit, i) => (
-                    <li key={i} className="flex items-center gap-3 text-white font-medium">
-                      <div className="bg-emerald-500/20 p-1 rounded-full">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <div key={i} className="flex items-center gap-4 group">
+                      <div className="bg-emerald-500/10 p-1.5 rounded-full border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-colors">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                       </div>
-                      {benefit}
-                    </li>
+                      <span className="text-slate-200 font-bold text-base lg:text-lg">{benefit}</span>
+                    </div>
                   ))}
-                </ul>
-                <Link href="/instructor/apply">
-                  <Button size="lg" className="h-14 px-10 text-lg font-bold rounded-full bg-primary hover:bg-primary/90 mt-4 shadow-xl shadow-primary/20">
-                    {t.home.instructorSection.btn}
-                  </Button>
-                </Link>
+                </div>
+
+                <div className="pt-4">
+                  <Link href="/instructor/apply">
+                    <Button className="h-16 px-12 text-xl font-black rounded-3xl bg-[#4F46E5] hover:bg-[#4338CA] transition-all hover:scale-[1.03] shadow-[0_0_40px_-5px_rgba(79,70,229,0.4)] gap-3">
+                      Empezar a enseñar hoy
+                      <ArrowRight className="h-6 w-6" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
-              {/* Cambiamos aspect-square por aspect-video para que la imagen personalizada luzca mejor */}
-              <div className="flex-1 relative w-full aspect-video lg:aspect-auto h-full min-h-[400px]">
+
+              <div className="flex-1 relative min-h-[450px] lg:min-h-0 bg-slate-800/50">
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0F172A] via-transparent to-transparent z-10 hidden lg:block" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-transparent to-transparent z-10 lg:hidden" />
                 <Image 
                   src={instructorImageUrl} 
                   alt="Expert Mastered Skills" 
                   fill 
-                  className="object-cover transition-all duration-700"
+                  className="object-cover lg:object-center"
                   unoptimized
-                  data-ai-hint="expert teacher logo"
                 />
               </div>
             </div>
