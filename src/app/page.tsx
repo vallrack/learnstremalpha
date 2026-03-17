@@ -15,6 +15,7 @@ export default function Home() {
   const { t } = useTranslation();
   const db = useFirestore();
   const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
+  const instructorImageUrl = "https://drive.google.com/uc?export=view&id=1FujdqLfrqmCYNzP-TfuGlO9SKaBN8HIh";
 
   // Consulta real de cursos desde Firestore (limitado a 3 para el Home)
   const coursesQuery = useMemoFirebase(() => {
@@ -181,10 +182,11 @@ export default function Home() {
               </div>
               <div className="flex-1 relative w-full aspect-square lg:aspect-auto h-full min-h-[400px]">
                 <Image 
-                  src="https://picsum.photos/seed/instructor/800/800" 
+                  src={instructorImageUrl} 
                   alt="Instructor" 
                   fill 
-                  className="object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-700"
+                  className="object-cover transition-all duration-700"
+                  unoptimized
                   data-ai-hint="instructor teacher"
                 />
               </div>
