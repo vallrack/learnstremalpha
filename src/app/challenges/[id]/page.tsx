@@ -75,15 +75,17 @@ export default function ChallengeExecutionPage() {
     }
   }, [challenge]);
 
-  // VERIFICACIÓN DE SEGURIDAD:
-  // No permitir acceso si el reto es privado y el usuario no está inscrito en el curso asociado
+  // VERIFICACIÓN DE SEGURIDAD ESTRICTA:
+  // Un estudiante solo puede acceder si el reto pertenece a un curso en el que está inscrito.
+  // El administrador tiene acceso total.
   const canAccessChallenge = useMemo(() => {
     if (!challenge) return false;
     if (profile?.role === 'admin') return true;
-    if (challenge.visibility === 'private') {
-      return enrolledCourseIds.includes(challenge.courseId);
-    }
-    return true;
+    
+    // Si el reto no tiene curso asignado, se considera restringido para estudiantes (según requerimiento)
+    if (!challenge.courseId) return false;
+    
+    return enrolledCourseIds.includes(challenge.courseId);
   }, [challenge, profile, enrolledCourseIds]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -174,7 +176,7 @@ export default function ChallengeExecutionPage() {
     return <div className="h-screen flex flex-col items-center justify-center gap-4"><h1 className="text-2xl font-bold">Reto no encontrado</h1><Button onClick={() => router.back()}>Volver</Button></div>;
   }
 
-  // Vista de acceso denegado si el reto es privado de otro curso
+  // Vista de acceso denegado si el reto no pertenece a sus cursos
   if (!canAccessChallenge) {
     return (
       <div className="h-screen flex flex-col bg-[#F8FAFC]">
@@ -185,7 +187,7 @@ export default function ChallengeExecutionPage() {
           </div>
           <h1 className="text-4xl font-headline font-bold mb-4">Acceso Restringido</h1>
           <p className="text-muted-foreground max-w-md mb-10 text-lg leading-relaxed">
-            Este desafío es exclusivo para alumnos inscritos en el curso asociado. Inscríbete en el curso para desbloquear esta actividad práctica.
+            Este desafío es exclusivo para estudiantes inscritos en el curso asociado. Por favor, inscríbete en el programa correspondiente para desbloquear esta actividad.
           </p>
           <div className="flex gap-4">
             <Link href="/courses"><Button className="rounded-2xl h-14 px-8 font-bold gap-2"><BookOpen className="h-5 w-5" /> Explorar Cursos</Button></Link>
@@ -212,7 +214,7 @@ export default function ChallengeExecutionPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex gap-2">
                   <Badge variant="secondary" className="rounded-lg">{challenge.technology}</Badge>
-                  {challenge.visibility === 'private' && <Badge className="bg-amber-100 text-amber-700 border-amber-200">Exclusivo Curso</Badge>}
+                  <Badge className="bg-primary/10 text-primary border-none">Reto de Curso</Badge>
                 </div>
                 <Badge className={challenge.difficulty === 'Principiante' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}>
                   {challenge.difficulty}

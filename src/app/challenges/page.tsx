@@ -50,15 +50,13 @@ export default function ChallengesCataloguePage() {
   };
 
   // FILTRADO CRÍTICO: 
-  // 1. Desafíos Públicos (visibility === 'public' o undefined)
-  // 2. Desafíos de cursos en los que el alumno está inscrito
-  // 3. Admin ve todo
+  // 1. El Administrador ve TODO el catálogo.
+  // 2. El Estudiante SOLO ve desafíos de cursos en los que está inscrito.
+  // 3. Se ocultan retos públicos generales a estudiantes para evitar ruido (según requerimiento).
   const filteredChallenges = useMemo(() => {
     return allChallenges?.filter(challenge => {
       const isVisible = isAdmin || 
-                        challenge.visibility === 'public' || 
-                        !challenge.visibility ||
-                        (challenge.visibility === 'private' && enrolledCourseIds.includes(challenge.courseId));
+                        (challenge.courseId && enrolledCourseIds.includes(challenge.courseId));
       
       const matchesSearch = challenge.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             challenge.technology?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -89,8 +87,9 @@ export default function ChallengesCataloguePage() {
           </div>
           <h1 className="text-4xl md:text-6xl font-headline font-bold mb-6 text-foreground">Desafíos de Código</h1>
           <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
-            Pon a prueba tu lógica con retos públicos o exclusivos de tus cursos. 
-            Solo verás desafíos de cursos en los que estés inscrito.
+            {isAdmin 
+              ? "Panel de administración: Visualizando todos los retos del sistema." 
+              : "Retos prácticos exclusivos de tus cursos activos. Domina la tecnología paso a paso."}
           </p>
           
           <div className="relative max-w-xl mx-auto">
@@ -129,17 +128,9 @@ export default function ChallengesCataloguePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {techChallenges.map(challenge => {
                     const isPremium = !challenge.isFree;
-                    const isCoursePrivate = challenge.visibility === 'private';
 
                     return (
                       <Card key={challenge.id} className="group rounded-[2.5rem] overflow-hidden border-slate-200 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 flex flex-col bg-white relative">
-                        {isCoursePrivate && (
-                          <div className="absolute top-4 left-4 z-10">
-                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] font-bold gap-1 rounded-lg">
-                              <Lock className="h-2.5 w-2.5" /> CURSO
-                            </Badge>
-                          </div>
-                        )}
                         <CardHeader className="p-8 pb-4">
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex gap-2 ml-auto">
@@ -163,21 +154,12 @@ export default function ChallengesCataloguePage() {
                           </p>
                         </CardContent>
                         <CardFooter className="p-8 pt-0 mt-auto">
-                          {isPremium && !user ? (
-                            <Link href="/login" className="w-full">
-                              <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 font-bold border-amber-200 text-amber-700 hover:bg-amber-50">
-                                <LogIn className="h-4 w-4" />
-                                Ingresa para Acceder
-                              </Button>
+                          <Button className="w-full h-12 rounded-2xl gap-2 font-bold group-hover:bg-primary transition-all shadow-lg shadow-transparent group-hover:shadow-primary/20" asChild>
+                            <Link href={`/challenges/${challenge.id}`}>
+                              Aceptar Desafío
+                              <ArrowRight className="h-4 w-4" />
                             </Link>
-                          ) : (
-                            <Button className="w-full h-12 rounded-2xl gap-2 font-bold group-hover:bg-primary transition-all shadow-lg shadow-transparent group-hover:shadow-primary/20" asChild>
-                              <Link href={`/challenges/${challenge.id}`}>
-                                Aceptar Desafío
-                                <ArrowRight className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          )}
+                          </Button>
                         </CardFooter>
                       </Card>
                     );
@@ -189,9 +171,9 @@ export default function ChallengesCataloguePage() {
         ) : (
           <div className="text-center py-20 bg-muted/20 rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto flex flex-col items-center">
             <EyeOff className="h-12 w-12 text-muted-foreground opacity-20 mb-4" />
-            <p className="text-muted-foreground font-medium">No hay desafíos visibles para ti en este momento.</p>
-            <p className="text-xs text-muted-foreground mt-2">Inscríbete en cursos para desbloquear sus retos exclusivos.</p>
-            <Link href="/courses" className="mt-6"><Button variant="outline">Explorar Cursos</Button></Link>
+            <p className="text-muted-foreground font-medium">No hay desafíos disponibles para tus cursos actuales.</p>
+            <p className="text-xs text-muted-foreground mt-2">Inscríbete en nuevos cursos para desbloquear retos de otras tecnologías.</p>
+            <Link href="/courses" className="mt-6"><Button variant="outline">Explorar Catálogo de Cursos</Button></Link>
           </div>
         )}
       </main>
