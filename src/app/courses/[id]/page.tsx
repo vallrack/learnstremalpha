@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
@@ -137,7 +136,7 @@ export default function CourseDetailPage() {
           <div className="flex flex-wrap items-center gap-6 text-sm text-slate-400">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4" /> 
-              Instructor: <span className="text-white font-medium">{course.instructorName || 'Experto'}</span>
+              Instructor: <span className="text-white font-medium">{course.instructorName || 'Experto LearnStream'}</span>
             </div>
             {closingDate && (
               <div className="flex items-center gap-2">
@@ -328,7 +327,7 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
 
   const { data: lessons, isLoading } = useCollection(lessonsQuery);
 
-  if (isLoading) return <div className="py-4 flex justify-center"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>;
+  if (isLoading) return <div className="py-4 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
     <div className="space-y-2">

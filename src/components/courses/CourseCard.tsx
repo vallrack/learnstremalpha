@@ -4,14 +4,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, BookOpen } from 'lucide-react';
+import { PlayCircle, BookOpen, User } from 'lucide-react';
 
 export function CourseCard({ course }: { course: any }) {
   // Usamos thumbnailDataUrl como fuente principal de la imagen
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
 
   return (
-    <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 flex flex-col h-full bg-card">
+    <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 flex flex-col h-full bg-card rounded-[2rem]">
       <Link href={`/courses/${course.id}`}>
         <div className="relative aspect-video overflow-hidden">
           <Image 
@@ -29,27 +29,32 @@ export function CourseCard({ course }: { course: any }) {
           )}
         </div>
       </Link>
-      <CardHeader className="p-4 pb-0">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <Badge variant="secondary" className="font-normal rounded-lg">{course.category || 'General'}</Badge>
-          <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> Curso Real</span>
+      <CardHeader className="p-6 pb-0">
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-2">
+          <Badge variant="secondary" className="font-bold rounded-lg px-2 py-0.5 h-5 bg-primary/5 text-primary border-none lowercase first-letter:uppercase">{course.category || 'General'}</Badge>
+          <span className="flex items-center gap-1 font-medium"><BookOpen className="h-3 w-3" /> Curso Real</span>
         </div>
         <Link href={`/courses/${course.id}`}>
-          <h3 className="font-headline font-semibold text-lg line-clamp-1 group-hover:text-primary transition-colors text-foreground">
+          <h3 className="font-headline font-bold text-xl line-clamp-1 group-hover:text-primary transition-colors text-slate-900">
             {course.title}
           </h3>
         </Link>
       </CardHeader>
-      <CardContent className="p-4 pt-2 flex-1">
-        <p className="text-sm text-muted-foreground line-clamp-2">
+      <CardContent className="p-6 pt-3 flex-1">
+        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
           {course.description}
         </p>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex items-center justify-between border-t border-border/40 mt-auto">
-        <span className="text-xs font-medium text-muted-foreground">Por {course.instructorName || 'Instructor'}</span>
+      <CardFooter className="p-6 pt-0 flex items-center justify-between border-t border-slate-50 mt-auto">
+        <div className="flex items-center gap-2">
+          <div className="bg-slate-100 p-1.5 rounded-full">
+            <User className="h-3 w-3 text-slate-400" />
+          </div>
+          <span className="text-[11px] font-bold text-slate-600">Por {course.instructorName || 'Experto LearnStream'}</span>
+        </div>
         <Link href={`/courses/${course.id}`}>
-          <div className="text-primary hover:text-primary/80 transition-colors">
-            <PlayCircle className="h-8 w-8" />
+          <div className="text-primary hover:text-primary/80 transition-all hover:scale-110">
+            <PlayCircle className="h-8 w-8 fill-primary/10" />
           </div>
         </Link>
       </CardFooter>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,6 +16,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { TECH_STACK } from '@/lib/languages';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export default function AdminCoursesPage() {
   const { user } = useUser();
@@ -110,6 +110,7 @@ export default function AdminCoursesPage() {
       isActive,
       previewVideoUrl,
       updatedAt: serverTimestamp(),
+      instructorName: profile.displayName || user.displayName || user.email // Sincronizamos siempre el nombre
     };
 
     if (closingDate) {
@@ -130,7 +131,6 @@ export default function AdminCoursesPage() {
       updateDocumentNonBlocking(doc(db, 'courses', editingCourseId), courseData);
     } else {
       courseData.instructorId = user.uid;
-      courseData.instructorName = profile.displayName || user.displayName || user.email;
       courseData.createdAt = serverTimestamp();
       if (!courseData.imageUrl && !courseData.thumbnailDataUrl) {
         courseData.imageUrl = `https://picsum.photos/seed/${Math.random()}/800/450`;
@@ -301,9 +301,9 @@ export default function AdminCoursesPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6 border">
-                          <AvatarFallback className="text-[8px] font-bold">{course.instructorName?.[0]}</AvatarFallback>
+                          <AvatarFallback className="text-[8px] font-bold bg-slate-100 text-slate-600 uppercase">{course.instructorName?.[0] || '?'}</AvatarFallback>
                         </Avatar>
-                        <span className="text-xs font-medium text-slate-600">{course.instructorName}</span>
+                        <span className="text-xs font-medium text-slate-600">{course.instructorName || 'Experto'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
