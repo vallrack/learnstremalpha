@@ -5,6 +5,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { BookOpen, Trophy, Clock, PlayCircle, Loader2, Sparkles, Code2, BarChart3, Star, Zap, ChevronRight, Award, Medal } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
