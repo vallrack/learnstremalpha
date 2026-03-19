@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock, Users, Eye, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock, Users, Eye, Upload, Image as ImageIcon, X, Link as LinkIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -25,11 +25,9 @@ export default function AdminCoursesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    setNow(new Date());
   }, []);
   
   const profileRef = useMemoFirebase(() => {
@@ -38,7 +36,6 @@ export default function AdminCoursesPage() {
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
   const isAdmin = profile?.role === 'admin';
-  const isInstructor = profile?.role === 'instructor';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -50,7 +47,6 @@ export default function AdminCoursesPage() {
   const [closingDate, setClosingDate] = useState('');
   const [isActive, setIsActive] = useState(true);
 
-  // Consulta inteligente: Si es admin ve todo, si es instructor solo ve lo suyo
   const coursesQuery = useMemoFirebase(() => {
     if (!db || !profile) return null;
     if (profile.role === 'admin') {
@@ -109,6 +105,18 @@ export default function AdminCoursesPage() {
     }
   };
 
+  // Función para convertir links de Google Drive a links directos de imagen
+  const handleUrlChange = (val: string) => {
+    let finalUrl = val;
+    if (val.includes('drive.google.com')) {
+      const match = val.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (match && match[1]) {
+        finalUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    }
+    setImageUrl(finalUrl);
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!db || !user || !profile) return;
@@ -134,8 +142,10 @@ export default function AdminCoursesPage() {
     if (imageUrl) {
       if (imageUrl.startsWith('data:')) {
         courseData.thumbnailDataUrl = imageUrl;
+        courseData.imageUrl = null;
       } else {
         courseData.imageUrl = imageUrl;
+        courseData.thumbnailDataUrl = null;
       }
     }
 
@@ -282,16 +292,28 @@ export default function AdminCoursesPage() {
                               <div className="flex flex-col items-center gap-2 p-6 text-center">
                                 <div className="bg-white p-3 rounded-2xl shadow-sm"><ImageIcon className="h-6 w-6 text-slate-400" /></div>
                                 <div>
-                                  <p className="text-xs font-bold text-slate-600">Sube una imagen (16:9)</p>
-                                  <p className="text-[10px] text-muted-foreground">PNG, JPG o WEBP</p>
+                                  <p className="text-xs font-bold text-slate-600">Sube imagen o pega URL</p>
+                                  <p className="text-[10px] text-muted-foreground">Formato 16:9 recomendado</p>
                                 </div>
                                 <Label htmlFor="course-image" className="mt-2 cursor-pointer bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/90">
-                                  Seleccionar Archivo
+                                  Subir Archivo
                                 </Label>
                               </div>
                             )}
                           </div>
                           <input id="course-image" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                        </div>
+                        
+                        <div className="flex flex-col gap-2 mt-2">
+                          <div className="relative">
+                            <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                            <Input 
+                              placeholder="O pega URL de Internet o Google Drive..." 
+                              value={imageUrl.startsWith('data:') ? '' : imageUrl}
+                              onChange={(e) => handleUrlChange(e.target.value)}
+                              className="rounded-xl h-9 text-[10px] pl-8 bg-slate-50"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -340,8 +362,6 @@ export default function AdminCoursesPage() {
             </TableHeader>
             <TableBody>
               {courses?.map(course => {
-                const cDate = course.closingDate && (course.closingDate instanceof Timestamp ? course.closingDate.toDate() : new Date(course.closingDate));
-                
                 return (
                   <TableRow key={course.id} className="border-slate-100">
                     <TableCell className="font-bold pl-8 py-5">
