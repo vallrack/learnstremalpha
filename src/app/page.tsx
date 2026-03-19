@@ -8,14 +8,23 @@ import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, Loader2, BookOpen, Grad
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, limit, where } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, limit, where, doc } from 'firebase/firestore';
 
 export default function Home() {
   const { t } = useTranslation();
   const db = useFirestore();
+  const { user } = useUser();
   const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
   const instructorImageUrl = "https://lh3.googleusercontent.com/d/1FujdqLfrqmCYNzP-TfuGlO9SKaBN8HIh";
+
+  // Verificación de acceso administrativo para mostrar placeholders
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+  const hasManagementAccess = profile?.role === 'admin' || profile?.role === 'instructor';
 
   const coursesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -27,6 +36,9 @@ export default function Home() {
   }, [db]);
 
   const { data: featuredCourses, isLoading } = useCollection(coursesQuery);
+
+  // Lógica de visibilidad: Mostrar la sección si está cargando, si hay cursos, o si el usuario es admin/instructor
+  const shouldShowCoursesSection = isLoading || (featuredCourses && featuredCourses.length > 0) || hasManagementAccess;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -106,43 +118,47 @@ export default function Home() {
         </section>
 
         {/* Real Featured Courses Section */}
-        <section className="py-24 px-6 bg-slate-50/50">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row items-center md:items-end justify-between mb-12 gap-6">
-              <div className="text-center md:text-left">
-                <h2 className="text-3xl font-headline font-bold mb-4">{t.home.coursesSection.title}</h2>
-                <p className="text-muted-foreground">{t.home.coursesSection.subtitle}</p>
-              </div>
-              <Link href="/courses">
-                <Button variant="link" className="text-primary font-bold p-0 h-auto text-lg">
-                  {t.home.coursesSection.viewAll}
-                </Button>
-              </Link>
-            </div>
-            
-            {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="aspect-video bg-muted animate-pulse rounded-[2.5rem]" />
-                ))}
-              </div>
-            ) : featuredCourses && featuredCourses.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {featuredCourses.map(course => (
-                  <CourseCard key={course.id} course={course} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto flex flex-col items-center gap-4">
-                < BookOpen className="h-12 w-12 text-muted-foreground opacity-20" />
-                <p className="text-muted-foreground font-medium">Estamos preparando contenido increíble para ti.</p>
-                <Link href="/admin">
-                  <Button variant="outline">Crear primer curso</Button>
+        {shouldShowCoursesSection && (
+          <section className="py-24 px-6 bg-slate-50/50">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex flex-col md:flex-row items-center md:items-end justify-between mb-12 gap-6">
+                <div className="text-center md:text-left">
+                  <h2 className="text-3xl font-headline font-bold mb-4">{t.home.coursesSection.title}</h2>
+                  <p className="text-muted-foreground">{t.home.coursesSection.subtitle}</p>
+                </div>
+                <Link href="/courses">
+                  <Button variant="link" className="text-primary font-bold p-0 h-auto text-lg">
+                    {t.home.coursesSection.viewAll}
+                  </Button>
                 </Link>
               </div>
-            )}
-          </div>
-        </section>
+              
+              {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="aspect-video bg-muted animate-pulse rounded-[2.5rem]" />
+                  ))}
+                </div>
+              ) : featuredCourses && featuredCourses.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {featuredCourses.map(course => (
+                    <CourseCard key={course.id} course={course} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto flex flex-col items-center gap-4">
+                  < BookOpen className="h-12 w-12 text-muted-foreground opacity-20" />
+                  <p className="text-muted-foreground font-medium">Estamos preparando contenido increíble para ti.</p>
+                  {hasManagementAccess && (
+                    <Link href="/admin">
+                      <Button variant="outline">Crear primer curso</Button>
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Instructor Invitation Section (Improved Design) */}
         <section className="py-24 px-6 relative">
