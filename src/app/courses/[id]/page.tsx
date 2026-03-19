@@ -50,7 +50,6 @@ export default function CourseDetailPage() {
     );
   }
 
-  // Verificación de cuenta inactiva
   const isAccountInactive = profile?.isActive === false;
 
   if (isAccountInactive) {
@@ -90,6 +89,7 @@ export default function CourseDetailPage() {
   const isCompleted = progress?.status === 'completed';
   const isPremium = !!profile?.isPremiumSubscriber;
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
+  const isUnoptimized = imageSrc.startsWith('data:') || imageSrc.includes('drive.google.com') || imageSrc.includes('googleusercontent.com');
   const previewVideoUrl = course.previewVideoUrl || null;
 
   const closingDate = course.closingDate instanceof Timestamp ? course.closingDate.toDate() : (course.closingDate ? new Date(course.closingDate) : null);
@@ -231,7 +231,7 @@ export default function CourseDetailPage() {
                       alt={course.title}
                       fill
                       className="object-cover opacity-80"
-                      unoptimized={imageSrc.startsWith('data:')}
+                      unoptimized={isUnoptimized}
                     />
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
                       <Button 

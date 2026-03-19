@@ -105,16 +105,13 @@ export default function AdminCoursesPage() {
     }
   };
 
-  // Función robusta para convertir links de Google Drive a links directos de imagen
   const handleUrlChange = (val: string) => {
     let finalUrl = val;
+    // Soporte para enlaces directos de Google Drive
     if (val.includes('drive.google.com')) {
-      // Intentar extraer el ID usando diferentes patrones comunes
       const dMatch = val.match(/\/d\/([a-zA-Z0-9-_]+)/);
       const idMatch = val.match(/[?&]id=([a-zA-Z0-9-_]+)/);
-      
       const driveId = (dMatch && dMatch[1]) || (idMatch && idMatch[1]);
-      
       if (driveId) {
         finalUrl = `https://drive.google.com/uc?export=view&id=${driveId}`;
       }
@@ -283,7 +280,13 @@ export default function AdminCoursesPage() {
                           <div className={`aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-colors ${imageUrl ? 'border-primary/20 bg-primary/5' : 'border-slate-200 bg-slate-50'}`}>
                             {imageUrl ? (
                               <>
-                                <Image src={imageUrl} alt="Preview" fill className="object-cover" unoptimized />
+                                <Image 
+                                  src={imageUrl} 
+                                  alt="Preview" 
+                                  fill 
+                                  className="object-cover" 
+                                  unoptimized={imageUrl.startsWith('data:') || imageUrl.includes('drive.google.com') || imageUrl.includes('googleusercontent.com')} 
+                                />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                   <Label htmlFor="course-image" className="cursor-pointer bg-white text-slate-900 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center gap-2">
                                     <Upload className="h-3 w-3" /> Cambiar
@@ -367,12 +370,19 @@ export default function AdminCoursesPage() {
             </TableHeader>
             <TableBody>
               {courses?.map(course => {
+                const cardImg = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/c/200/150';
                 return (
                   <TableRow key={course.id} className="border-slate-100">
                     <TableCell className="font-bold pl-8 py-5">
                       <div className="flex items-center gap-4">
                         <div className="relative h-12 w-20 rounded-lg overflow-hidden border bg-slate-100 shrink-0">
-                          <Image src={course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/c/200/150'} alt={course.title} fill className="object-cover" unoptimized />
+                          <Image 
+                            src={cardImg} 
+                            alt={course.title} 
+                            fill 
+                            className="object-cover" 
+                            unoptimized={cardImg.startsWith('data:') || cardImg.includes('drive.google.com') || cardImg.includes('googleusercontent.com')} 
+                          />
                         </div>
                         <div className="flex flex-col">
                           <span className="line-clamp-1">{course.title}</span>

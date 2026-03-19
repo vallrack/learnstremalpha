@@ -7,25 +7,31 @@ import { Badge } from '@/components/ui/badge';
 import { PlayCircle, BookOpen, User } from 'lucide-react';
 
 export function CourseCard({ course }: { course: any }) {
-  // Usamos thumbnailDataUrl como fuente principal de la imagen
+  // Usamos thumbnailDataUrl como fuente principal de la imagen (Base64) o imageUrl (URL externa)
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
+
+  // Determinamos si debemos saltar la optimización de Next.js (necesario para Google Drive y Base64)
+  const isExternalOrData = 
+    imageSrc.startsWith('data:') || 
+    imageSrc.includes('drive.google.com') || 
+    imageSrc.includes('googleusercontent.com');
 
   return (
     <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 flex flex-col h-full bg-card rounded-[2rem]">
       <Link href={`/courses/${course.id}`}>
-        <div className="relative aspect-video overflow-hidden">
+        <div className="relative aspect-video overflow-hidden bg-slate-100">
           <Image 
             src={imageSrc} 
-            alt={course.title}
+            alt={course.title || 'Curso'}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
-            unoptimized={imageSrc.startsWith('data:')}
+            unoptimized={isExternalOrData}
           />
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
           {course.isFree ? (
-            <Badge className="absolute top-3 right-3 bg-emerald-500 hover:bg-emerald-600 border-none">Gratis</Badge>
+            <Badge className="absolute top-3 right-3 bg-emerald-500 hover:bg-emerald-600 border-none shadow-sm">Gratis</Badge>
           ) : (
-            <Badge className="absolute top-3 right-3 bg-amber-500 hover:bg-amber-600 border-none text-white">Premium</Badge>
+            <Badge className="absolute top-3 right-3 bg-amber-500 hover:bg-amber-600 border-none text-white shadow-sm">Premium</Badge>
           )}
         </div>
       </Link>
@@ -50,7 +56,7 @@ export function CourseCard({ course }: { course: any }) {
           <div className="bg-slate-100 p-1.5 rounded-full">
             <User className="h-3 w-3 text-slate-400" />
           </div>
-          <span className="text-[11px] font-bold text-slate-600">Por {course.instructorName || 'Experto LearnStream'}</span>
+          <span className="text-[11px] font-bold text-slate-600 truncate max-w-[150px]">Por {course.instructorName || 'Experto'}</span>
         </div>
         <Link href={`/courses/${course.id}`}>
           <div className="text-primary hover:text-primary/80 transition-all hover:scale-110">
