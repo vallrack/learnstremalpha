@@ -112,6 +112,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'pseint.sourceforge.net',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
