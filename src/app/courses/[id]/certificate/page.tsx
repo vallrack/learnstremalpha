@@ -71,7 +71,7 @@ function CertificateContent() {
   if (!isPreview && (!course || !progress || progress.status !== 'completed')) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4 text-center p-6">
-        <AlertCircle className="h-12 w-12 text-amber-500" />
+        <AlertCircle className="h-12 w-12 text-amber-50" />
         <h1 className="text-2xl font-bold">Certificado no disponible</h1>
         <p className="text-muted-foreground">Debes completar el 100% del curso para obtener tu certificación.</p>
         <Button onClick={() => router.back()}>Volver</Button>
