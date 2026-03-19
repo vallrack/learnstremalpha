@@ -5,6 +5,14 @@ export const TECH_STACK = {
       "PSeInt (Pseudocódigo)", "LPP (Lógica de Programación)", "Diagramas de Flujo", "Scratch"
     ]
   },
+  "Idiomas y Comunicación": {
+    "Inglés para Programadores": [
+      "English for Programmers", "Technical Documentation", "Naming Conventions", "Interview Prep (English)", "Git & Commit Messages"
+    ],
+    "Inglés General": [
+      "A1 - Beginner", "A2 - Elementary", "B1 - Intermediate", "B2 - Upper Intermediate", "C1 - Advanced"
+    ]
+  },
   "Lenguajes de Programación": {
     "Los Gigantes": [
       "JavaScript", "TypeScript", "Python", "Java", "Kotlin", "C#", "C", "C++", "Swift", "Objective-C", "PHP", "Ruby", "Go (Golang)"

@@ -1,10 +1,10 @@
 
 'use server';
 /**
- * @fileOverview AI flow to evaluate student coding challenges and award technical badges.
+ * @fileOverview AI flow to evaluate student coding and language challenges.
  *
  * - evaluateChallenge - A function that grades and provides feedback for a student's solution.
- * - EvaluateChallengeInput - Input type (student code, challenge context).
+ * - EvaluateChallengeInput - Input type (student text/code, challenge context).
  * - EvaluateChallengeOutput - Output type (score, feedback, passed status, awarded badge).
  */
 
@@ -23,12 +23,12 @@ export type EvaluateChallengeInput = z.infer<typeof EvaluateChallengeInputSchema
 const EvaluateChallengeOutputSchema = z.object({
   score: z.number().describe('Una calificación numérica del 0 al 5, donde 5 es la máxima nota.'),
   passed: z.boolean().describe('Indica si el estudiante aprobó el desafío (generalmente nota >= 3).'),
-  feedback: z.string().describe('Feedback técnico detallado y sugerencias de mejora, SIEMPRE EN ESPAÑOL.'),
+  feedback: z.string().describe('Feedback detallado y sugerencias de mejora, SIEMPRE EN ESPAÑOL.'),
   awardedBadge: z.object({
-    title: z.string().describe('Un título creativo para la insignia lograda, ej: "Maestro de Bucles en Python" o "Arquitecto de Sombras CSS".'),
+    title: z.string().describe('Un título creativo para la insignia lograda, ej: "Polyglot Coder" o "Maestro de la Lógica".'),
     description: z.string().describe('Una breve explicación de por qué ganó esta insignia.'),
-    iconType: z.enum(['logic', 'style', 'data', 'architecture', 'speed']).describe('El tipo de habilidad demostrada.')
-  }).optional().describe('Solo se otorga si el puntaje es alto (4.5+) y demuestra maestría en un concepto específico.'),
+    iconType: z.enum(['logic', 'style', 'data', 'architecture', 'speed', 'communication']).describe('El tipo de habilidad demostrada.')
+  }).optional().describe('Solo se otorga si el puntaje es alto (4.5+) y demuestra maestría.'),
 });
 export type EvaluateChallengeOutput = z.infer<typeof EvaluateChallengeOutputSchema>;
 
@@ -40,17 +40,17 @@ const prompt = ai.definePrompt({
   name: 'evaluateChallengePrompt',
   input: {schema: EvaluateChallengeInputSchema},
   output: {schema: EvaluateChallengeOutputSchema},
-  prompt: `Eres un experto revisor técnico y desarrollador senior. 
-Tu tarea es evaluar la entrega de un estudiante para un desafío de código, diseño o lógica algorítmica.
+  prompt: `Eres un experto revisor senior en tecnología y comunicación profesional.
+Tu tarea es evaluar la entrega de un estudiante para un desafío que puede ser de CÓDIGO o de IDIOMAS (INGLÉS TÉCNICO).
 
-REGLA CRÍTICA: Todo el feedback debe estar escrito en ESPAÑOL.
+REGLA CRÍTICA: Todo el feedback debe estar escrito en ESPAÑOL para que el estudiante lo entienda claramente, independientemente de la materia evaluada.
 
 Contexto del Desafío:
 ---
 Título: {{{challengeTitle}}}
-Tecnología: {{{technology}}}
+Materia/Tecnología: {{{technology}}}
 Descripción: {{{challengeDescription}}}
-Solución de Referencia (si está disponible): {{{solutionReference}}}
+Referencia Esperada: {{{solutionReference}}}
 ---
 
 Entrega del Estudiante:
@@ -58,16 +58,21 @@ Entrega del Estudiante:
 {{{studentCode}}}
 ---
 
-Criterios de Evaluación:
-1. Lógica y Correctitud: ¿El código o algoritmo resuelve el problema planteado?
-2. Mejores Prácticas: ¿Es código limpio y sigue los patrones de {{{technology}}}?
-3. Si la tecnología es PSeInt o LPP: Enfócate en la lógica secuencial, condicionales y ciclos. No seas estricto con el lenguaje, sino con la resolución del problema lógico.
+INSTRUCCIONES SEGÚN MATERIA:
 
-Si el estudiante demuestra un dominio excepcional (puntaje 4.5 o más), inventa una "Insignia de Maestría" específica para la habilidad que demostró (ej: "Lógica de Hierro", "Ninja de Algoritmos").
+1. SI ES CÓDIGO O LÓGICA (Ej: JavaScript, Python, PSeInt, LPP):
+   - Evalúa la correctitud algorítmica y mejores prácticas.
+   - Para PSeInt/LPP, prioriza la resolución lógica sobre la sintaxis estricta.
 
-Proporciona una calificación del 0 al 5. Sé alentador pero riguroso. 
-Si el código está vacío o es irrelevante para el reto, califica con 0 o 1. 
-Considera que una nota de 3 o más significa que ha aprobado.`,
+2. SI ES INGLÉS O COMUNICACIÓN (Ej: English for Programmers, B1, Technical Documentation):
+   - Evalúa gramática, vocabulario técnico y adecuación al contexto profesional.
+   - Valora si el estudiante logra comunicar la idea técnica de forma efectiva en inglés.
+   - Sugiere correcciones idiomáticas si es necesario.
+
+Criterios Generales:
+- Proporciona una calificación del 0 al 5 (3 o más es aprobado).
+- Sé alentador pero riguroso.
+- Si el estudiante demuestra maestría (4.5+), otorga una insignia creativa relacionada con la habilidad (ej: "Global Communicator", "Algorithm Ninja").`,
 });
 
 const evaluateChallengeFlow = ai.defineFlow(
