@@ -18,7 +18,7 @@
         "isPremiumSubscriber": { "type": "boolean" },
         "isActive": { "type": "boolean", "default": true },
         "instructorStatus": { "type": "string", "enum": ["none", "pending", "active", "rejected"], "default": "none" },
-        "revenueSharePercentage": { "type": "number", "default": 70, "description": "Porcentaje de ganancia del instructor por cada venta." },
+        "revenueSharePercentage": { "type": "number", "default": 70 },
         "totalEarnings": { "type": "number", "default": 0 }
       },
       "required": ["id", "displayName", "email", "createdAt"]
@@ -55,22 +55,6 @@
       },
       "required": ["id", "title", "technology", "instructorId"]
     },
-    "Promotion": {
-      "title": "Promotion",
-      "type": "object",
-      "description": "Descuentos y cupones de campaña creados por el admin.",
-      "properties": {
-        "id": { "type": "string" },
-        "code": { "type": "string", "description": "Código del cupón (ej: PROMO50)" },
-        "discountPercentage": { "type": "number", "description": "Porcentaje de descuento (1-100)" },
-        "expiresAt": { "type": "string", "format": "date-time" },
-        "usageLimit": { "type": "number", "description": "Máximo de usos permitidos" },
-        "timesUsed": { "type": "number", "default": 0 },
-        "isActive": { "type": "boolean", "default": true },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "code", "discountPercentage"]
-    },
     "CodingChallenge": {
       "title": "CodingChallenge",
       "type": "object",
@@ -80,6 +64,8 @@
         "description": { "type": "string" },
         "difficulty": { "type": "string", "enum": ["Principiante", "Intermedio", "Avanzado"] },
         "technology": { "type": "string" },
+        "type": { "type": "string", "enum": ["code", "wordsearch"], "default": "code" },
+        "words": { "type": "array", "items": { "type": "string" }, "description": "Lista de palabras para la sopa de letras." },
         "initialCode": { "type": "string" },
         "solution": { "type": "string" },
         "instructorId": { "type": "string" },
@@ -103,6 +89,10 @@
       {
         "path": "/courses/{courseId}",
         "definition": { "entityName": "Course", "schema": { "$ref": "#/backend/entities/Course" } }
+      },
+      {
+        "path": "/coding_challenges/{challengeId}",
+        "definition": { "entityName": "CodingChallenge", "schema": { "$ref": "#/backend/entities/CodingChallenge" } }
       }
     ]
   }

@@ -16,7 +16,10 @@ import {
   Layout,
   Terminal,
   Eye,
-  EyeOff
+  EyeOff,
+  Gamepad2,
+  ListPlus,
+  X
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -73,13 +76,15 @@ export default function AdminChallengesPage() {
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
   const isAdmin = profile?.role === 'admin';
-  const isInstructor = profile?.role === 'instructor';
 
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState('Principiante');
   const [technology, setTechnology] = useState('');
+  const [challengeType, setChallengeType] = useState<'code' | 'wordsearch'>('code');
+  const [words, setWords] = useState<string[]>([]);
+  const [wordInput, setWordsInput] = useState('');
   const [initialCode, setInitialCode] = useState('');
   const [solution, setSolution] = useState('');
   const [isFree, setIsFree] = useState(true);
@@ -111,11 +116,20 @@ export default function AdminChallengesPage() {
     setDescription('');
     setDifficulty('Principiante');
     setTechnology('');
+    setChallengeType('code');
+    setWords([]);
     setInitialCode('');
     setSolution('');
     setIsFree(true);
     setVisibility('public');
     setCourseId('none');
+  };
+
+  const handleAddWord = () => {
+    if (wordInput.trim()) {
+      setWords([...words, wordInput.trim()]);
+      setWordsInput('');
+    }
   };
 
   const handleEditClick = (challenge: any) => {
@@ -124,6 +138,8 @@ export default function AdminChallengesPage() {
     setDescription(challenge.description || '');
     setDifficulty(challenge.difficulty || 'Principiante');
     setTechnology(challenge.technology || '');
+    setChallengeType(challenge.type || 'code');
+    setWords(challenge.words || []);
     setInitialCode(challenge.initialCode || '');
     setSolution(challenge.solution || '');
     setIsFree(challenge.isFree ?? true);
@@ -141,7 +157,9 @@ export default function AdminChallengesPage() {
       description,
       difficulty,
       technology,
-      initialCode,
+      type: challengeType,
+      words: challengeType === 'wordsearch' ? words : [],
+      initialCode: challengeType === 'code' ? initialCode : '',
       solution,
       isFree,
       visibility,
@@ -193,12 +211,10 @@ export default function AdminChallengesPage() {
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-12">
           <div>
             <h1 className="text-4xl font-headline font-bold mb-2 flex items-center gap-3">
-              <Code2 className="h-8 w-8 text-primary" />
+              <Gamepad2 className="h-8 w-8 text-primary" />
               Gestión de Desafíos
             </h1>
-            <p className="text-muted-foreground">
-              {isAdmin ? "Panel de Admin: Gestionando todos los retos del sistema." : "Panel de Instructor: Administrando tus retos prácticos."}
-            </p>
+            <p className="text-muted-foreground">Crea retos de código o actividades interactivas para tus alumnos.</p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -211,31 +227,35 @@ export default function AdminChallengesPage() {
                 Nuevo Desafío
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[850px] rounded-[2.5rem] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[900px] rounded-[2.5rem] max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleFormSubmit}>
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-headline">{editingId ? 'Editar Desafío' : 'Crear Desafío'}</DialogTitle>
                   <DialogDescription>
-                    Define la visibilidad y requisitos técnicos. Los desafíos privados solo aparecen si el estudiante está inscrito en el curso asociado.
+                    Elige el formato de evaluación. "Sopa de Letras" es ideal para inglés y vocabulario lógico.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 py-8">
                   <div className="space-y-6">
                     <div className="grid gap-2">
                       <Label className="font-bold">Título del Reto</Label>
-                      <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Invertir una Cadena" className="rounded-xl h-11" />
+                      <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Vocabulario de Variables" className="rounded-xl h-11" />
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
-                        <Label className="font-bold">Visibilidad</Label>
-                        <Select value={visibility} onValueChange={(v: any) => setVisibility(v)}>
+                        <Label className="font-bold">Tipo de Desafío</Label>
+                        <Select value={challengeType} onValueChange={(v: any) => setChallengeType(v)}>
                           <SelectTrigger className="rounded-xl h-11">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="public">Público (Catálogo)</SelectItem>
-                            <SelectItem value="private">Solo para Curso</SelectItem>
+                            <SelectItem value="code">
+                              <div className="flex items-center gap-2"><Terminal className="h-3 w-3" /> Editor de Código</div>
+                            </SelectItem>
+                            <SelectItem value="wordsearch">
+                              <div className="flex items-center gap-2"><Gamepad2 className="h-3 w-3" /> Sopa de Letras</div>
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -251,27 +271,6 @@ export default function AdminChallengesPage() {
                         </Select>
                       </div>
                     </div>
-
-                    {visibility === 'private' && (
-                      <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <Label className="font-bold flex items-center gap-2">
-                          Curso Asociado
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger>
-                              <TooltipContent><p className="text-[10px]">Solo los estudiantes inscritos en este curso verán el desafío.</p></TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </Label>
-                        <Select value={courseId} onValueChange={setCourseId} required={visibility === 'private'}>
-                          <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Seleccionar curso..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Sin asignar</SelectItem>
-                            {courses?.map(c => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
@@ -297,45 +296,87 @@ export default function AdminChallengesPage() {
                         </Select>
                       </div>
                       <div className="grid gap-2">
-                        <Label className="font-bold">Acceso</Label>
-                        <div className="flex items-center justify-between px-3 h-11 bg-muted/30 rounded-xl border">
-                          <span className="text-xs font-medium">{isFree ? 'Gratuito' : 'Premium'}</span>
-                          <Switch checked={isFree} onCheckedChange={setIsFree} />
-                        </div>
+                        <Label className="font-bold">Visibilidad</Label>
+                        <Select value={visibility} onValueChange={(v: any) => setVisibility(v)}>
+                          <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="public">Público (Catálogo)</SelectItem>
+                            <SelectItem value="private">Privado (Solo Curso)</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
                     <div className="grid gap-2">
-                      <Label className="font-bold">Enunciado</Label>
+                      <Label className="font-bold">Enunciado / Instrucciones</Label>
                       <Textarea 
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
-                        className="min-h-[150px] rounded-2xl resize-none" 
-                        placeholder="Explica qué debe resolver el estudiante..." 
+                        className="min-h-[120px] rounded-2xl resize-none" 
+                        placeholder={challengeType === 'wordsearch' ? "Encuentra las palabras y escribe una frase con ellas..." : "Explica qué debe resolver el estudiante..."} 
                       />
                     </div>
                   </div>
                   
                   <div className="space-y-8 bg-muted/20 p-6 rounded-[2rem] border">
-                    <div className="grid gap-3">
-                      <Label className="font-bold">Código Inicial (Plantilla)</Label>
-                      <Textarea 
-                        value={initialCode} 
-                        onChange={(e) => setInitialCode(e.target.value)} 
-                        className="font-mono text-[11px] min-h-[180px] rounded-2xl bg-white border-dashed" 
-                        placeholder={"function solution() {\n  // Escribe aquí...\n}"} 
-                      />
-                    </div>
-
-                    <div className="grid gap-3">
-                      <Label className="font-bold text-emerald-600">Solución Correcta (Referencia IA)</Label>
-                      <Textarea 
-                        value={solution} 
-                        onChange={(e) => setSolution(e.target.value)} 
-                        className="font-mono text-[11px] min-h-[180px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
-                        placeholder="La solución perfecta para la IA..." 
-                      />
-                    </div>
+                    {challengeType === 'code' ? (
+                      <>
+                        <div className="grid gap-3">
+                          <Label className="font-bold">Código Inicial (Plantilla)</Label>
+                          <Textarea 
+                            value={initialCode} 
+                            onChange={(e) => setInitialCode(e.target.value)} 
+                            className="font-mono text-[11px] min-h-[180px] rounded-2xl bg-white border-dashed" 
+                            placeholder={"function solution() {\n  // Escribe aquí...\n}"} 
+                          />
+                        </div>
+                        <div className="grid gap-3">
+                          <Label className="font-bold text-emerald-600">Referencia IA</Label>
+                          <Textarea 
+                            value={solution} 
+                            onChange={(e) => setSolution(e.target.value)} 
+                            className="font-mono text-[11px] min-h-[120px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
+                            placeholder="Solución esperada para que la IA califique..." 
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="grid gap-3">
+                          <Label className="font-bold flex items-center gap-2">
+                            <ListPlus className="h-4 w-4 text-primary" />
+                            Palabras para la Sopa
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input 
+                              value={wordInput} 
+                              onChange={(e) => setWordsInput(e.target.value)} 
+                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddWord())}
+                              placeholder="Ej: STRING" 
+                              className="rounded-xl h-11 bg-white"
+                            />
+                            <Button type="button" onClick={handleAddWord} className="rounded-xl h-11">Añadir</Button>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {words.map((w, i) => (
+                              <Badge key={i} className="rounded-lg bg-white border-slate-200 text-slate-700 py-1.5 gap-2 group">
+                                {w}
+                                <X className="h-3 w-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setWords(words.filter((_, idx) => idx !== i))} />
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="grid gap-3">
+                          <Label className="font-bold text-emerald-600">Referencia IA (Contexto)</Label>
+                          <Textarea 
+                            value={solution} 
+                            onChange={(e) => setSolution(e.target.value)} 
+                            className="font-mono text-[11px] min-h-[120px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
+                            placeholder="Ej: Estas palabras son tipos de datos en JS. El estudiante debe usarlas para explicar la memoria..." 
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <DialogFooter>
@@ -348,7 +389,6 @@ export default function AdminChallengesPage() {
           </Dialog>
         </header>
 
-        {/* Barra de Filtros */}
         <section className="bg-white p-6 rounded-[2rem] border shadow-sm mb-8 flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1 w-full space-y-2">
             <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Buscar</Label>
@@ -381,12 +421,11 @@ export default function AdminChallengesPage() {
           </Button>
         </section>
 
-        {/* Lista Agrupada */}
         <div className="space-y-4">
           {isChallengesLoading ? (
             <div className="p-20 flex flex-col items-center justify-center gap-4 bg-white rounded-[2rem] border">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground animate-pulse">Cargando desafíos...</p>
+              <p className="text-muted-foreground">Cargando desafíos...</p>
             </div>
           ) : techEntries.length > 0 ? (
             <Accordion type="multiple" className="space-y-4">
@@ -411,8 +450,8 @@ export default function AdminChallengesPage() {
                       <TableHeader>
                         <TableRow className="border-none hover:bg-transparent">
                           <TableHead className="w-[40%]">Título</TableHead>
+                          <TableHead>Tipo</TableHead>
                           <TableHead>Visibilidad</TableHead>
-                          <TableHead>Acceso</TableHead>
                           <TableHead className="text-right pr-4">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -426,23 +465,29 @@ export default function AdminChallengesPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {challenge.visibility === 'private' ? (
-                                <div className="flex items-center gap-1.5 text-amber-600">
-                                  <EyeOff className="h-3 w-3" />
-                                  <span className="text-xs font-medium">Solo Curso</span>
+                              {challenge.type === 'wordsearch' ? (
+                                <div className="flex items-center gap-1.5 text-purple-600">
+                                  <Gamepad2 className="h-3 w-3" />
+                                  <span className="text-[10px] font-bold uppercase">Sopa de Letras</span>
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-1.5 text-emerald-600">
-                                  <Eye className="h-3 w-3" />
-                                  <span className="text-xs font-medium">Catálogo</span>
+                                <div className="flex items-center gap-1.5 text-slate-600">
+                                  <Code2 className="h-3 w-3" />
+                                  <span className="text-[10px] font-bold uppercase">Código</span>
                                 </div>
                               )}
                             </TableCell>
                             <TableCell>
-                              {challenge.isFree ? (
-                                <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg">Gratis</Badge>
+                              {challenge.visibility === 'private' ? (
+                                <div className="flex items-center gap-1.5 text-amber-600">
+                                  <EyeOff className="h-3 w-3" />
+                                  <span className="text-xs font-medium">Privado</span>
+                                </div>
                               ) : (
-                                <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg">Premium</Badge>
+                                <div className="flex items-center gap-1.5 text-emerald-600">
+                                  <Eye className="h-3 w-3" />
+                                  <span className="text-xs font-medium">Público</span>
+                                </div>
                               )}
                             </TableCell>
                             <TableCell className="text-right pr-4">
