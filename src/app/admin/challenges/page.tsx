@@ -61,7 +61,9 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { TECH_STACK } from '@/lib/languages';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import { VisualH5PBuilder } from './VisualH5PBuilder';
 
 export default function AdminChallengesPage() {
   const { user } = useUser();
@@ -320,25 +322,38 @@ export default function AdminChallengesPage() {
                   <div className="space-y-8 bg-muted/20 p-6 rounded-[2rem] border">
                     {['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challengeType) ? (
                       <div className="grid gap-4">
-                        <div className="flex items-center justify-between">
-                           <Label className="font-bold text-amber-600">Configuración Avanzada JSON (Motor H5P)</Label>
-                           <Button type="button" variant="outline" size="sm" className="h-8 text-[11px] font-bold border-amber-200 text-amber-700 bg-amber-50" onClick={() => {
-                              if (challengeType === 'flashcard') setJsonConfig('{\n  "cards": [\n    { "front": "¿Qué hace useState?", "back": "Define estados reactivos en React" },\n    { "front": "¿Qué es JSX?", "back": "Sintaxis para escribir HTML dentro de JavaScript" }\n  ]\n}');
-                              else if (challengeType === 'swipe') setJsonConfig('{\n  "deck": [\n    { "statement": "React es un lenguaje de programación", "isTrue": false },\n    { "statement": "Next.js permite generación en el Servidor (SSR)", "isTrue": true }\n  ]\n}');
-                              else if (challengeType === 'sortable') setJsonConfig('{\n  "lines": [\n    { "id": "L1", "text": "function sumar(a, b) {" },\n    { "id": "L2", "text": "  return a + b;" },\n    { "id": "L3", "text": "}" }\n  ],\n  "correctOrder": ["L1", "L2", "L3"]\n}');
-                              else if (challengeType === 'dragdrop') setJsonConfig('{\n  "template": "const [count, setCount] = {{{hueco1}}}(0);",\n  "snippets": [\n    { "id": "s1", "text": "useState" },\n    { "id": "s2", "text": "useEffect" }\n  ],\n  "correctMapping": {\n    "hueco1": "s1"\n  }\n}');
-                              else if (challengeType === 'interactive-video') setJsonConfig('{\n  "videoUrl": "https://www.youtube.com/watch?v=Poner_ID_Aqui",\n  "checkpoints": [\n    {\n      "seconds": 45,\n      "question": "¿De qué hook está hablando exactamente el instructor?",\n      "options": ["useState", "useEffect", "useRef", "useMemo"],\n      "correctIndex": 1\n    }\n  ]\n}');
-                           }}>
-                              Cargar Plantilla de Ejemplo
-                           </Button>
-                        </div>
-                        <p className="text-xs text-slate-500 font-medium">Haz clic en <b>"Cargar Plantilla"</b> para ver exactamente cómo se deben estructurar los datos del juego. Luego, simplemente reemplaza los textos con el contenido de tu curso.</p>
-                        <Textarea 
-                          value={jsonConfig} 
-                          onChange={(e) => setJsonConfig(e.target.value)} 
-                          className="font-mono text-[11px] min-h-[300px] rounded-2xl bg-[#0d1117] text-[#7ee787] border-slate-800 shadow-inner p-4" 
-                          placeholder="Pega o escribe tu JSON aquí..." 
-                        />
+                        <Tabs defaultValue="visual" className="w-full">
+                           <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-slate-200/50 rounded-xl p-1">
+                             <TabsTrigger value="visual" className="rounded-lg font-bold">🛠️ Editor Visual No-Code</TabsTrigger>
+                             <TabsTrigger value="json" className="rounded-lg font-bold">💻 Variables JSON Base</TabsTrigger>
+                           </TabsList>
+                           <TabsContent value="visual" className="bg-white p-6 rounded-[2rem] border shadow-sm">
+                               <VisualH5PBuilder type={challengeType} jsonConfig={jsonConfig} setJsonConfig={setJsonConfig} />
+                           </TabsContent>
+                           <TabsContent value="json">
+                              <div className="grid gap-4">
+                                <div className="flex items-center justify-between">
+                                   <Label className="font-bold text-amber-600">Configuración Avanzada JSON</Label>
+                                   <Button type="button" variant="outline" size="sm" className="h-8 text-[11px] font-bold border-amber-200 text-amber-700 bg-amber-50" onClick={() => {
+                                      if (challengeType === 'flashcard') setJsonConfig('{\n  "cards": [\n    { "front": "¿Qué hace useState?", "back": "Define estados reactivos en React" },\n    { "front": "¿Qué es JSX?", "back": "Sintaxis HTML dentro de JS" }\n  ]\n}');
+                                      else if (challengeType === 'swipe') setJsonConfig('{\n  "deck": [\n    { "statement": "React es un lenguaje", "isTrue": false },\n    { "statement": "Next.js permite SSR", "isTrue": true }\n  ]\n}');
+                                      else if (challengeType === 'sortable') setJsonConfig('{\n  "lines": [\n    { "id": "L1", "text": "function sumar(a, b) {" },\n    { "id": "L2", "text": "  return a + b;" },\n    { "id": "L3", "text": "}" }\n  ],\n  "correctOrder": ["L1", "L2", "L3"]\n}');
+                                      else if (challengeType === 'dragdrop') setJsonConfig('{\n  "template": "const [count, setCount] = {{{hueco1}}}(0);",\n  "snippets": [\n    { "id": "s1", "text": "useState" },\n    { "id": "s2", "text": "useEffect" }\n  ],\n  "correctMapping": {\n    "hueco1": "s1"\n  }\n}');
+                                      else if (challengeType === 'interactive-video') setJsonConfig('{\n  "videoUrl": "https://www.youtube.com/watch?v=...",\n  "checkpoints": [\n    {\n      "seconds": 45,\n      "question": "¿De qué hook habla el instructor?",\n      "options": ["useState", "useEffect", "useRef", "useMemo"],\n      "correctIndex": 1\n    }\n  ]\n}');
+                                   }}>
+                                      Restaurar Plantilla Raw
+                                   </Button>
+                                </div>
+                                <p className="text-xs text-slate-500 font-medium">Recomendamos usar el modo <b>Visual</b>, pero si eres desarrollador, puedes inyectar los arrays desde aquí libremente.</p>
+                                <Textarea 
+                                  value={jsonConfig} 
+                                  onChange={(e) => setJsonConfig(e.target.value)} 
+                                  className="font-mono text-[11px] min-h-[300px] rounded-2xl bg-[#0d1117] text-[#7ee787] border-slate-800 shadow-inner p-4" 
+                                  placeholder="Pega o escribe tu JSON aquí..." 
+                                />
+                              </div>
+                           </TabsContent>
+                        </Tabs>
                       </div>
                     ) : challengeType === 'code' || challengeType === 'interview' ? (
                       <>
