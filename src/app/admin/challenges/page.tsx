@@ -74,7 +74,7 @@ export default function AdminChallengesPage() {
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState('Principiante');
   const [technology, setTechnology] = useState('');
-  const [challengeType, setChallengeType] = useState<'code' | 'wordsearch' | 'quiz' | 'interview'>('code');
+  const [challengeType, setChallengeType] = useState<string>('code');
   const [words, setWords] = useState<string[]>([]);
   const [wordInput, setWordsInput] = useState('');
   const [initialCode, setInitialCode] = useState('');
@@ -82,6 +82,7 @@ export default function AdminChallengesPage() {
   const [isFree, setIsFree] = useState(true);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [questions, setQuestions] = useState<any[]>([]);
+  const [jsonConfig, setJsonConfig] = useState('{\n\n}');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -115,6 +116,7 @@ export default function AdminChallengesPage() {
     setIsFree(true);
     setVisibility('public');
     setQuestions([]);
+    setJsonConfig('{\n\n}');
   };
 
   const handleEditClick = (challenge: any) => {
@@ -130,6 +132,14 @@ export default function AdminChallengesPage() {
     setIsFree(challenge.isFree ?? true);
     setVisibility(challenge.visibility || 'public');
     setQuestions(challenge.questions || []);
+    
+    if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challenge.type)) {
+       const { id, title, description, difficulty, technology, type, isFree, visibility, updatedAt, instructorId, instructorName, createdAt, ...rest } = challenge;
+       setJsonConfig(JSON.stringify(rest, null, 2));
+    } else {
+       setJsonConfig('{\n\n}');
+    }
+    
     setIsDialogOpen(true);
   };
 
@@ -143,14 +153,26 @@ export default function AdminChallengesPage() {
       difficulty,
       technology,
       type: challengeType,
-      words: challengeType === 'wordsearch' ? words : [],
-      questions: challengeType === 'quiz' ? questions : [],
-      initialCode: challengeType === 'code' ? initialCode : '',
-      solution,
-      isFree,
       visibility,
       updatedAt: serverTimestamp(),
     };
+
+    if (challengeType === 'code' || challengeType === 'interview') {
+      challengeData.initialCode = initialCode;
+      challengeData.solution = solution;
+    } else if (challengeType === 'wordsearch') {
+      challengeData.words = words;
+    } else if (challengeType === 'quiz') {
+      challengeData.questions = questions;
+    } else {
+      try {
+         const parsed = JSON.parse(jsonConfig);
+         Object.assign(challengeData, parsed);
+      } catch (err) {
+         alert("La configuración JSON es inválida. Revisa la sintaxis.");
+         return;
+      }
+    }
 
     if (editingId) {
       updateDocumentNonBlocking(doc(db, 'coding_challenges', editingId), challengeData);
@@ -217,6 +239,11 @@ export default function AdminChallengesPage() {
                             <SelectItem value="wordsearch">Sopa de Letras</SelectItem>
                             <SelectItem value="quiz">Trivia (Cuestionario)</SelectItem>
                             <SelectItem value="interview">Simulacro Entrevista</SelectItem>
+                            <SelectItem value="dragdrop">Arrastrar Código (Fill-In)</SelectItem>
+                            <SelectItem value="sortable">Reordenar Lógica</SelectItem>
+                            <SelectItem value="flashcard">Flashcards 3D</SelectItem>
+                            <SelectItem value="swipe">Cartas Tinder (Sweep)</SelectItem>
+                            <SelectItem value="interactive-video">Video Interactivo</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -291,7 +318,18 @@ export default function AdminChallengesPage() {
                   </div>
                   
                   <div className="space-y-8 bg-muted/20 p-6 rounded-[2rem] border">
-                    {challengeType === 'code' || challengeType === 'interview' ? (
+                    {['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challengeType) ? (
+                      <div className="grid gap-3">
+                        <Label className="font-bold text-amber-600">Configuración Avanzada JSON (Motor H5P)</Label>
+                        <p className="text-xs text-slate-500">Define los nodos dinámicos requeridos para este tipo de actividad altamente interactiva.</p>
+                        <Textarea 
+                          value={jsonConfig} 
+                          onChange={(e) => setJsonConfig(e.target.value)} 
+                          className="font-mono text-[11px] min-h-[300px] rounded-2xl bg-slate-900 text-emerald-400 border-dashed" 
+                          placeholder="Escribe configuraciones JSON correctas..." 
+                        />
+                      </div>
+                    ) : challengeType === 'code' || challengeType === 'interview' ? (
                       <>
                         <div className="grid gap-3">
                           <Label className="font-bold">{challengeType === 'code' ? 'Código Inicial' : 'Placeholder de Respuesta'}</Label>
@@ -379,7 +417,7 @@ export default function AdminChallengesPage() {
                   <TableCell className="pl-8 py-4">
                     <div className="flex items-center gap-3">
                       <div className="bg-slate-100 p-2 rounded-xl text-slate-500">
-                        {c.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : c.type === 'interview' ? <MessageSquare className="h-5 w-5" /> : c.type === 'wordsearch' ? <Gamepad2 className="h-5 w-5" /> : <Terminal className="h-5 w-5" />}
+                        {['swipe', 'flashcard', 'interactive-video', 'dragdrop', 'sortable'].includes(c.type) ? <Sparkles className="h-5 w-5" /> : c.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : c.type === 'interview' ? <MessageSquare className="h-5 w-5" /> : c.type === 'wordsearch' ? <Gamepad2 className="h-5 w-5" /> : <Terminal className="h-5 w-5" />}
                       </div>
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-900">{c.title}</span>
@@ -389,7 +427,7 @@ export default function AdminChallengesPage() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="rounded-lg font-bold">
-                      {c.type === 'quiz' ? 'Trivia' : c.type === 'interview' ? 'Entrevista' : c.type === 'wordsearch' ? 'Sopa Letras' : 'Código'}
+                       {c.type === 'quiz' ? 'Trivia' : c.type === 'interview' ? 'Entrevista' : c.type === 'wordsearch' ? 'Sopa Letras' : c.type === 'sortable' ? 'Ordenamiento' : c.type === 'dragdrop' ? 'Rompecabezas' : c.type === 'swipe' ? 'Cartas Swing' : c.type === 'flashcard' ? 'Flashcards 3D' : c.type === 'interactive-video' ? 'Video Interactivo' : 'Código'}
                     </Badge>
                   </TableCell>
                   <TableCell>
