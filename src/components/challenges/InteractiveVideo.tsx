@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import ReactPlayer from 'react-player';
+import dynamic from 'next/dynamic';
+const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
 import { Button } from '@/components/ui/button';
 import { PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,7 +17,6 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
   const [activeCheckpoint, setActiveCheckpoint] = useState<VideoCheckpoint | null>(null);
   const [clearedCheckpoints, setClearedCheckpoints] = useState<number[]>([]);
   const [correctCount, setCorrectCount] = useState(0);
-  const playerRef = useRef<any>(null);
 
   const handleProgress = (state: any) => {
       const { playedSeconds } = state;
@@ -46,8 +46,8 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
 
   return (
       <div className="max-w-4xl mx-auto rounded-[3rem] overflow-hidden shadow-2xl border-4 border-slate-900 bg-black relative aspect-video">
+         {/* @ts-ignore */}
          <ReactPlayer
-            ref={playerRef}
             url={url}
             playing={playing}
             controls={!activeCheckpoint}

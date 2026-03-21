@@ -302,6 +302,26 @@ export default function ChallengeExecutionPage() {
                     language={challenge.technology?.toLowerCase() === 'python' ? 'python' : challenge.technology?.toLowerCase() === 'html' ? 'html' : 'javascript'}
                     value={code}
                     onChange={(val) => setCode(val || '')}
+                    onMount={(editor, monaco) => {
+                      // Bloqueo de atajos Ctrl+V o Cmd+V
+                      editor.onKeyDown((e: any) => {
+                        if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.KeyV) {
+                           e.preventDefault();
+                           e.stopPropagation();
+                           toast({ title: 'Modo Estricto', description: 'Copiar y pegar código está deshabilitado para garantizar tu aprendizaje.', variant: 'destructive' });
+                        }
+                      });
+                      
+                      // Bloqueo duro a nivel DOM para menu click derecho -> Pegar
+                      const domNode = editor.getDomNode();
+                      if (domNode) {
+                         domNode.addEventListener('paste', (e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             toast({ title: 'Modo Estricto', description: 'Copiar y pegar código está deshabilitado para garantizar tu aprendizaje.', variant: 'destructive' });
+                         }, true);
+                      }
+                    }}
                     options={{
                       minimap: { enabled: false },
                       fontSize: 16,
