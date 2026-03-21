@@ -23,7 +23,7 @@ function SuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const ref_payco = searchParams.get('ref_payco');
-  
+
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
 
   useEffect(() => {

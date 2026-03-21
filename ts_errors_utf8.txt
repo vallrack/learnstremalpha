@@ -1,0 +1,8 @@
+﻿src/app/challenges/page.tsx(107,67): error TS18046: 'techChallenges' is of type 'unknown'.
+src/app/challenges/page.tsx(107,91): error TS18046: 'techChallenges' is of type 'unknown'.
+src/app/challenges/page.tsx(112,20): error TS18046: 'techChallenges' is of type 'unknown'.
+src/app/challenges/page.tsx(112,39): error TS7006: Parameter 'challenge' implicitly has an 'any' type.
+src/components/ui/calendar.tsx(57,9): error TS2353: Object literal may only specify known properties, and 'IconLeft' does not exist in type 'Partial<CustomComponents>'.
+src/components/ui/calendar.tsx(57,22): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/calendar.tsx(60,23): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/lib/stripe.ts(1,20): error TS2307: Cannot find module 'stripe' or its corresponding type declarations.

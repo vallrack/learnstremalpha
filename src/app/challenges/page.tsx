@@ -96,7 +96,7 @@ export default function ChallengesCataloguePage() {
           </div>
         ) : filteredChallenges.length > 0 ? (
           <div className="space-y-20">
-            {Object.entries(groupedChallenges).map(([tech, techChallenges]) => (
+            {(Object.entries(groupedChallenges) as [string, any[]][]).map(([tech, techChallenges]) => (
               <section key={tech}>
                 <div className="flex items-center gap-4 mb-8 border-b pb-4 border-slate-200">
                   <div className="bg-primary p-2.5 rounded-2xl shadow-lg shadow-primary/20">
@@ -109,7 +109,7 @@ export default function ChallengesCataloguePage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {techChallenges.map(challenge => (
+                  {techChallenges.map((challenge: any) => (
                     <Card key={challenge.id} className="group rounded-[2.5rem] overflow-hidden border-slate-200 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 flex flex-col bg-white relative">
                       <CardHeader className="p-8 pb-4">
                         <div className="flex items-center justify-between mb-4">
