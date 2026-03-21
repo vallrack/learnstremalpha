@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
-const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
+const ReactPlayer = dynamic(() => import('react-player'), { ssr: false }) as React.ElementType<any>;
 import { Button } from '@/components/ui/button';
 import { PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,7 +46,6 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
 
   return (
       <div className="max-w-4xl mx-auto rounded-[3rem] overflow-hidden shadow-2xl border-4 border-slate-900 bg-black relative aspect-video">
-         {/* @ts-ignore */}
          <ReactPlayer
             url={url}
             playing={playing}
