@@ -5,7 +5,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import useSWRSubscription from 'swr/subscription';
 
-export type WithId<T> = T & { id: string };
+type WithId<T> = T & { id: string };
 
 export interface UseCollectionResult<T> {
   data: WithId<T>[] | null;

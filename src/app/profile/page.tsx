@@ -62,7 +62,7 @@ export default function ProfilePage() {
 
   const copyPortfolioLink = () => {
     if (!user?.uid) return;
-    const link = `${window.location.origin}/p/${user.uid}`;
+    const link = `${window.location.origin}/u/${user.uid}`;
     navigator.clipboard.writeText(link);
     toast({
       title: "¡Enlace copiado!",
@@ -174,7 +174,7 @@ export default function ProfilePage() {
                     <div className="pt-4 p-4 bg-primary/5 rounded-2xl border border-primary/10">
                        <p className="text-xs font-bold text-primary mb-2 flex items-center gap-2"><Share2 className="h-3 w-3" /> Tu Enlace Público:</p>
                        <div className="flex gap-2">
-                         <Input value={`${window.location.origin}/p/${user?.uid}`} readOnly className="h-9 text-[10px] rounded-lg bg-white" />
+                         <Input value={`${window.location.origin}/u/${user?.uid}`} readOnly className="h-9 text-[10px] rounded-lg bg-white" />
                          <Button size="icon" variant="outline" onClick={copyPortfolioLink} className="h-9 w-9 rounded-lg"><Copy className="h-3 w-3" /></Button>
                        </div>
                     </div>

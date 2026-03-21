@@ -1,5 +1,3 @@
-﻿src/firebase/firestore/use-collection.tsx(33,6): error TS7006: Parameter 'key' implicitly has an 'any' type.
-src/firebase/firestore/use-collection.tsx(33,13): error TS7031: Binding element 'next' implicitly has an 'any' type.
-src/firebase/firestore/use-doc.tsx(23,6): error TS7006: Parameter 'key' implicitly has an 'any' type.
-src/firebase/firestore/use-doc.tsx(23,13): error TS7031: Binding element 'next' implicitly has an 'any' type.
+﻿src/ai/flows/ask-lesson-questions.ts(19,63): error TS6234: This expression is not callable because it is a 'get' accessor. Did you mean to use it without '()'?
+  Type 'String' has no call signatures.
 src/firebase/index.ts(40,1): error TS2308: Module './firestore/use-collection' has already exported a member named 'WithId'. Consider explicitly re-exporting to resolve the ambiguity.

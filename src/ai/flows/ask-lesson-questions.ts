@@ -16,7 +16,7 @@ export const lessonRetriever = ai.defineRetriever(
     }).optional()
   },
   async (query, options) => {
-    console.log("Ejecutando Retriever RAG para query:", query.text());
+    console.log("Ejecutando Retriever RAG para query:", query.text);
     
     // Aquí iría tu lógica de Firestore Vector Search o Pinecone
     // Retornamos un mock si el RAG es interactuado

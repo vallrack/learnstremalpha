@@ -34,6 +34,7 @@ import { evaluateChallenge, type EvaluateChallengeOutput } from '@/ai/flows/eval
 import { WordSearchGame } from '@/components/challenges/WordSearchGame';
 import { QuizPlayer } from '@/components/challenges/QuizPlayer';
 import Link from 'next/link';
+import Editor from '@monaco-editor/react';
 
 export default function ChallengeExecutionPage() {
   const params = useParams();
@@ -262,19 +263,32 @@ export default function ChallengeExecutionPage() {
                 </div>
               </div>
             ) : (
-              <div className="h-full bg-slate-950 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-4 border-slate-900">
-                <div className="bg-slate-900 px-6 py-2 flex items-center gap-2">
+              <div className="h-full bg-[#1e1e1e] rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-4 border-[#1e1e1e]">
+                <div className="bg-[#1e1e1e] px-6 py-4 flex items-center gap-2 border-b border-white/5 shrink-0">
                   <div className="w-3 h-3 rounded-full bg-rose-500" />
                   <div className="w-3 h-3 rounded-full bg-amber-500" />
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className="ml-4 text-[10px] font-mono text-slate-500 uppercase font-bold tracking-widest">dev_terminal_v1.0</span>
+                  <span className="ml-4 text-[10px] font-mono text-slate-500 uppercase font-bold tracking-widest">learnstream_ide_v2.0</span>
                 </div>
-                <Textarea 
-                  value={code} 
-                  onChange={(e) => setCode(e.target.value)} 
-                  className="flex-1 bg-slate-950 text-emerald-400 font-mono text-sm p-10 focus-visible:ring-0 border-none resize-none leading-relaxed shadow-inner" 
-                  spellCheck={false} 
-                />
+                <div className="flex-1 min-h-[400px] relative">
+                  <Editor
+                    height="100%"
+                    theme="vs-dark"
+                    language={challenge.technology?.toLowerCase() === 'python' ? 'python' : challenge.technology?.toLowerCase() === 'html' ? 'html' : 'javascript'}
+                    value={code}
+                    onChange={(val) => setCode(val || '')}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 16,
+                      padding: { top: 24, bottom: 24 },
+                      scrollBeyondLastLine: false,
+                      roundedSelection: false,
+                      fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+                      wordWrap: 'on'
+                    }}
+                    className="absolute inset-0"
+                  />
+                </div>
               </div>
             )}
 
