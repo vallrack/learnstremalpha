@@ -33,6 +33,11 @@ import { doc, collection, serverTimestamp, increment } from 'firebase/firestore'
 import { evaluateChallenge, type EvaluateChallengeOutput } from '@/ai/flows/evaluate-challenge';
 import { WordSearchGame } from '@/components/challenges/WordSearchGame';
 import { QuizPlayer } from '@/components/challenges/QuizPlayer';
+import { InteractiveVideo } from '@/components/challenges/InteractiveVideo';
+import { DragDropSnippets } from '@/components/challenges/DragDropSnippets';
+import { SortableCodeBlocks } from '@/components/challenges/SortableCodeBlocks';
+import { FlipFlashcards } from '@/components/challenges/FlipFlashcards';
+import { SwipeCards } from '@/components/challenges/SwipeCards';
 import Link from 'next/link';
 import Editor from '@monaco-editor/react';
 
@@ -261,6 +266,26 @@ export default function ChallengeExecutionPage() {
                     placeholder="Escribe tu respuesta como si estuvieras frente al reclutador..."
                   />
                 </div>
+              </div>
+            ) : challenge.type === 'interactive-video' ? (
+              <div className="max-w-4xl mx-auto py-12 px-6 w-full animate-in fade-in zoom-in duration-500">
+                 <InteractiveVideo url={challenge.videoUrl as string} checkpoints={challenge.checkpoints || []} onComplete={(score) => handleSubmit(score)} />
+              </div>
+            ) : challenge.type === 'dragdrop' ? (
+              <div className="max-w-5xl mx-auto py-12 px-6 w-full animate-in slide-in-from-bottom-8 duration-500">
+                 <DragDropSnippets template={challenge.template as string} snippets={challenge.snippets || []} correctMapping={challenge.correctMapping || {}} onComplete={(score) => handleSubmit(score)} />
+              </div>
+            ) : challenge.type === 'sortable' ? (
+              <div className="max-w-4xl mx-auto py-12 px-6 w-full animate-in slide-in-from-right-8 duration-500">
+                 <SortableCodeBlocks lines={challenge.lines || []} correctOrder={challenge.correctOrder || []} onComplete={(score) => handleSubmit(score)} />
+              </div>
+            ) : challenge.type === 'flashcard' ? (
+              <div className="max-w-2xl mx-auto py-6 px-4 w-full h-[700px] flex items-center justify-center animate-in zoom-in-90 duration-500">
+                 <FlipFlashcards cards={challenge.cards || []} onComplete={(score) => handleSubmit(score)} />
+              </div>
+            ) : challenge.type === 'swipe' ? (
+              <div className="max-w-xl mx-auto py-6 px-4 w-full h-[700px] flex items-center justify-center animate-in slide-in-from-bottom-20 duration-500">
+                 <SwipeCards deck={challenge.deck || []} onComplete={(score) => handleSubmit(score)} />
               </div>
             ) : (
               <div className="h-full bg-[#1e1e1e] rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-4 border-[#1e1e1e]">
