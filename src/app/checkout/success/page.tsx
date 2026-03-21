@@ -7,8 +7,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Loader2, ArrowRight, PartyPopper, AlertCircle } from 'lucide-react';
-import { useUser, useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser } from '@/firebase';
+import { verifyEpaycoTransaction } from '@/app/actions/epayco';
 
 export default function CheckoutSuccessPage() {
   return (
@@ -20,7 +20,6 @@ export default function CheckoutSuccessPage() {
 
 function SuccessContent() {
   const { user, isUserLoading } = useUser();
-  const db = useFirestore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const ref_payco = searchParams.get('ref_payco');
@@ -37,39 +36,26 @@ function SuccessContent() {
       }
 
       try {
-        // Consultar el estado de la transacción en ePayco
-        const response = await fetch(`https://secure.epayco.co/validation/v1/reference/${ref_payco}`);
-        const result = await response.json();
-
-        if (result.success && result.data.x_cod_response === 1) {
-          // Transacción Aceptada
-          if (user?.uid && db) {
-            updateDocumentNonBlocking(doc(db, 'users', user.uid), {
-              isPremiumSubscriber: true,
-              premiumUpdatedAt: new Date().toISOString(),
-              lastEpaycoRef: ref_payco
-            });
+        if (user?.uid) {
+          const result = await verifyEpaycoTransaction(ref_payco, user.uid, 'premium');
+          if (result.success) {
             setStatus('success');
+          } else {
+            setStatus('error');
+            setErrorMessage(result.message || 'La transacción no fue aprobada.');
           }
-        } else if (result.data.x_cod_response === 3) {
-          // Transacción Pendiente (común en Efecty/PSE)
-          setStatus('error');
-          setErrorMessage('Tu pago está pendiente de aprobación. Se activará cuando sea procesado.');
-        } else {
-          setStatus('error');
-          setErrorMessage('La transacción no fue aprobada. Por favor intenta de nuevo.');
         }
       } catch (error) {
-        console.error('Error verifying ePayco payment:', error);
+        console.error('Error in Server Action invocation:', error);
         setStatus('error');
-        setErrorMessage('Hubo un problema al verificar el pago con ePayco.');
+        setErrorMessage('Hubo un problema al comunicar con el servidor para verificar el pago.');
       }
     }
 
     if (!isUserLoading && user) {
       verifyPayment();
     }
-  }, [user, isUserLoading, ref_payco, db]);
+  }, [user, isUserLoading, ref_payco]);
 
   if (status === 'loading') {
     return (

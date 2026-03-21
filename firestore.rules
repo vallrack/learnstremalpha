@@ -19,9 +19,9 @@ service cloud.firestore {
     match /users/{userId} {
       // Permitimos lectura pública para el Portfolio Profesional
       allow get: if true; 
-      allow create: if isOwner(userId);
+      allow create: if isOwner(userId) && (!request.resource.data.keys().hasAny(['role', 'isPremiumSubscriber', 'premiumUpdatedAt', 'lastEpaycoRef']));
       allow list: if isAdmin();
-      allow update: if isOwner(userId) || isAdmin();
+      allow update: if isAdmin() || (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isPremiumSubscriber', 'premiumUpdatedAt', 'lastEpaycoRef'])));
       allow delete: if isAdmin();
 
       match /courseProgress/{courseId} {

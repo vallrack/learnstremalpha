@@ -7,8 +7,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Loader2, ArrowRight, PartyPopper, AlertCircle, Clock } from 'lucide-react';
-import { useUser, useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { useUser } from '@/firebase';
+import { verifyEpaycoTransaction } from '@/app/actions/epayco';
 
 export default function InstructorSuccessPage() {
   return (
@@ -20,7 +20,6 @@ export default function InstructorSuccessPage() {
 
 function SuccessContent() {
   const { user, isUserLoading } = useUser();
-  const db = useFirestore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const ref_payco = searchParams.get('ref_payco');
@@ -29,40 +28,21 @@ function SuccessContent() {
 
   useEffect(() => {
     async function verifyInstructorPayment() {
-      if (!ref_payco || !user?.uid || !db) return;
+      if (!ref_payco || !user?.uid) return;
 
       try {
-        const response = await fetch(`https://secure.epayco.co/validation/v1/reference/${ref_payco}`);
-        const result = await response.json();
+        const result = await verifyEpaycoTransaction(ref_payco, user.uid, 'instructor', {
+          userName: user.displayName || 'Postulante',
+          userEmail: user.email || ''
+        });
 
-        if (result.success && result.data.x_cod_response === 1) {
-          // Transacción Aceptada
-          const applicationData = {
-            userId: user.uid,
-            userEmail: user.email,
-            userName: user.displayName || 'Postulante',
-            paymentReference: ref_payco,
-            status: 'pending',
-            createdAt: serverTimestamp(),
-            // Rescatamos bio y especialidad de los campos extra
-            specialty: result.data.x_extra2,
-            bio: result.data.x_extra3
-          };
-
-          // Guardar solicitud
-          addDocumentNonBlocking(collection(db, 'instructor_applications'), applicationData);
-
-          // Actualizar estado del usuario
-          updateDocumentNonBlocking(doc(db, 'users', user.uid), {
-            instructorStatus: 'pending'
-          });
-
+        if (result.success) {
           setStatus('success');
         } else {
           setStatus('error');
         }
       } catch (error) {
-        console.error('Error verifying payment:', error);
+        console.error('Error verifying payment server action:', error);
         setStatus('error');
       }
     }
@@ -70,7 +50,7 @@ function SuccessContent() {
     if (!isUserLoading && user) {
       verifyInstructorPayment();
     }
-  }, [user, isUserLoading, ref_payco, db]);
+  }, [user, isUserLoading, ref_payco]);
 
   if (status === 'loading') {
     return (
