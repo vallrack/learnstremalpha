@@ -328,7 +328,7 @@ export default function AdminChallengesPage() {
                              <TabsTrigger value="json" className="rounded-lg font-bold">💻 Variables JSON Base</TabsTrigger>
                            </TabsList>
                            <TabsContent value="visual" className="bg-white p-6 rounded-[2rem] border shadow-sm">
-                               <VisualH5PBuilder type={challengeType} jsonConfig={jsonConfig} setJsonConfig={setJsonConfig} />
+                               <VisualH5PBuilder type={challengeType} jsonConfig={jsonConfig} setJsonConfig={setJsonConfig} technology={technology} lessonTitle={title} />
                            </TabsContent>
                            <TabsContent value="json">
                               <div className="grid gap-4">

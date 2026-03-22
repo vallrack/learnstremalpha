@@ -40,6 +40,7 @@ import { FlipFlashcards } from '@/components/challenges/FlipFlashcards';
 import { SwipeCards } from '@/components/challenges/SwipeCards';
 import Link from 'next/link';
 import Editor from '@monaco-editor/react';
+import { XPRewardAnimation } from '@/components/gamification/XPRewardAnimation';
 
 export default function ChallengeExecutionPage() {
   const params = useParams();
@@ -65,6 +66,7 @@ export default function ChallengeExecutionPage() {
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [result, setResult] = useState<EvaluateChallengeOutput | null>(null);
+  const [showXPReward, setShowXPReward] = useState<{ xpGained: number; newTotalXP: number; badge?: { title: string; description: string } | null } | null>(null);
 
   useEffect(() => {
     if (challenge) setCode(challenge.initialCode || '');
@@ -108,6 +110,15 @@ export default function ChallengeExecutionPage() {
 
   const processResult = (evaluation: EvaluateChallengeOutput) => {
     setResult(evaluation);
+
+    // Trigger XP reward animation
+    const xpGained = evaluation.passed ? 200 : 100;
+    const currentXP = (profile as any)?.xp || 0;
+    setShowXPReward({
+      xpGained,
+      newTotalXP: currentXP + xpGained,
+      badge: evaluation.awardedBadge ? { title: evaluation.awardedBadge.title, description: evaluation.awardedBadge.description } : null,
+    });
 
     if (user && !user.isAnonymous) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'challenge_submissions'), {
@@ -354,6 +365,15 @@ export default function ChallengeExecutionPage() {
           </div>
         </section>
       </main>
+      {/* XP Reward Animation */}
+      {showXPReward && (
+        <XPRewardAnimation
+          xpGained={showXPReward.xpGained}
+          newTotalXP={showXPReward.newTotalXP}
+          badge={showXPReward.badge}
+          onDismiss={() => setShowXPReward(null)}
+        />
+      )}
     </div>
   );
 }
