@@ -193,7 +193,6 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             system_instruction: { parts: [{ text: systemPrompt }] },
-            systemInstruction: { parts: [{ text: systemPrompt }] }, // Fallback for camelCase
             contents: historyGemini,
             generationConfig: { maxOutputTokens: 512, temperature: 0.7, topP: 0.9 },
             safetySettings: [
