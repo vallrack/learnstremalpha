@@ -167,6 +167,7 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
         reply = response.reply;
       } else if (aiProvider === 'gemini-direct') {
         const GEMINI_API_KEY = "AIzaSyDWPMrsqtbkmVD1Ck1Rduk44-TgPZY28Z0";
+        // Use 2.0-flash as requested by the user
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
         
         const systemPrompt = language === 'en' 
