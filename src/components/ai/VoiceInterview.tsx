@@ -173,23 +173,32 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
           ? `You are a world-class technical interviewer for a ${role} position. ${instructions}. Keep responses concise (max 3 sentences).` 
           : `Eres un entrevistador técnico experto para la posición de ${role}. ${instructions}. Mantén tus respuestas concisas (máximo 3 frases).`;
 
-        const contents = [
-          { role: 'user', parts: [{ text: systemPrompt }] },
-          { role: 'model', parts: [{ text: "Understood. I'm ready." }] },
-          ...messages.map(m => ({
-            role: m.role === 'model' ? 'model' : 'user',
-            parts: [{ text: m.content[0].text }]
-          })),
-          { role: 'user', parts: [{ text }] }
-        ];
+        // Match the user's working structure exactly
+        const historyGemini = messages.map(m => ({
+          role: m.role === 'model' ? 'model' : 'user',
+          parts: [{ text: m.content[0].text }]
+        }));
+        
+        // Add current message
+        historyGemini.push({ role: 'user', parts: [{ text }] });
 
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents })
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: historyGemini,
+            generationConfig: { maxOutputTokens: 500, temperature: 0.7, topP: 0.9 }
+          })
         });
+
+        if (!res.ok) {
+           const err = await res.json().catch(() => ({}));
+           throw new Error(err?.error?.message || `HTTP ${res.status}`);
+        }
+
         const data = await res.json();
-        reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Gemini direct error.";
+        reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response content.";
       } else {
         // PUTER.JS INTEGRATION
         const puter = (window as any).puter;
