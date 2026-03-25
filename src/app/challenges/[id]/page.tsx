@@ -268,6 +268,7 @@ export default function ChallengeExecutionPage() {
                   initialLanguage={challenge.targetLanguage || 'es'} 
                   instructions={challenge.solution}
                   isPremiumChallenge={!challenge.isFree}
+                  isAdmin={profile?.role === 'admin'}
                   onComplete={(transcript) => {
                     setCode(transcript);
                   }} 

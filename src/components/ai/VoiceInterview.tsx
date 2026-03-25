@@ -26,6 +26,7 @@ interface VoiceInterviewProps {
   onComplete?: (transcript: string) => void;
   instructions?: string;
   isPremiumChallenge?: boolean;
+  isAdmin?: boolean;
 }
 
 export function VoiceInterview({ 
@@ -33,7 +34,8 @@ export function VoiceInterview({
   initialLanguage = 'es', 
   onComplete, 
   instructions = '', 
-  isPremiumChallenge = false 
+  isPremiumChallenge = false,
+  isAdmin = false 
 }: VoiceInterviewProps) {
   const [isInterviewing, setIsInterviewing] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -233,9 +235,9 @@ export function VoiceInterview({
         const puter = (window as any).puter;
         if (!puter) throw new Error("Puter.js not loaded. Please check your internet connection and refresh.");
         
-        // Premium Enforcement: If it's a premium challenge, require Puter Sign-in
+        // Premium Enforcement: If it's a premium challenge, require Puter Sign-in (Admins bypass this)
         const isSignedIn = await puter.auth.isSignedIn();
-        if (isPremiumChallenge && !isSignedIn) {
+        if (isPremiumChallenge && !isSignedIn && !isAdmin) {
            throw new Error("Puter Authorization Required: This is a premium challenge. Please use the 'Sign In to Puter' button above to authorize AI usage with your Claude account.");
         }
         
@@ -315,7 +317,7 @@ export function VoiceInterview({
                </select>
              </Badge>
 
-              {(aiProvider === 'puter' || isPremiumChallenge) && (
+              {(aiProvider === 'puter' || (isPremiumChallenge && !isAdmin)) && (
                 <Button 
                  variant="outline" 
                  size="sm" 
