@@ -3,14 +3,12 @@
 
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
-import { LessonAssistant } from '@/components/player/LessonAssistant';
 import { QuizPlayer } from '@/components/challenges/QuizPlayer';
 import { Button } from '@/components/ui/button';
 import { 
   ChevronLeft, 
   CheckCircle, 
   Menu, 
-  MoreVertical, 
   Loader2, 
   PlayCircle,
   Paperclip,
@@ -18,15 +16,12 @@ import {
   FileText,
   Presentation,
   Link as LinkIcon,
-  Download,
   Eye,
   ExternalLink,
-  Lock,
   Award,
   Code2,
   ArrowRight,
-  HelpCircle,
-  AlertCircle
+  HelpCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
@@ -40,6 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
+import { FloatingAITutor } from '@/components/ai/FloatingAITutor';
 
 export default function LessonPlayerPage() {
   return (
@@ -113,7 +109,7 @@ function LessonPlayerContent() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-screen flex flex-col bg-background overflow-hidden relative">
       <Navbar />
       <div className="flex-1 flex overflow-hidden">
         <aside className="hidden lg:flex w-80 border-r bg-card flex-col overflow-hidden shrink-0">
@@ -172,11 +168,8 @@ function LessonPlayerContent() {
             </div>
           </div>
         </main>
-
-        <aside className="hidden xl:block w-96 bg-card border-l shrink-0">
-          <LessonAssistant lessonContent={currentLesson.description || ''} />
-        </aside>
       </div>
+      <FloatingAITutor lessonTitle={currentLesson.title} lessonContent={currentLesson.description || ''} />
     </div>
   );
 }
@@ -196,25 +189,18 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
 
   const getEmbedUrl = (url: string, type: string) => {
     if (!url) return '';
-    
-    // Google Drive normalization
     if (url.includes('drive.google.com')) {
-      // Convert /view, /edit, etc to /preview for clean embedding
       let embedUrl = url;
       if (url.includes('/view')) embedUrl = url.replace(/\/view.*$/, '/preview');
       else if (url.includes('/edit')) embedUrl = url.replace(/\/edit.*$/, '/preview');
       else if (!url.endsWith('/preview')) {
-        // Try to append /preview if it's just a file link
         embedUrl = url.split('?')[0].replace(/\/$/, '') + '/preview';
       }
       return embedUrl;
     }
-
-    // Office Online Viewer for Word and PowerPoint (Non-Google Drive)
     if (type === 'word' || type === 'ppt') {
       return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     }
-
     return url;
   };
 

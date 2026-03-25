@@ -129,17 +129,32 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">Tu camino al éxito técnico está al {Math.round((completedCount / (allCourses?.length || 1)) * 100)}% de completarse.</p>
           </div>
 
-          <div className="flex items-center gap-4 bg-white p-4 rounded-[2rem] border shadow-sm">
-            <div className="relative h-16 w-16 flex items-center justify-center">
-              <svg className="absolute inset-0 h-full w-full -rotate-90">
-                <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" className="text-slate-100" />
-                <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={`${(xpInCurrentLevel / 1000) * 176} 176`} className="text-primary" />
-              </svg>
-              <span className="text-xl font-bold">{level}</span>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-4 bg-white p-4 rounded-[2rem] border shadow-sm">
+              <div className="relative h-16 w-16 flex items-center justify-center">
+                <svg className="absolute inset-0 h-full w-full -rotate-90">
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" className="text-slate-100" />
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={`${(xpInCurrentLevel / 1000) * 176} 176`} className="text-primary" />
+                </svg>
+                <span className="text-xl font-bold">{level}</span>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Nivel de Programador</p>
+                <p className="text-sm font-bold text-slate-900">{xpInCurrentLevel} / 1000 XP</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Nivel de Programador</p>
-              <p className="text-sm font-bold text-slate-900">{xpInCurrentLevel} / 1000 XP</p>
+
+            <div className="flex items-center gap-4 bg-white p-4 rounded-[2rem] border shadow-sm px-6">
+              <div className="h-12 w-12 bg-orange-100 rounded-2xl flex items-center justify-center shadow-inner">
+                <Zap className="h-6 w-6 text-orange-500 fill-orange-500 animate-pulse" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Racha de Estudio</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-black text-slate-900">{profile?.streak || 0} Días</span>
+                  <Badge variant="secondary" className="bg-orange-50 text-orange-600 border-none text-[9px] px-2 py-0">¡FUEGO!</Badge>
+                </div>
+              </div>
             </div>
           </div>
         </header>

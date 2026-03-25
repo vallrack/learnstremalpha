@@ -12,7 +12,8 @@ export const en = {
     startFree: "Start Free",
     language: "Language",
     spanish: "Spanish",
-    english: "English"
+    english: "English",
+    leaderboard: "Leaderboard"
   },
   home: {
     heroBadge: "AI-Powered Learning Platform",
@@ -51,5 +52,20 @@ export const en = {
     ctaTitle: "Ready to boost your career?",
     ctaSubtitle: "Get unlimited access to all courses, projects, and our exclusive AI features with a premium subscription.",
     ctaBtn: "Get Unlimited Access"
+  },
+  leaderboard: {
+    title: "Student Leaderboard",
+    subtitle: "The community's top developers based on XP and completed challenges.",
+    rank: "Rank",
+    student: "Student",
+    xp: "Experience (XP)",
+    level: "Level",
+    top3Title: "Academy Legends"
+  },
+  aiTutor: {
+    toggle: "Ask AI Tutor",
+    placeholder: "Have a question about this lesson?",
+    thinking: "Analyzing lesson...",
+    disclaimer: "AI understands this lesson context to better assist you."
   }
 }

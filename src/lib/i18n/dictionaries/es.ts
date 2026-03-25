@@ -12,7 +12,8 @@ export const es = {
     startFree: "Empieza Gratis",
     language: "Idioma",
     spanish: "Español",
-    english: "Inglés"
+    english: "Inglés",
+    leaderboard: "Ranking"
   },
   home: {
     heroBadge: "Plataforma de Aprendizaje con IA",
@@ -51,5 +52,20 @@ export const es = {
     ctaTitle: "¿Listo para impulsar tu carrera?",
     ctaSubtitle: "Obtén acceso ilimitado a todos los cursos, proyectos y nuestras funciones exclusivas de IA con una suscripción premium.",
     ctaBtn: "Obtener Acceso Ilimitado"
+  },
+  leaderboard: {
+    title: "Ranking de Estudiantes",
+    subtitle: "Los mejores desarrolladores de la comunidad basados en XP y retos superados.",
+    rank: "Rango",
+    student: "Estudiante",
+    xp: "Experiencia (XP)",
+    level: "Nivel",
+    top3Title: "Leyendas de la Academia"
+  },
+  aiTutor: {
+    toggle: "Preguntar a IA",
+    placeholder: "¿Tienes una duda sobre esta lección?",
+    thinking: "Analizando lección...",
+    disclaimer: "La IA conoce el contexto de esta clase para ayudarte mejor."
   }
 }

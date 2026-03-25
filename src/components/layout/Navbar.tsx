@@ -21,7 +21,8 @@ import {
   ChevronDown,
   Tag,
   GraduationCap,
-  FileText
+  FileText,
+  Trophy
 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -74,6 +75,7 @@ export function Navbar() {
     { href: '/', label: t.common.language === 'es' ? 'Inicio' : 'Home', icon: Home },
     { href: '/courses', label: t.common.courses, icon: BookOpen },
     { href: '/challenges', label: t.common.challenges, icon: Code2 },
+    { href: '/leaderboard', label: t.common.leaderboard, icon: Trophy },
   ];
 
   if (user) {
