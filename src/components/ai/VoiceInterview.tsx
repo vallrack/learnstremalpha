@@ -14,7 +14,8 @@ import {
   MessageSquare,
   Sparkles,
   Globe,
-  Settings
+  Settings,
+  Cpu
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { mockInterview } from '@/ai/flows/mock-interview';
@@ -34,6 +35,8 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
   const [language, setLanguage] = useState<'en' | 'es'>(initialLanguage);
   const [messages, setMessages] = useState<any[]>([]);
   const [transcript, setTranscript] = useState('');
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'puter'>('gemini');
+  const [puterModel, setPuterModel] = useState('claude-3-5-sonnet');
   
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<any>(null);
@@ -149,20 +152,41 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
     setIsGenerating(true);
 
     try {
-      const response = await mockInterview({
-        message: text,
-        language,
-        role,
-        instructions,
-        history: messages.map(m => ({
-          role: m.role,
-          content: m.content
-        }))
-      });
+      let reply = '';
+      if (aiProvider === 'gemini') {
+        const response = await mockInterview({
+          message: text,
+          language,
+          role,
+          instructions,
+          history: messages.map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        });
+        reply = response.reply;
+      } else {
+        // PUTER.JS INTEGRATION
+        const puter = (window as any).puter;
+        if (!puter) throw new Error("Puter.js not loaded");
+        
+        const systemPrompt = language === 'en' 
+          ? `You are a world-class technical interviewer for a ${role} position. ${instructions}` 
+          : `Eres un entrevistador técnico experto para la posición de ${role}. ${instructions}`;
 
-      const aiResponse = { role: 'model', content: [{ text: response.reply }] };
+        const puterMessages = [
+          { role: 'system', content: systemPrompt },
+          ...messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content[0].text })),
+          { role: 'user', content: text }
+        ];
+
+        const response = await puter.ai.chat(puterMessages, { model: puterModel });
+        reply = response?.message?.content?.[0]?.text || response?.message?.content || "No response from Puter.";
+      }
+
+      const aiResponse = { role: 'model', content: [{ text: reply }] };
       setMessages(prev => [...prev, aiResponse]);
-      speak(response.reply);
+      speak(reply);
     } catch (error) {
       console.error('Interview Error:', error);
       const errorMsg = language === 'en' 
@@ -198,10 +222,40 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
                  onChange={(e) => setLanguage(e.target.value as 'en' | 'es')}
                  disabled={isInterviewing}
                >
-                 <option value="es" className="bg-slate-800">Español</option>
-                 <option value="en" className="bg-slate-800">English</option>
+                 <option value="es" className="bg-slate-800">ES</option>
+                 <option value="en" className="bg-slate-800">EN</option>
                </select>
              </Badge>
+
+             <Badge variant="outline" className="border-slate-700 bg-slate-800 text-slate-300 gap-2 h-9 px-4 rounded-xl">
+               <Settings className="h-4 w-4" />
+               <select 
+                 className="bg-transparent border-none outline-none font-bold text-xs cursor-pointer appearance-none"
+                 value={aiProvider}
+                 onChange={(e) => setAiProvider(e.target.value as 'gemini' | 'puter')}
+                 disabled={isInterviewing}
+               >
+                 <option value="gemini" className="bg-slate-800">Gemini (Slow)</option>
+                 <option value="puter" className="bg-slate-800">Claude (Fast)</option>
+               </select>
+             </Badge>
+
+             {aiProvider === 'puter' && (
+               <Badge variant="outline" className="border-indigo-700 bg-indigo-800 text-indigo-100 gap-2 h-9 px-4 rounded-xl">
+                 <Cpu className="h-4 w-4" />
+                 <select 
+                   className="bg-transparent border-none outline-none font-bold text-[10px] cursor-pointer appearance-none"
+                   value={puterModel}
+                   onChange={(e) => setPuterModel(e.target.value)}
+                   disabled={isInterviewing}
+                 >
+                   <option value="claude-3-5-sonnet" className="bg-indigo-800">3.5 Sonnet</option>
+                   <option value="claude-3-5-haiku" className="bg-indigo-800">3.5 Haiku</option>
+                   <option value="claude-haiku-4-5" className="bg-indigo-800">Haiku 4.5 (Beta)</option>
+                   <option value="gpt-4o" className="bg-indigo-800">GPT-4o</option>
+                 </select>
+               </Badge>
+             )}
           </div>
         </div>
       </CardHeader>
