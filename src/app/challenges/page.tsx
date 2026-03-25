@@ -5,7 +5,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Code2, Terminal, ArrowRight, Loader2, Sparkles, Layout, Lock, Unlock, LogIn, EyeOff, HelpCircle, MessageSquare, Gamepad2 } from 'lucide-react';
+import { Search, Code2, Terminal, ArrowRight, Loader2, Sparkles, Layout, Lock, Unlock, LogIn, EyeOff, HelpCircle, MessageSquare, Gamepad2, Zap } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, doc, where } from 'firebase/firestore';
@@ -88,6 +88,41 @@ export default function ChallengesCataloguePage() {
             />
           </div>
         </header>
+
+        {/* Featured Interview Challenge */}
+        <section className="mb-16">
+          <Card className="rounded-[3rem] border-none shadow-2xl bg-slate-900 text-white overflow-hidden relative group">
+            <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-opacity">
+               <MessageSquare className="h-40 w-40" />
+            </div>
+            <CardContent className="p-10 md:p-16 relative z-10">
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                  <div className="space-y-6">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/20 text-primary text-xs font-black uppercase tracking-widest border border-primary/30">
+                       <Zap className="h-3.5 w-3.5 fill-current" />
+                       Novedad: Voice-to-Voice
+                    </div>
+                    <h2 className="text-4xl md:text-5xl font-headline font-bold leading-tight">Mock Interviews de Alta Complejidad</h2>
+                    <p className="text-slate-400 text-lg leading-relaxed font-medium">
+                      Habla con nuestra IA en tiempo real. Entrena tu inglés técnico y prepárate para las preguntas más difíciles de la industria con feedback instantáneo.
+                    </p>
+                    <div className="flex flex-wrap gap-4 pt-2">
+                       <Badge variant="secondary" className="bg-slate-800 text-slate-300 border-slate-700 rounded-xl px-3 py-1.5">Español & English</Badge>
+                       <Badge variant="secondary" className="bg-slate-800 text-slate-300 border-slate-700 rounded-xl px-3 py-1.5">+100 XP por sesión</Badge>
+                    </div>
+                  </div>
+                  <div className="flex justify-center lg:justify-end">
+                     <Link href="/challenges/interview">
+                        <Button className="h-20 px-12 rounded-[2rem] text-xl font-black bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/40 gap-4 group-hover:scale-105 transition-transform">
+                          Probar Entrevista IA
+                          <ArrowRight className="h-6 w-6" />
+                        </Button>
+                     </Link>
+                  </div>
+               </div>
+            </CardContent>
+          </Card>
+        </section>
 
         {isChallengesLoading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-4">
