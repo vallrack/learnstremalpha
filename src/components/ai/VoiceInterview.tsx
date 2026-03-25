@@ -25,9 +25,16 @@ interface VoiceInterviewProps {
   initialLanguage?: 'en' | 'es';
   onComplete?: (transcript: string) => void;
   instructions?: string;
+  isPremiumChallenge?: boolean;
 }
 
-export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 'es', onComplete, instructions = '' }: VoiceInterviewProps) {
+export function VoiceInterview({ 
+  role = 'Frontend Developer', 
+  initialLanguage = 'es', 
+  onComplete, 
+  instructions = '', 
+  isPremiumChallenge = false 
+}: VoiceInterviewProps) {
   const [isInterviewing, setIsInterviewing] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -36,7 +43,7 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
   const [messages, setMessages] = useState<any[]>([]);
   const [transcript, setTranscript] = useState('');
   const [aiProvider, setAiProvider] = useState<'gemini' | 'puter' | 'gemini-direct'>('gemini-direct');
-  const [puterModel, setPuterModel] = useState('claude-3-5-sonnet');
+  const [puterModel, setPuterModel] = useState('claude-sonnet-4-6');
   
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<any>(null);
@@ -212,15 +219,17 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
         const data = await res.json();
         reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response content.";
       } else {
-        // PUTER.JS INTEGRATION
+        // PUTER.JS INTEGRATION (v2 - No API keys or registrations required)
         const puter = (window as any).puter;
         if (!puter) throw new Error("Puter.js not loaded. Please check your internet connection and refresh.");
         
-        // Ensure we are signed in if Puter requires it for "User-Pays"
+        // Premium Enforcement: If it's a premium challenge, require Puter Sign-in
         const isSignedIn = await puter.auth.isSignedIn();
-        if (!isSignedIn) {
-           throw new Error("Puter: Not signed in. Use the 'Sign In to Puter' button above to authorize AI usage.");
+        if (isPremiumChallenge && !isSignedIn) {
+           throw new Error("Puter Authorization Required: This is a premium challenge. Please use the 'Sign In to Puter' button above to authorize AI usage with your Claude account.");
         }
+        
+        console.log(`[VoiceInterview] Puter session active: ${isSignedIn}`);
 
         const systemPrompt = language === 'en' 
           ? `You are a world-class technical interviewer for a ${role} position. ${instructions}. Keep responses concise (max 3 sentences).` 
@@ -232,10 +241,8 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
           { role: 'user', content: text }
         ];
 
-        // Map UI model names to Puter actual model strings
+        // Map UI model names to Puter actual model strings (using direct value for v2)
         let actualModel = puterModel;
-        if (actualModel === 'claude-3-5-sonnet') actualModel = 'claude-3-5-sonnet'; // Often works
-        if (actualModel === 'claude-3-5-haiku') actualModel = 'claude-3-5-haiku';
         
         const response = await puter.ai.chat(puterMessages, { model: actualModel });
         reply = response?.message?.content?.[0]?.text || response?.message?.content || "No response content from Puter.";
@@ -298,17 +305,16 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
                </select>
              </Badge>
 
-             {aiProvider === 'puter' && (
-               <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-9 px-4 rounded-xl border-indigo-700 bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100"
-                onClick={() => (window as any).puter?.auth.signIn()}
-               >
-                 Sign In to Puter
-               </Button>
-             )}
-
+              {(aiProvider === 'puter' || isPremiumChallenge) && (
+                <Button 
+                 variant="outline" 
+                 size="sm" 
+                 className="h-9 px-4 rounded-xl border-indigo-700 bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100"
+                 onClick={() => (window as any).puter?.auth.signIn()}
+                >
+                  {isPremiumChallenge ? 'Link Puter Account' : 'Sign In to Puter'}
+                </Button>
+              )}
              {aiProvider === 'puter' && (
                <Badge variant="outline" className="border-indigo-700 bg-indigo-800 text-indigo-100 gap-2 h-9 px-4 rounded-xl">
                  <Cpu className="h-4 w-4" />
@@ -318,9 +324,11 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
                    onChange={(e) => setPuterModel(e.target.value)}
                    disabled={isInterviewing}
                  >
+                   <option value="claude-sonnet-4-6" className="bg-indigo-800">Sonnet 4.6 (Puter v2)</option>
+                   <option value="claude-3-7-sonnet" className="bg-indigo-800">3.7 Sonnet</option>
                    <option value="claude-3-5-sonnet" className="bg-indigo-800">3.5 Sonnet</option>
-                   <option value="claude-3-5-haiku" className="bg-indigo-800">3.5 Haiku</option>
-                   <option value="claude-haiku-4-5" className="bg-indigo-800">Haiku 4.5 (Beta)</option>
+                   <option value="claude-opus-4-6" className="bg-indigo-800">Opus 4.6</option>
+                   <option value="claude-haiku-4-5" className="bg-indigo-800">Haiku 4.5</option>
                    <option value="gpt-4o" className="bg-indigo-800">GPT-4o</option>
                  </select>
                </Badge>

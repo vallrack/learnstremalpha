@@ -161,6 +161,7 @@ export default function AdminChallengesPage() {
       difficulty,
       technology,
       type: challengeType,
+      isFree,
       visibility,
       updatedAt: serverTimestamp(),
     };

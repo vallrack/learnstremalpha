@@ -267,6 +267,7 @@ export default function ChallengeExecutionPage() {
                   role={challenge.targetRole || challenge.title} 
                   initialLanguage={challenge.targetLanguage || 'es'} 
                   instructions={challenge.solution}
+                  isPremiumChallenge={!challenge.isFree}
                   onComplete={(transcript) => {
                     setCode(transcript);
                   }} 
