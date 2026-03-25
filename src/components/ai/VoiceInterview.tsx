@@ -317,7 +317,7 @@ export function VoiceInterview({
                </select>
              </Badge>
 
-              {(aiProvider === 'puter' || (isPremiumChallenge && !isAdmin)) && (
+              {aiProvider === 'puter' && !isAdmin && (
                 <Button 
                  variant="outline" 
                  size="sm" 
@@ -389,20 +389,24 @@ export function VoiceInterview({
                      {isListening ? (transcript || (language === 'en' ? 'Keep talking...' : 'Cuéntame mas...')) : 
                       isInterviewing ? (language === 'en' ? 'Click the button below to respond.' : 'Presiona el botón para responder.') :
                       (language === 'en' ? 'Start your high-performance interview session.' : 'Comienza tu sesión de alta complejidad.')}
-                   </p>
-                </div>
+                    </p>
+                    
+                    {!isInterviewing && (
+                      <div className="pt-4">
+                        <Button 
+                          onClick={startInterview} 
+                          className="h-14 px-10 rounded-2xl bg-primary text-lg font-bold shadow-xl shadow-primary/30 gap-3 hover:scale-105 transition-transform"
+                        >
+                          <Play className="h-5 w-5 fill-current" />
+                          {language === 'en' ? 'Start Mock Interview' : 'Comenzar Entrevista'}
+                        </Button>
+                      </div>
+                    )}
+                 </div>
              </div>
 
              <div className="flex items-center justify-center gap-4 pt-8">
-               {!isInterviewing ? (
-                 <Button 
-                   onClick={startInterview} 
-                   className="h-14 px-10 rounded-2xl bg-primary text-lg font-bold shadow-xl shadow-primary/30 gap-3"
-                 >
-                   <Play className="h-5 w-5 fill-current" />
-                   {language === 'en' ? 'Start Mock Interview' : 'Comenzar Entrevista'}
-                 </Button>
-               ) : (
+               {isInterviewing && (
                  <>
                    <Button 
                      variant="outline" 
