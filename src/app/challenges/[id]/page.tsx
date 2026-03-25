@@ -38,6 +38,7 @@ import { DragDropSnippets } from '@/components/challenges/DragDropSnippets';
 import { SortableCodeBlocks } from '@/components/challenges/SortableCodeBlocks';
 import { FlipFlashcards } from '@/components/challenges/FlipFlashcards';
 import { SwipeCards } from '@/components/challenges/SwipeCards';
+import { VoiceInterview } from '@/components/ai/VoiceInterview';
 import Link from 'next/link';
 import Editor from '@monaco-editor/react';
 import { XPRewardAnimation } from '@/components/gamification/XPRewardAnimation';
@@ -262,21 +263,14 @@ export default function ChallengeExecutionPage() {
               </div>
             ) : challenge.type === 'interview' ? (
               <div className="h-full flex flex-col gap-6 animate-in fade-in duration-700">
-                <div className="bg-white p-10 rounded-[3rem] border shadow-2xl border-primary/5 flex-1 flex flex-col">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="bg-primary/10 p-3 rounded-2xl"><MessageSquare className="h-8 w-8 text-primary" /></div>
-                    <div>
-                      <h3 className="text-2xl font-headline font-bold text-slate-900">Sala de Entrevista Virtual</h3>
-                      <p className="text-slate-500 text-sm font-medium">Usa terminología técnica y mantén un tono profesional.</p>
-                    </div>
-                  </div>
-                  <Textarea 
-                    value={code} 
-                    onChange={(e) => setCode(e.target.value)} 
-                    className="flex-1 rounded-[2rem] border-2 border-slate-50 bg-slate-50 p-10 text-2xl font-medium focus-visible:ring-primary shadow-inner resize-none leading-relaxed"
-                    placeholder="Escribe tu respuesta como si estuvieras frente al reclutador..."
-                  />
-                </div>
+                <VoiceInterview 
+                  role={challenge.targetRole || challenge.title} 
+                  initialLanguage={challenge.targetLanguage || 'es'} 
+                  instructions={challenge.solution}
+                  onComplete={(transcript) => {
+                    setCode(transcript);
+                  }} 
+                />
               </div>
             ) : challenge.type === 'interactive-video' ? (
               <div className="max-w-4xl mx-auto py-12 px-6 w-full animate-in fade-in zoom-in duration-500">

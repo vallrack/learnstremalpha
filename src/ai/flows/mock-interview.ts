@@ -11,6 +11,7 @@ const MockInterviewInputSchema = z.object({
     role: z.enum(['user', 'model']),
     content: z.array(z.object({ text: z.string() })),
   })).optional().describe('The conversation history to maintain context.'),
+  instructions: z.string().optional().describe('Special instructions for the AI reviewer (e.g., be strict, ask about X).'),
 });
 
 const MockInterviewOutputSchema = z.object({
@@ -29,19 +30,21 @@ const mockInterviewFlow = ai.defineFlow(
     outputSchema: MockInterviewOutputSchema,
   },
   async (input) => {
-    const { message, language, role, history = [] } = input;
+    const { message, language, role, history = [], instructions = '' } = input;
 
     const systemPrompt = language === 'en' 
       ? `You are a world-class technical interviewer at a top tech company. 
          You are interviewing a candidate for a ${role} position.
          Your goal is to be professional, slightly challenging, but encouraging.
          Speak naturally and keep your responses relatively concise (maximum 3 sentences) since the user is listening to you.
-         Conduct the interview in English.`
+         Conduct the interview in English.
+         ${instructions ? `Special Instructions for this session: ${instructions}` : ''}`
       : `Eres un entrevistador técnico de clase mundial en una empresa tecnológica top.
          Estás entrevistando a un candidato para la posición de ${role}.
          Tu objetivo es ser profesional, ligeramente desafiante pero alentador.
          Habla de forma natural y mantén tus respuestas relativamente concisas (máximo 3 frases) ya que el usuario te está escuchando.
-         Realiza la entrevista en español.`;
+         Realiza la entrevista en español.
+         ${instructions ? `Instrucciones especiales para esta sesión: ${instructions}` : ''}`;
 
     const historyString = history.map(m => 
       `${m.role === 'user' ? 'Candidate' : 'Interviewer'}: ${m.content[0].text}`
@@ -56,10 +59,11 @@ ${historyString}
 Current Candidate Statement: "${message}"
 Interviewer:`;
 
-    const { text } = await ai.generate(fullPrompt);
+    const response = await ai.generate(fullPrompt);
+    const reply = response.text || "I'm sorry, can you please repeat that? I didn't catch it correctly.";
 
     return {
-      reply: text,
+      reply: reply,
       suggestedNextStep: "Continue the interview flow"
     };
   }

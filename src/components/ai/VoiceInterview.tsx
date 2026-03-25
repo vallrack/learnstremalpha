@@ -22,9 +22,11 @@ import { mockInterview } from '@/ai/flows/mock-interview';
 interface VoiceInterviewProps {
   role?: string;
   initialLanguage?: 'en' | 'es';
+  onComplete?: (transcript: string) => void;
+  instructions?: string;
 }
 
-export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 'es' }: VoiceInterviewProps) {
+export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 'es', onComplete, instructions = '' }: VoiceInterviewProps) {
   const [isInterviewing, setIsInterviewing] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -36,6 +38,7 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isProcessingRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -89,6 +92,12 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
     setIsListening(false);
     if (recognitionRef.current) recognitionRef.current.stop();
     if (synthRef.current) synthRef.current.cancel();
+
+    // Trigger onComplete with the full conversation
+    if (onComplete) {
+       const fullTranscript = messages.map(m => `${m.role === 'user' ? 'Candidate' : 'Interviewer'}: ${m.content[0].text}`).join('\n');
+       onComplete(fullTranscript);
+    }
   };
 
   const toggleListening = () => {
@@ -128,8 +137,9 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
   };
 
   const handleUserMessage = async (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || isProcessingRef.current) return;
     
+    isProcessingRef.current = true;
     // Stop listening while AI works
     recognitionRef.current?.stop();
     setIsListening(false);
@@ -143,6 +153,7 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
         message: text,
         language,
         role,
+        instructions,
         history: messages.map(m => ({
           role: m.role,
           content: m.content
@@ -154,8 +165,14 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
       speak(response.reply);
     } catch (error) {
       console.error('Interview Error:', error);
+      const errorMsg = language === 'en' 
+        ? "I'm sorry, I'm having trouble connecting. Could you repeat that?" 
+        : "Lo siento, tengo problemas de conexión. ¿Podrías repetirlo?";
+      setMessages(prev => [...prev, { role: 'model', content: [{ text: errorMsg }] }]);
+      speak(errorMsg);
     } finally {
       setIsGenerating(false);
+      isProcessingRef.current = false;
     }
   };
 

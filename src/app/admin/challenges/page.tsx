@@ -85,6 +85,8 @@ export default function AdminChallengesPage() {
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [questions, setQuestions] = useState<any[]>([]);
   const [jsonConfig, setJsonConfig] = useState('{\n\n}');
+  const [targetLanguage, setTargetLanguage] = useState<'en' | 'es'>('es');
+  const [targetRole, setTargetRole] = useState('');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -119,6 +121,8 @@ export default function AdminChallengesPage() {
     setVisibility('public');
     setQuestions([]);
     setJsonConfig('{\n\n}');
+    setTargetLanguage('es');
+    setTargetRole('');
   };
 
   const handleEditClick = (challenge: any) => {
@@ -134,6 +138,8 @@ export default function AdminChallengesPage() {
     setIsFree(challenge.isFree ?? true);
     setVisibility(challenge.visibility || 'public');
     setQuestions(challenge.questions || []);
+    setTargetLanguage(challenge.targetLanguage || 'es');
+    setTargetRole(challenge.targetRole || '');
     
     if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challenge.type)) {
        const { id, title, description, difficulty, technology, type, isFree, visibility, updatedAt, instructorId, instructorName, createdAt, ...rest } = challenge;
@@ -162,6 +168,10 @@ export default function AdminChallengesPage() {
     if (challengeType === 'code' || challengeType === 'interview') {
       challengeData.initialCode = initialCode;
       challengeData.solution = solution;
+      if (challengeType === 'interview') {
+        challengeData.targetLanguage = targetLanguage;
+        challengeData.targetRole = targetRole || title;
+      }
     } else if (challengeType === 'wordsearch') {
       challengeData.words = words;
     } else if (challengeType === 'quiz') {
@@ -357,22 +367,45 @@ export default function AdminChallengesPage() {
                       </div>
                     ) : challengeType === 'code' || challengeType === 'interview' ? (
                       <>
+                        {challengeType === 'interview' && (
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="grid gap-2">
+                              <Label className="font-bold">Idioma de Entrevista</Label>
+                              <Select value={targetLanguage} onValueChange={(v: any) => setTargetLanguage(v)}>
+                                <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="es">Español</SelectItem>
+                                  <SelectItem value="en">English</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="font-bold">Rol / Tema Objetivo</Label>
+                              <Input 
+                                value={targetRole} 
+                                onChange={(e) => setTargetRole(e.target.value)} 
+                                placeholder="Ej: React Expert, Senior Python..." 
+                                className="rounded-xl h-11"
+                              />
+                            </div>
+                          </div>
+                        )}
                         <div className="grid gap-3">
-                          <Label className="font-bold">{challengeType === 'code' ? 'Código Inicial' : 'Placeholder de Respuesta'}</Label>
+                          <Label className="font-bold">{challengeType === 'code' ? 'Código Inicial' : 'Puntos Clave a Mencionar'}</Label>
                           <Textarea 
                             value={initialCode} 
                             onChange={(e) => setInitialCode(e.target.value)} 
-                            className="font-mono text-[11px] min-h-[180px] rounded-2xl bg-white border-dashed" 
-                            placeholder={challengeType === 'code' ? "function solution() { ... }" : "Escribe tu respuesta aquí..."} 
+                            className="font-mono text-[11px] min-h-[120px] rounded-2xl bg-white border-dashed" 
+                            placeholder={challengeType === 'code' ? "function solution() { ... }" : "Palabras clave que el estudiante debe intentar usar..."} 
                           />
                         </div>
-                        <div className="grid gap-3">
-                          <Label className="font-bold text-emerald-600">Referencia IA (Lo que buscará evaluar)</Label>
+                        <div className="grid gap-3 mt-4">
+                          <Label className="font-bold text-emerald-600">Instrucciones IA (Contexto para el entrevistador)</Label>
                           <Textarea 
                             value={solution} 
                             onChange={(e) => setSolution(e.target.value)} 
                             className="font-mono text-[11px] min-h-[120px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
-                            placeholder="Ej: Debe usar 'async/await' y explicar el manejo de errores..." 
+                            placeholder="Ej: Actúa de forma estricta sobre Clean Architecture y pregunta sobre SOLID..." 
                           />
                         </div>
                       </>
