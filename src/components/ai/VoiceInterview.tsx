@@ -35,7 +35,7 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
   const [language, setLanguage] = useState<'en' | 'es'>(initialLanguage);
   const [messages, setMessages] = useState<any[]>([]);
   const [transcript, setTranscript] = useState('');
-  const [aiProvider, setAiProvider] = useState<'gemini' | 'puter' | 'gemini-direct'>('gemini');
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'puter' | 'gemini-direct'>('gemini-direct');
   const [puterModel, setPuterModel] = useState('claude-3-5-sonnet');
   
   const recognitionRef = useRef<any>(null);
@@ -151,6 +151,8 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
     setMessages(prev => [...prev, newUserMessage]);
     setIsGenerating(true);
 
+    console.log(`[VoiceInterview] Starting AI call with provider: ${aiProvider}`);
+
     try {
       let reply = '';
       if (aiProvider === 'gemini') {
@@ -191,6 +193,7 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             system_instruction: { parts: [{ text: systemPrompt }] },
+            systemInstruction: { parts: [{ text: systemPrompt }] }, // Fallback for camelCase
             contents: historyGemini,
             generationConfig: { maxOutputTokens: 512, temperature: 0.7, topP: 0.9 },
             safetySettings: [
@@ -243,10 +246,10 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
       setMessages(prev => [...prev, aiResponse]);
       speak(reply);
     } catch (error: any) {
-      console.error('Interview Error:', error);
+      console.error(`[VoiceInterview] Error with provider ${aiProvider}:`, error);
       const errorMsg = language === 'en' 
-        ? `I'm sorry, I'm having trouble connecting (${error.message || "Unknown error"}). Could you repeat that?` 
-        : `Lo siento, tengo problemas de conexión (${error.message || "Error desconocido"}). ¿Podrías repetirlo?`;
+        ? `I'm sorry, I'm having trouble connecting (${aiProvider}: ${error.message || "Unknown error"}). Could you repeat that?` 
+        : `Lo siento, tengo problemas de conexión (${aiProvider}: ${error.message || "Error desconocido"}). ¿Podrías repetirlo?`;
       setMessages(prev => [...prev, { role: 'model', content: [{ text: errorMsg }] }]);
       speak(language === 'en' ? "I'm sorry, I'm having trouble connecting." : "Lo siento, tengo problemas de conexión.");
     } finally {

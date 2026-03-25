@@ -87,8 +87,11 @@ export default function LoginPage() {
           });
         }
       } else {
-        if (isAdmin && userDoc.data()?.role !== 'admin') {
-          setDocumentNonBlocking(userRef, { role: 'admin' }, { merge: true });
+        if (isAdmin && (userDoc.data()?.role !== 'admin' || !userDoc.data()?.isPremiumSubscriber)) {
+          setDocumentNonBlocking(userRef, { 
+            role: 'admin', 
+            isPremiumSubscriber: true 
+          }, { merge: true });
         }
       }
     } catch (e) {

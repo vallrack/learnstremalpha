@@ -147,7 +147,7 @@ export default function ChallengeExecutionPage() {
     }
   };
 
-  if (isUserLoading || isChallengeLoading) {
+  if (isUserLoading || isChallengeLoading || (user && !profile)) {
     return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 

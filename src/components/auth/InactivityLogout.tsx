@@ -7,7 +7,7 @@ import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
 
-const INACTIVITY_LIMIT = 3 * 60 * 1000; // 3 minutos en milisegundos
+const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutos
 
 export function InactivityLogout() {
   const { user } = useUser();

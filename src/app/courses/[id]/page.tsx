@@ -87,7 +87,7 @@ export default function CourseDetailPage() {
   }
 
   const isCompleted = progress?.status === 'completed';
-  const isPremium = !!profile?.isPremiumSubscriber;
+  const isPremium = profile?.role === 'admin' || !!profile?.isPremiumSubscriber;
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
   
   // Lógica robusta para optimización de imágenes (Base64 y fuentes no listadas deben ser unoptimized)

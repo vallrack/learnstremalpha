@@ -67,8 +67,8 @@ function CertificateContent() {
     );
   }
 
-  // Si no es preview, validar que el curso esté completado
-  if (!isPreview && (!course || !progress || progress.status !== 'completed')) {
+  // Si no es preview, validar que el curso esté completado (salvo para admins)
+  if (!isPreview && profile?.role !== 'admin' && (!course || !progress || progress.status !== 'completed')) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4 text-center p-6">
         <AlertCircle className="h-12 w-12 text-amber-50" />
@@ -86,7 +86,7 @@ function CertificateContent() {
 
   const studentName = isPreview ? "Nombre del Estudiante" : (profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Estudiante');
   const completionDate = isPreview ? new Date().toLocaleDateString() : (progress?.completedAt ? new Date(progress.completedAt.toDate()).toLocaleDateString() : new Date().toLocaleDateString());
-  const isPremium = isPreview ? true : !!profile?.isPremiumSubscriber;
+  const isPremium = isPreview ? true : (profile?.role === 'admin' || !!profile?.isPremiumSubscriber);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col print:bg-white">
