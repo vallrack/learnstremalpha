@@ -241,13 +241,13 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
       const aiResponse = { role: 'model', content: [{ text: reply }] };
       setMessages(prev => [...prev, aiResponse]);
       speak(reply);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Interview Error:', error);
       const errorMsg = language === 'en' 
-        ? "I'm sorry, I'm having trouble connecting. Could you repeat that?" 
-        : "Lo siento, tengo problemas de conexión. ¿Podrías repetirlo?";
+        ? `I'm sorry, I'm having trouble connecting (${error.message || "Unknown error"}). Could you repeat that?` 
+        : `Lo siento, tengo problemas de conexión (${error.message || "Error desconocido"}). ¿Podrías repetirlo?`;
       setMessages(prev => [...prev, { role: 'model', content: [{ text: errorMsg }] }]);
-      speak(errorMsg);
+      speak(language === 'en' ? "I'm sorry, I'm having trouble connecting." : "Lo siento, tengo problemas de conexión.");
     } finally {
       setIsGenerating(false);
       isProcessingRef.current = false;
