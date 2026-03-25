@@ -278,8 +278,8 @@ export function VoiceInterview({
 
   return (
     <Card className="rounded-[2.5rem] border-none shadow-2xl bg-white overflow-hidden max-w-4xl mx-auto">
-      <CardHeader className="bg-slate-900 text-white p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <CardHeader className="bg-slate-900 text-white p-6 sm:p-8">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <div className="bg-primary/20 p-2 rounded-xl">
@@ -289,7 +289,7 @@ export function VoiceInterview({
             </div>
             <CardDescription className="text-slate-400 font-medium">Practica tus habilidades de comunicación para: <span className="text-white font-bold">{role}</span></CardDescription>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
              <Badge variant="outline" className="border-slate-700 bg-slate-800 text-slate-300 gap-2 h-9 px-4 rounded-xl">
                <Globe className="h-4 w-4" />
                <select 
@@ -349,10 +349,9 @@ export function VoiceInterview({
         </div>
       </CardHeader>
       
-      <CardContent className="p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-3 min-h-[500px]">
-          {/* Interaction Area */}
-          <div className="lg:col-span-2 p-8 flex flex-col justify-between border-r border-slate-100">
+      <CardContent className="p-0 flex flex-col lg:grid lg:grid-cols-3 min-h-[400px] lg:min-h-[500px]">
+        {/* Interaction Area */}
+        <div className="lg:col-span-2 p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-100">
              <div className="flex-1 flex flex-col items-center justify-center space-y-12">
                 {/* Voice Visualizer Area */}
                 <div className="relative flex items-center justify-center">
@@ -431,15 +430,15 @@ export function VoiceInterview({
           </div>
 
           {/* Transcript / Progress Sidebar */}
-          <div className="bg-slate-50/50 p-6 flex flex-col">
-             <div className="flex items-center gap-2 mb-6 text-slate-900 font-bold px-2">
+          <div className="bg-slate-50/50 p-4 sm:p-6 flex flex-col border-slate-100">
+             <div className="flex items-center gap-2 mb-4 text-slate-900 font-bold px-1 sm:px-2">
                 <MessageSquare className="h-4 w-4" />
                 Audio Transcript
              </div>
              
              <div 
                ref={scrollRef}
-               className="flex-1 overflow-y-auto space-y-4 pr-2 max-h-[400px]"
+               className="flex-1 overflow-y-auto space-y-4 pr-1 sm:pr-2 max-h-[300px] lg:max-h-[400px]"
              >
                 {messages.length === 0 && (
                   <div className="text-center pt-20 px-4 space-y-2 opacity-40">
@@ -484,7 +483,6 @@ export function VoiceInterview({
                 </div>
              </div>
           </div>
-        </div>
       </CardContent>
     </Card>
   );
