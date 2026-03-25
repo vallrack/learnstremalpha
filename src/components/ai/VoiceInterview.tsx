@@ -126,7 +126,17 @@ export function VoiceInterview({
     if (!synthRef.current) return;
     
     synthRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Clean markdown symbols for a more natural speech
+    const cleanText = text
+      .replace(/\*\*/g, '') // bold
+      .replace(/__/g, '')   // underline
+      .replace(/#/g, '')    // headers
+      .replace(/`/g, '')    // code
+      .replace(/\[|\]/g, '') // brackets
+      .replace(/\(|\)/g, ''); // parentheses (optional, but can help)
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = language === 'en' ? 'en-US' : 'es-ES';
     
     // Attempt to pick a natural voice if available
