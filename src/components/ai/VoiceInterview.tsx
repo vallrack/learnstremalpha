@@ -42,7 +42,7 @@ export function VoiceInterview({
   const [language, setLanguage] = useState<'en' | 'es'>(initialLanguage);
   const [messages, setMessages] = useState<any[]>([]);
   const [transcript, setTranscript] = useState('');
-  const [aiProvider, setAiProvider] = useState<'gemini' | 'puter' | 'gemini-direct'>('gemini-direct');
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'puter' | 'gemini-direct'>('puter');
   const [puterModel, setPuterModel] = useState('claude-sonnet-4-6');
   
   const recognitionRef = useRef<any>(null);
@@ -175,7 +175,7 @@ export function VoiceInterview({
         });
         reply = response.reply;
       } else if (aiProvider === 'gemini-direct') {
-        const GEMINI_API_KEY = "AIzaSyDWPMrsqtbkmVD1Ck1Rduk44-TgPZY28Z0";
+        const GEMINI_API_KEY = "AIzaSyDWPMrsqtbkmVD1Ck1Rduk44-TgPZY28Z0"; // WARNING: RECENTLY REPORTED AS LEAKED. PLEASE ROTATE.
         // Use 2.0-flash as requested by the user
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
         
