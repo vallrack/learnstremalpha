@@ -173,11 +173,14 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
           ? `You are a world-class technical interviewer for a ${role} position. ${instructions}. Keep responses concise (max 3 sentences).` 
           : `Eres un entrevistador técnico experto para la posición de ${role}. ${instructions}. Mantén tus respuestas concisas (máximo 3 frases).`;
 
-        // Match the user's working structure exactly
-        const historyGemini = messages.map(m => ({
-          role: m.role === 'model' ? 'model' : 'user',
-          parts: [{ text: m.content[0].text }]
-        }));
+        // Match the user's working structure exactly: HISTORY MUST START WITH USER
+        // We skip the first message if it's the 'model' greeting to ensure compliance.
+        const historyGemini = messages
+          .filter((m, idx) => !(idx === 0 && m.role === 'model'))
+          .map(m => ({
+            role: m.role === 'model' ? 'model' : 'user',
+            parts: [{ text: m.content[0].text }]
+          }));
         
         // Add current message
         historyGemini.push({ role: 'user', parts: [{ text }] });
@@ -188,7 +191,13 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
           body: JSON.stringify({
             system_instruction: { parts: [{ text: systemPrompt }] },
             contents: historyGemini,
-            generationConfig: { maxOutputTokens: 500, temperature: 0.7, topP: 0.9 }
+            generationConfig: { maxOutputTokens: 512, temperature: 0.7, topP: 0.9 },
+            safetySettings: [
+              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+            ]
           })
         });
 
