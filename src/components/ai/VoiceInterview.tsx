@@ -35,7 +35,7 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
   const [language, setLanguage] = useState<'en' | 'es'>(initialLanguage);
   const [messages, setMessages] = useState<any[]>([]);
   const [transcript, setTranscript] = useState('');
-  const [aiProvider, setAiProvider] = useState<'gemini' | 'puter'>('gemini');
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'puter' | 'gemini-direct'>('gemini');
   const [puterModel, setPuterModel] = useState('claude-3-5-sonnet');
   
   const recognitionRef = useRef<any>(null);
@@ -165,14 +165,45 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
           }))
         });
         reply = response.reply;
+      } else if (aiProvider === 'gemini-direct') {
+        const GEMINI_API_KEY = "AIzaSyDWPMrsqtbkmVD1Ck1Rduk44-TgPZY28Z0";
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+        
+        const systemPrompt = language === 'en' 
+          ? `You are a world-class technical interviewer for a ${role} position. ${instructions}. Keep responses concise (max 3 sentences).` 
+          : `Eres un entrevistador técnico experto para la posición de ${role}. ${instructions}. Mantén tus respuestas concisas (máximo 3 frases).`;
+
+        const contents = [
+          { role: 'user', parts: [{ text: systemPrompt }] },
+          { role: 'model', parts: [{ text: "Understood. I'm ready." }] },
+          ...messages.map(m => ({
+            role: m.role === 'model' ? 'model' : 'user',
+            parts: [{ text: m.content[0].text }]
+          })),
+          { role: 'user', parts: [{ text }] }
+        ];
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents })
+        });
+        const data = await res.json();
+        reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Gemini direct error.";
       } else {
         // PUTER.JS INTEGRATION
         const puter = (window as any).puter;
-        if (!puter) throw new Error("Puter.js not loaded");
+        if (!puter) throw new Error("Puter.js not loaded. Please check your internet connection and refresh.");
         
+        // Ensure we are signed in if Puter requires it for "User-Pays"
+        const isSignedIn = await puter.auth.isSignedIn();
+        if (!isSignedIn) {
+           throw new Error("Puter: Not signed in. Use the 'Sign In to Puter' button above to authorize AI usage.");
+        }
+
         const systemPrompt = language === 'en' 
-          ? `You are a world-class technical interviewer for a ${role} position. ${instructions}` 
-          : `Eres un entrevistador técnico experto para la posición de ${role}. ${instructions}`;
+          ? `You are a world-class technical interviewer for a ${role} position. ${instructions}. Keep responses concise (max 3 sentences).` 
+          : `Eres un entrevistador técnico experto para la posición de ${role}. ${instructions}. Mantén tus respuestas concisas (máximo 3 frases).`;
 
         const puterMessages = [
           { role: 'system', content: systemPrompt },
@@ -180,8 +211,13 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
           { role: 'user', content: text }
         ];
 
-        const response = await puter.ai.chat(puterMessages, { model: puterModel });
-        reply = response?.message?.content?.[0]?.text || response?.message?.content || "No response from Puter.";
+        // Map UI model names to Puter actual model strings
+        let actualModel = puterModel;
+        if (actualModel === 'claude-3-5-sonnet') actualModel = 'claude-3-5-sonnet'; // Often works
+        if (actualModel === 'claude-3-5-haiku') actualModel = 'claude-3-5-haiku';
+        
+        const response = await puter.ai.chat(puterMessages, { model: actualModel });
+        reply = response?.message?.content?.[0]?.text || response?.message?.content || "No response content from Puter.";
       }
 
       const aiResponse = { role: 'model', content: [{ text: reply }] };
@@ -232,13 +268,25 @@ export function VoiceInterview({ role = 'Frontend Developer', initialLanguage = 
                <select 
                  className="bg-transparent border-none outline-none font-bold text-xs cursor-pointer appearance-none"
                  value={aiProvider}
-                 onChange={(e) => setAiProvider(e.target.value as 'gemini' | 'puter')}
+                 onChange={(e) => setAiProvider(e.target.value as any)}
                  disabled={isInterviewing}
                >
-                 <option value="gemini" className="bg-slate-800">Gemini (Slow)</option>
-                 <option value="puter" className="bg-slate-800">Claude (Fast)</option>
+                 <option value="gemini" className="bg-slate-800">Gemini (Cloud)</option>
+                 <option value="gemini-direct" className="bg-slate-800">Gemini (Direct)</option>
+                 <option value="puter" className="bg-slate-800">Claude (Puter)</option>
                </select>
              </Badge>
+
+             {aiProvider === 'puter' && (
+               <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-9 px-4 rounded-xl border-indigo-700 bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100"
+                onClick={() => (window as any).puter?.auth.signIn()}
+               >
+                 Sign In to Puter
+               </Button>
+             )}
 
              {aiProvider === 'puter' && (
                <Badge variant="outline" className="border-indigo-700 bg-indigo-800 text-indigo-100 gap-2 h-9 px-4 rounded-xl">
