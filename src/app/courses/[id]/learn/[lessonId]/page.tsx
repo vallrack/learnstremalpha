@@ -194,6 +194,30 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
   }, [db, courseId, moduleId, lessonId]);
   const { data: resources, isLoading } = useCollection(resourcesQuery);
 
+  const getEmbedUrl = (url: string, type: string) => {
+    if (!url) return '';
+    
+    // Google Drive normalization
+    if (url.includes('drive.google.com')) {
+      // Convert /view, /edit, etc to /preview for clean embedding
+      let embedUrl = url;
+      if (url.includes('/view')) embedUrl = url.replace(/\/view.*$/, '/preview');
+      else if (url.includes('/edit')) embedUrl = url.replace(/\/edit.*$/, '/preview');
+      else if (!url.endsWith('/preview')) {
+        // Try to append /preview if it's just a file link
+        embedUrl = url.split('?')[0].replace(/\/$/, '') + '/preview';
+      }
+      return embedUrl;
+    }
+
+    // Office Online Viewer for Word and PowerPoint (Non-Google Drive)
+    if (type === 'word' || type === 'ppt') {
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+    }
+
+    return url;
+  };
+
   if (isLoading || !resources || resources.length === 0) return null;
 
   return (
@@ -204,18 +228,34 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
           {resources.map((res) => (
             <div key={res.id} className={`flex items-center justify-between p-3 rounded-2xl border border-transparent cursor-pointer ${!isGuest ? 'hover:bg-muted/50 hover:border-border' : 'opacity-60 grayscale'}`} onClick={() => !isGuest ? setPreviewResource(res) : toast({ variant: "destructive", title: "Acceso denegado", description: "Inicia sesión para descargar material." })}>
               <div className="flex items-center gap-3 overflow-hidden">
-                <div className="bg-background p-2 rounded-xl shadow-sm border">{res.type === 'pdf' ? <FileDown className="h-4 w-4 text-red-500" /> : <FileText className="h-4 w-4 text-blue-500" />}</div>
+                <div className="bg-background p-2 rounded-xl shadow-sm border">
+                    {res.type === 'pdf' ? <FileDown className="h-4 w-4 text-red-500" /> : res.type === 'ppt' ? <Presentation className="h-4 w-4 text-amber-500" /> : res.type === 'word' ? <FileText className="h-4 w-4 text-blue-500" /> : <LinkIcon className="h-4 w-4 text-slate-500" />}
+                </div>
                 <p className="text-xs font-semibold truncate">{res.title}</p>
               </div>
-              <Eye className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={(e) => { e.stopPropagation(); window.open(res.contentUrl, '_blank'); }}><ExternalLink className="h-3 w-3" /></Button>
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              </div>
             </div>
           ))}
         </div>
       </div>
       <Dialog open={!!previewResource} onOpenChange={(open) => !open && setPreviewResource(null)}>
-        <DialogContent className="max-w-[95vw] lg:max-w-6xl h-[92vh] flex flex-col p-0 overflow-hidden rounded-3xl">
-          <DialogHeader className="p-4 border-b bg-white"><DialogTitle>{previewResource?.title}</DialogTitle></DialogHeader>
-          <div className="flex-1 bg-slate-100"><iframe src={previewResource?.contentUrl} className="w-full h-full border-none bg-white" title={previewResource?.title} /></div>
+        <DialogContent className="max-w-[95vw] lg:max-w-6xl h-[92vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+          <DialogHeader className="p-4 border-b bg-white flex flex-row items-center justify-between">
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+                <Eye className="h-4 w-4 text-primary" /> {previewResource?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 bg-slate-900 relative">
+            <iframe 
+                src={getEmbedUrl(previewResource?.contentUrl, previewResource?.type)} 
+                className="w-full h-full border-none bg-white shadow-inner" 
+                title={previewResource?.title} 
+                allow="autoplay"
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </>

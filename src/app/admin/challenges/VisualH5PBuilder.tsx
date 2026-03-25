@@ -14,7 +14,7 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiError, setAiError] = useState('');
 
-  const supportedAITypes = ['flashcard', 'swipe', 'sortable', 'quiz'];
+  const supportedAITypes = ['flashcard', 'swipe', 'sortable', 'quiz', 'dragdrop', 'interactive-video'];
 
   const handleAIGenerate = async () => {
     if (!aiLessonContent.trim()) return;
@@ -82,7 +82,14 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
             disabled={isGenerating || !aiLessonContent.trim()} 
             className="w-full h-10 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg shadow-purple-200 gap-2"
           >
-            {isGenerating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando con Gemini...</> : <><Wand2 className="h-4 w-4" /> Generar {type === 'flashcard' ? 'Tarjetas' : type === 'swipe' ? 'Declaraciones' : type === 'sortable' ? 'Código' : 'Preguntas'}</>}
+            {isGenerating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando con Gemini...</> : <><Wand2 className="h-4 w-4" /> Generar {
+              type === 'flashcard' ? 'Tarjetas' : 
+              type === 'swipe' ? 'Declaraciones' : 
+              type === 'sortable' ? 'Código' : 
+              type === 'quiz' ? 'Preguntas' :
+              type === 'dragdrop' ? 'Huecos de Código' :
+              'Interacciones de Video'
+            }</>}
           </Button>
         </div>
       )}

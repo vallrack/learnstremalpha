@@ -13,7 +13,7 @@ const GenerateActivitiesInputSchema = z.object({
   lessonTitle: z.string().describe('Título de la lección.'),
   lessonContent: z.string().describe('El texto completo de la lección de la cual se generarán actividades.'),
   technology: z.string().describe('Tecnología principal de la lección, ej: JavaScript, Python, React.'),
-  activityType: z.enum(['flashcard', 'swipe', 'sortable', 'quiz']).describe('El tipo de actividad H5P a generar.'),
+  activityType: z.enum(['flashcard', 'swipe', 'sortable', 'quiz', 'dragdrop', 'interactive-video']).describe('El tipo de actividad H5P a generar.'),
 });
 export type GenerateActivitiesInput = z.infer<typeof GenerateActivitiesInputSchema>;
 
@@ -45,6 +45,25 @@ const QuizSchema = z.object({
     options: z.array(z.string()).length(4).describe('Exactamente 4 opciones de respuesta.'),
     correctIndex: z.number().min(0).max(3).describe('Índice (0-3) de la opción correcta.'),
   })).min(5).max(10).describe('Array de preguntas de opción múltiple.'),
+});
+
+const DragDropSchema = z.object({
+  template: z.string().describe('Código con huecos marcados como {{{s1}}}, {{{s2}}}, etc.'),
+  snippets: z.array(z.object({
+    id: z.string().describe('ID del snippet, ej: s1, s2.'),
+    text: z.string().describe('El texto del fragmento de código.'),
+  })).describe('Los fragmentos que se arrastran.'),
+  correctMapping: z.record(z.string()).describe('Mapa de hueco a snippet: { "s1": "s1" }.'),
+});
+
+const InteractiveVideoSchema = z.object({
+  videoUrl: z.string().describe('URL de YouTube sugerida o placeholder.'),
+  checkpoints: z.array(z.object({
+    seconds: z.number().describe('Segundo exacto de la pausa.'),
+    question: z.string().describe('Pregunta que aparece.'),
+    options: z.array(z.string()).length(4).describe('4 opciones.'),
+    correctIndex: z.number().describe('Índice correcto.'),
+  })).describe('Momentos de pausa en el video.'),
 });
 
 const GenerateActivitiesOutputSchema = z.object({
@@ -97,6 +116,17 @@ REGLAS POR TIPO:
    - Genera 5-10 preguntas de opción múltiple con exactamente 4 opciones cada una.
    - Las preguntas deben evaluar comprensión profunda de la lección.
    - El JSON debe tener la forma: { "questions": [{ "question": "...", "options": ["A","B","C","D"], "correctIndex": 0 }] }
+
+5. SI activityType = "dragdrop":
+   - Genera una plantilla de código con 2-4 "huecos" usando la sintaxis {{{s1}}}, {{{s2}}}, etc.
+   - Crea un banco de "snippets" que encajen en esos huecos.
+   - Proporciona el mapping correcto.
+   - Ejemplo: "const [state, setState] = {{{s1}}}({{{s2}}});" con snippets id:s1 text:useState y id:s2 text:initialValue.
+
+6. SI activityType = "interactive-video":
+   - Analiza la lección y propón 3-5 puntos de pausa lógicos (en segundos progresivos, ej: 10, 45, 120).
+   - Genera una pregunta desafiante para cada punto.
+   - Usa un videoUrl de YouTube genérico de la tecnología si no se provee uno (ej: de un canal oficial).
 
 IMPORTANTE:
 - El campo "activityConfig" DEBE ser un STRING de JSON válido (usa JSON.stringify mentally).  

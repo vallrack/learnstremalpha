@@ -565,6 +565,7 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
   const [title, setTitle] = useState('');
   const [type, setType] = useState('pdf');
   const [contentUrl, setContentUrl] = useState('');
+  const [uploadType, setUploadType] = useState<'upload' | 'url'>('upload');
 
   const resourcesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -643,6 +644,7 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
     setType('pdf');
     setContentUrl('');
     setUploadProgress(0);
+    setUploadType('upload');
   };
 
   const handleDeleteResource = (resourceId: string) => {
@@ -652,30 +654,39 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
     }
   };
 
+  const isGoogleDrive = contentUrl.includes('drive.google.com');
+
   return (
     <div className="mt-4 border-t pt-4">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Paperclip className="h-3 w-3" /> Material de Apoyo</p>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild><Button size="sm" variant="ghost" className="h-7 text-[10px] border rounded-lg">Añadir Archivo</Button></DialogTrigger>
-          <DialogContent className="rounded-3xl">
+          <DialogContent className="rounded-3xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSaveResource}>
               <DialogHeader><DialogTitle>Nuevo Recurso</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                   <Label>Tipo de Recurso</Label>
-                  <Select value={type} onValueChange={setType}>
+                  <Select value={type} onValueChange={(v) => { setType(v); if(v === 'link') setUploadType('url'); }}>
                     <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pdf">Documento PDF (Subir)</SelectItem>
-                      <SelectItem value="word">Documento Word (Subir)</SelectItem>
-                      <SelectItem value="ppt">PowerPoint (Subir)</SelectItem>
-                      <SelectItem value="link">Enlace Externo (Drive, Notion...)</SelectItem>
+                      <SelectItem value="pdf">Documento PDF</SelectItem>
+                      <SelectItem value="word">Documento Word</SelectItem>
+                      <SelectItem value="ppt">PowerPoint</SelectItem>
+                      <SelectItem value="link">Enlace Externo (Web/Notion)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {type !== 'link' ? (
+                {type !== 'link' && (
+                  <div className="flex bg-slate-100 p-1 rounded-xl mb-2">
+                    <button type="button" onClick={() => setUploadType('upload')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${uploadType === 'upload' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700'}`}>Subir Archivo</button>
+                    <button type="button" onClick={() => setUploadType('url')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${uploadType === 'url' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700'}`}>Usar URL (Drive/OneDrive)</button>
+                  </div>
+                )}
+
+                {uploadType === 'upload' && type !== 'link' ? (
                   <div className="space-y-2">
                     <Label>Subir Archivo</Label>
                     <div className="border-2 border-dashed rounded-xl p-4 text-center min-h-[100px] flex flex-col items-center justify-center gap-4">
@@ -705,14 +716,25 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Label>URL del Enlace</Label>
+                    <Label>{type === 'link' ? 'URL del Enlace' : 'Pegar URL del Archivo'}</Label>
                     <Input 
-                      placeholder="https://drive.google.com/..." 
+                      placeholder={isGoogleDrive ? "https://drive.google.com/..." : "https://..."}
                       value={contentUrl} 
                       onChange={(e) => setContentUrl(e.target.value)} 
                       required 
                       className="rounded-xl"
                     />
+                    
+                    {isGoogleDrive && (
+                      <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                        <div className="flex items-center gap-2 text-amber-700 font-bold text-[10px] uppercase">
+                          <AlertTriangle className="h-3 w-3" /> ¡Importante! Google Drive
+                        </div>
+                        <p className="text-[10px] text-amber-800 leading-tight">
+                          Asegúrate de que el archivo esté compartido como <b>"Cualquier persona con el enlace puede ver"</b> para que los estudiantes puedan visualizarlo.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -726,6 +748,8 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
           </DialogContent>
         </Dialog>
       </div>
+
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {resources?.map((res) => (
           <div key={res.id} className="text-[10px] p-2 bg-white border rounded-xl flex items-center justify-between group">
