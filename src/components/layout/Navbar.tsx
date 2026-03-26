@@ -213,6 +213,7 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-6">
           <Link href="/courses" className="text-sm font-medium hover:text-primary transition-colors">{t.common.courses}</Link>
           <Link href="/challenges" className="text-sm font-medium hover:text-primary transition-colors">{t.common.challenges}</Link>
+          <Link href="/leaderboard" className="text-sm font-medium hover:text-primary transition-colors">{t.common.leaderboard}</Link>
           {user && (
             <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">{t.common.myLearning}</Link>
           )}

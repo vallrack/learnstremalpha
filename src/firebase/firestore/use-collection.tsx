@@ -26,7 +26,7 @@ export function useCollection<T = any>(
   const SWR_KEY = memoizedTargetRefOrQuery ? 
     (memoizedTargetRefOrQuery.type === 'collection'
           ? (memoizedTargetRefOrQuery as CollectionReference).path
-          : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString() + '-query') : null;
+          : (memoizedTargetRefOrQuery as any)?._query?.path?.canonicalString() + '-query') : null;
 
   const { data, error } = useSWRSubscription<WithId<T>[], FirestoreError | Error>(
     SWR_KEY,
