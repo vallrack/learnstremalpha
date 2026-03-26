@@ -1,15 +1,13 @@
 import { Resend } from 'resend';
-const SibApiV3Sdk = require('sib-api-v3-sdk');
+import { BrevoClient } from '@getbrevo/brevo';
 
 // Configuración de Resend
 const resend = new Resend(process.env.RESEND_API_KEY || 're_E8feRJYo_7ei253LwNVE7PQahPkqFoiPi');
 
-// Configuración de Brevo (Sib)
-const defaultClient = SibApiV3Sdk.ApiClient.instance;
-const apiKey = defaultClient.authentications['api-key'];
-apiKey.apiKey = process.env.BREVO_API_KEY || 'YOUR_BREVO_API_KEY';
-
-const transactionalEmailApi = new SibApiV3Sdk.TransactionalEmailsApi();
+// Configuración de Brevo (V5 Moderno)
+const brevo = new BrevoClient({ 
+  apiKey: process.env.BREVO_API_KEY || 'YOUR_BREVO_API_KEY'
+});
 
 export const emailService = {
   /**
@@ -63,25 +61,24 @@ export const emailService = {
    */
   async sendPaymentReminder({ email, name }: { email: string, name: string }) {
     try {
-      const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-      sendSmtpEmail.subject = "No pierdas tu progreso - Pásate a Premium en LearnStream";
-      sendSmtpEmail.htmlContent = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #6366f1;">¡Hola ${name}!</h2>
-          <p>Hemos notado que has estado aprendiendo mucho en LearnStream. ¡Felicidades por tu compromiso!</p>
-          <p>Para desbloquear todos los retos con IA, obtener certificados verificados y acceso vitalicio a todo el contenido, considera pasarte a nuestro plan <strong>Premium</strong>.</p>
-          <p>Es un único pago para siempre. ¡Invierte en tu futuro hoy!</p>
-          <div style="margin: 30px 0;">
-            <a href="https://learnstream.com/checkout" style="background-color: #6366f1; color: white; padding: 15px 30px; text-decoration: none; border-radius: 10px; font-weight: bold;">Obtener Acceso Vitalicio</a>
+      const response = await brevo.transactionalEmails.sendTransacEmail({
+        subject: "No pierdas tu progreso - Pásate a Premium en LearnStream",
+        htmlContent: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #6366f1;">¡Hola ${name}!</h2>
+            <p>Hemos notado que has estado aprendiendo mucho en LearnStream. ¡Felicidades por tu compromiso!</p>
+            <p>Para desbloquear todos los retos con IA, obtener certificados verificados y acceso vitalicio a todo el contenido, considera pasarte a nuestro plan <strong>Premium</strong>.</p>
+            <p>Es un único pago para siempre. ¡Invierte en tu futuro hoy!</p>
+            <div style="margin: 30px 0;">
+              <a href="https://learnstream.com/checkout" style="background-color: #6366f1; color: white; padding: 15px 30px; text-decoration: none; border-radius: 10px; font-weight: bold;">Obtener Acceso Vitalicio</a>
+            </div>
+            <p style="font-size: 12px; color: #64748b;">Si tienes alguna duda, responde a este correo y nuestro equipo te ayudará.</p>
           </div>
-          <p style="font-size: 12px; color: #64748b;">Si tienes alguna duda, responde a este correo y nuestro equipo te ayudará.</p>
-        </div>
-      `;
-      sendSmtpEmail.sender = { name: "LearnStream", email: "ventas@learnstream.com" };
-      sendSmtpEmail.to = [{ email: email, name: name }];
-
-      const data = await transactionalEmailApi.sendTransacEmail(sendSmtpEmail);
-      return { success: true, data };
+        `,
+        sender: { name: "LearnStream", email: "ventas@learnstream.com" },
+        to: [{ email: email, name: name }]
+      });
+      return { success: true, data: response };
     } catch (err) {
       console.error('Error sending with Brevo:', err);
       return { success: false, error: err };
