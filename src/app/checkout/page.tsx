@@ -334,6 +334,23 @@ export default function CheckoutPage() {
                       Soporte y Pagos Directos por WhatsApp
                     </Button>
                   </a>
+
+                  <Button 
+                    variant="ghost" 
+                    onClick={async () => {
+                      if (!user?.uid) return;
+                      const { sendPaymentReminderAction } = await import('@/app/actions/email');
+                      const res = await sendPaymentReminderAction(user.uid);
+                      if (res.success) {
+                        toast({ title: "Recordatorio enviado", description: "Revisa tu correo para continuar el proceso más tarde." });
+                      } else {
+                        toast({ variant: "destructive", title: "Error", description: "No pudimos enviar el recordatorio." });
+                      }
+                    }}
+                    className="w-full h-12 rounded-xl gap-2 text-slate-500 hover:text-primary font-bold"
+                  >
+                    Recibir recordatorio por correo
+                  </Button>
                 </div>
 
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">

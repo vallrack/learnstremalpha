@@ -75,7 +75,7 @@ function LessonPlayerContent() {
   }, [db, courseId]);
   const { data: modules, isLoading: isModulesLoading } = useCollection(modulesQuery);
 
-  const handleMarkAsCompleted = () => {
+  const handleMarkAsCompleted = async () => {
     if (!db || !user || user.isAnonymous || !courseId) return;
     const progressRef = doc(db, 'users', user.uid, 'courseProgress', courseId);
     setDocumentNonBlocking(progressRef, {
@@ -85,6 +85,17 @@ function LessonPlayerContent() {
       progressPercentage: 100,
       updatedAt: serverTimestamp(),
     }, { merge: true });
+
+    // Enviar certificado por correo
+    const { sendCertificateAction } = await import('@/app/actions/email');
+    sendCertificateAction(user.uid, courseId).then(res => {
+      if (res.success) {
+        toast({
+          title: "¡Certificado enviado!",
+          description: "Revisa tu bandeja de entrada; hemos enviado tu diploma oficial.",
+        });
+      }
+    });
 
     toast({
       title: "¡Lección completada!",

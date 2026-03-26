@@ -49,7 +49,9 @@ export function useCollection<T = any>(
         (error: FirestoreError) => {
           const contextualError = new FirestorePermissionError({
             operation: 'list',
-            path: key as string,
+            path: memoizedTargetRefOrQuery?.type === 'collection' 
+              ? (memoizedTargetRefOrQuery as CollectionReference).path 
+              : ((memoizedTargetRefOrQuery as any)?._query?.path?.canonicalString() || 'unknown-query'),
           });
           errorEmitter.emit('permission-error', contextualError);
           next(contextualError, undefined);
