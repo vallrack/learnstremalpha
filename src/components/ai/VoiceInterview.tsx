@@ -349,7 +349,7 @@ export function VoiceInterview({
         </div>
       </CardHeader>
       
-      <CardContent className="p-0 flex flex-col lg:grid lg:grid-cols-12 min-h-[450px] lg:min-h-[600px]">
+      <CardContent className="p-0 flex flex-col lg:grid lg:grid-cols-12 min-h-[450px] lg:min-h-[550px]">
         {/* Interaction Area */}
         <div className="lg:col-span-8 p-6 sm:p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-100">
              <div className="flex-1 flex flex-col items-center justify-center space-y-12">

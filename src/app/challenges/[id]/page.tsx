@@ -264,7 +264,7 @@ export default function ChallengeExecutionPage() {
                 <QuizPlayer questions={challenge.questions || []} onComplete={(s) => handleSubmit(s)} />
               </div>
             ) : challenge.type === 'interview' ? (
-              <div className="h-full flex flex-col gap-6 animate-in fade-in duration-700">
+              <div className="flex flex-col gap-6 animate-in fade-in duration-700">
                 <VoiceInterview 
                   role={challenge.targetRole || challenge.title} 
                   initialLanguage={challenge.targetLanguage || 'es'} 
