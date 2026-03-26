@@ -227,10 +227,12 @@ export default function ChallengeExecutionPage() {
 
         <section className="flex-1 flex flex-col bg-slate-100 relative min-w-0">
           <div className="h-12 bg-white border-b flex items-center justify-between px-6 shrink-0">
-            <div className="text-slate-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-              {challenge.type === 'quiz' ? <HelpCircle className="h-3 w-3" /> : challenge.type === 'interview' ? <MessageSquare className="h-3 w-3" /> : challenge.type === 'wordsearch' ? <Gamepad2 className="h-3 w-3" /> : <Terminal className="h-3 w-3" />}
-              {challenge.type === 'quiz' ? 'Prueba de Conocimientos' : challenge.type === 'interview' ? 'Simulador de Entrevista' : challenge.type === 'wordsearch' ? 'Juego de Vocabulario' : 'Entorno de Programación'}
-            </div>
+            {challenge.type !== 'interview' && (
+              <div className="text-slate-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                {challenge.type === 'quiz' ? <HelpCircle className="h-3 w-3" /> : challenge.type === 'interview' ? <MessageSquare className="h-3 w-3" /> : challenge.type === 'wordsearch' ? <Gamepad2 className="h-3 w-3" /> : <Terminal className="h-3 w-3" />}
+                {challenge.type === 'quiz' ? 'Prueba de Conocimientos' : challenge.type === 'interview' ? 'Simulador de Entrevista' : challenge.type === 'wordsearch' ? 'Juego de Vocabulario' : 'Entorno de Programación'}
+              </div>
+            )}
             {challenge.type !== 'quiz' && (challenge.type !== 'wordsearch' || isGameComplete) && (
               <Button onClick={() => handleSubmit()} disabled={isEvaluating || !code.trim()} className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold gap-2 px-4">
                 {isEvaluating ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Sparkles className="h-3 w-3" /> Enviar para Evaluación</>}
@@ -238,7 +240,7 @@ export default function ChallengeExecutionPage() {
             )}
           </div>
           
-          <div className="flex-1 relative overflow-y-auto p-8">
+          <div className={`flex-1 relative overflow-y-auto ${challenge.type === 'interview' ? 'p-4 lg:p-12' : 'p-8'}`}>
             {challenge.type === 'wordsearch' ? (
               <div className="space-y-12">
                 <WordSearchGame words={challenge.words || []} onComplete={() => setIsGameComplete(true)} />

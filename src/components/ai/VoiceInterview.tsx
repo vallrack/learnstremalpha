@@ -277,7 +277,7 @@ export function VoiceInterview({
   };
 
   return (
-    <Card className="rounded-[2.5rem] border-none shadow-2xl bg-white overflow-hidden max-w-4xl mx-auto">
+    <Card className="rounded-[2.5rem] border-none shadow-2xl bg-white overflow-hidden max-w-6xl mx-auto w-full transition-all duration-500">
       <CardHeader className="bg-slate-900 text-white p-6 sm:p-8">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
           <div className="space-y-2">
@@ -349,9 +349,9 @@ export function VoiceInterview({
         </div>
       </CardHeader>
       
-      <CardContent className="p-0 flex flex-col lg:grid lg:grid-cols-3 min-h-[400px] lg:min-h-[500px]">
+      <CardContent className="p-0 flex flex-col lg:grid lg:grid-cols-12 min-h-[450px] lg:min-h-[600px]">
         {/* Interaction Area */}
-        <div className="lg:col-span-2 p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-100">
+        <div className="lg:col-span-8 p-6 sm:p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-100">
              <div className="flex-1 flex flex-col items-center justify-center space-y-12">
                 {/* Voice Visualizer Area */}
                 <div className="relative flex items-center justify-center">
@@ -430,7 +430,7 @@ export function VoiceInterview({
           </div>
 
           {/* Transcript / Progress Sidebar */}
-          <div className="bg-slate-50/50 p-4 sm:p-6 flex flex-col border-slate-100">
+          <div className="lg:col-span-4 bg-slate-50/50 p-6 sm:p-8 flex flex-col border-slate-100">
              <div className="flex items-center gap-2 mb-4 text-slate-900 font-bold px-1 sm:px-2">
                 <MessageSquare className="h-4 w-4" />
                 Audio Transcript
@@ -438,7 +438,7 @@ export function VoiceInterview({
              
              <div 
                ref={scrollRef}
-               className="flex-1 overflow-y-auto space-y-4 pr-1 sm:pr-2 max-h-[300px] lg:max-h-[400px]"
+               className="flex-1 overflow-y-auto space-y-4 pr-1 sm:pr-2 max-h-[350px] lg:max-h-none"
              >
                 {messages.length === 0 && (
                   <div className="text-center pt-20 px-4 space-y-2 opacity-40">
