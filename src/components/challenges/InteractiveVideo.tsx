@@ -63,7 +63,7 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
       return 'correct'; // simplified — could be enhanced with a map
   };
 
-  if (!url || url.trim() === '') {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
       return (
         <div className="max-w-4xl mx-auto rounded-[3rem] p-12 shadow-inner border-4 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-center space-y-4">
           <XCircle className="h-16 w-16 text-slate-300" />
@@ -73,13 +73,22 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
       );
   }
 
+  // Sanitizar URL para ReactPlayer
+  let safeUrl = url.trim();
+  if (safeUrl.startsWith('<iframe')) {
+      const match = safeUrl.match(/src="([^"]+)"/);
+      if (match) safeUrl = match[1];
+  } else if (!safeUrl.startsWith('http://') && !safeUrl.startsWith('https://')) {
+      safeUrl = 'https://' + safeUrl;
+  }
+
   return (
       <div className="space-y-4">
         {/* Video Player Container */}
         <div className="max-w-4xl mx-auto rounded-[3rem] overflow-hidden shadow-2xl border-4 border-slate-900 bg-black relative aspect-video">
            <ReactPlayer
               ref={playerRef}
-              url={url}
+              url={safeUrl}
               playing={playing}
               controls={!activeCheckpoint && !feedbackState}
               width="100%"
