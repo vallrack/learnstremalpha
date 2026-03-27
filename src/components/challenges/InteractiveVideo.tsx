@@ -1,6 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import dynamic from 'next/dynamic';
-const ReactPlayer = dynamic(() => import('react-player'), { ssr: false }) as React.ElementType<any>;
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import ReactPlayer from 'react-player/lazy';
 import { Button } from '@/components/ui/button';
 import { PlayCircle, CheckCircle2, XCircle, Diamond } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,8 +14,13 @@ export type VideoCheckpoint = {
 type FeedbackState = { type: 'correct' | 'incorrect'; checkpointSeconds: number } | null;
 
 export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string, checkpoints: VideoCheckpoint[], onComplete: (score: number) => void }) {
+  const [mounted, setMounted] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [activeCheckpoint, setActiveCheckpoint] = useState<VideoCheckpoint | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [clearedCheckpoints, setClearedCheckpoints] = useState<number[]>([]);
   const [correctCount, setCorrectCount] = useState(0);
   const [feedbackState, setFeedbackState] = useState<FeedbackState>(null);
@@ -62,6 +66,10 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
       // so we track it via feedbackState history. For simplicity, cleared = done.
       return 'correct'; // simplified — could be enhanced with a map
   };
+
+  if (!mounted) {
+      return <div className="max-w-4xl mx-auto aspect-video animate-pulse bg-slate-900 rounded-[3rem] shadow-2xl border-4 border-slate-800"></div>;
+  }
 
   if (!url || typeof url !== 'string' || url.trim() === '') {
       return (
