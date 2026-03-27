@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import ReactPlayer from 'react-player/lazy';
+import ReactPlayer from 'react-player';
 import { Button } from '@/components/ui/button';
 import { PlayCircle, CheckCircle2, XCircle, Diamond } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -90,11 +90,13 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
       safeUrl = 'https://' + safeUrl;
   }
 
+  const Player = ReactPlayer as React.ElementType<any>;
+
   return (
       <div className="space-y-4">
         {/* Video Player Container */}
         <div className="max-w-4xl mx-auto rounded-[3rem] overflow-hidden shadow-2xl border-4 border-slate-900 bg-black relative aspect-video">
-           <ReactPlayer
+           <Player
               ref={playerRef}
               url={safeUrl}
               playing={playing}
