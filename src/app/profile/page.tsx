@@ -81,9 +81,15 @@ export default function ProfilePage() {
           setUploadingAvatar(false);
         }, 
         async () => {
-          const url = await getDownloadURL(uploadTask.snapshot.ref);
-          handleSetAvatar(url);
-          setUploadingAvatar(false);
+          try {
+             const url = await getDownloadURL(uploadTask.snapshot.ref);
+             handleSetAvatar(url);
+          } catch (err) {
+             console.error("Error al obtener la URL", err);
+             toast({ variant: 'destructive', title: 'Error', description: 'Imagen subida, pero no se pudo obtener su enlace público.' });
+          } finally {
+             setUploadingAvatar(false);
+          }
         }
       );
     } catch (err) {

@@ -81,12 +81,12 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
       );
   }
 
-  // Sanitizar URL para ReactPlayer
-  let safeUrl = url.trim();
+  // Sanitizar URL de posibles caracteres invisibles u espacios
+  let safeUrl = url ? String(url).trim().replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') : '';
   if (safeUrl.startsWith('<iframe')) {
       const match = safeUrl.match(/src="([^"]+)"/);
       if (match) safeUrl = match[1];
-  } else if (!safeUrl.startsWith('http://') && !safeUrl.startsWith('https://')) {
+  } else if (safeUrl && !safeUrl.startsWith('http://') && !safeUrl.startsWith('https://')) {
       safeUrl = 'https://' + safeUrl;
   }
 
@@ -101,6 +101,7 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
               url={safeUrl}
               playing={playing}
               controls={!activeCheckpoint && !feedbackState}
+              light={true}
               width="100%"
               height="100%"
               onProgress={handleProgress}

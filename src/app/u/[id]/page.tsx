@@ -1,48 +1,97 @@
-import { adminDb } from '@/lib/firebase-admin';
+'use client';
+
+import { use, useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Shield, Star, CheckCircle, Code, Terminal, Clock, Medal, Zap, LayoutDashboard, Crown } from 'lucide-react';
-import Image from 'next/image';
+import { Trophy, Shield, Star, CheckCircle, Code, Terminal, Clock, Medal, Zap, LayoutDashboard, Crown, Loader2, ArrowLeft } from 'lucide-react';
+import { useFirestore } from '@/firebase';
+import { doc, collection, query, orderBy, limit, getDoc, getDocs } from 'firebase/firestore';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 interface ProfilePageProps {
   params: Promise<{ id: string }>;
 }
 
-export const dynamic = 'force-dynamic';
+export default function PublicProfilePage({ params }: ProfilePageProps) {
+  const { id } = use(params);
+  const db = useFirestore();
 
-export default async function PublicProfilePage({ params }: ProfilePageProps) {
-  const { id } = await params;
+  const [profile, setProfile] = useState<any>(null);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isNotFound, setIsNotFound] = useState(false);
 
-  const userDoc = await adminDb.collection('users').doc(id).get();
-  
-  if (!userDoc.exists) {
+  useEffect(() => {
+    async function fetchProfileData() {
+      if (!db || !id) return;
+      
+      try {
+        const userRef = doc(db, 'users', id);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          setIsNotFound(true);
+          setLoading(false);
+          return;
+        }
+        
+        setProfile(userSnap.data());
+
+        const achievementsQ = query(collection(db, 'users', id, 'achievements'), orderBy('unlockedAt', 'desc'));
+        const achievementsSnap = await getDocs(achievementsQ);
+        setAchievements(achievementsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+        const submissionsQ = query(collection(db, 'users', id, 'challenge_submissions'), orderBy('submittedAt', 'desc'), limit(50));
+        const submissionsSnap = await getDocs(submissionsQ);
+        const allSubs = submissionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setSubmissions(allSubs.filter((s: any) => s.passed).slice(0, 15));
+
+      } catch (err) {
+        console.error("Error fetching profile", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProfileData();
+  }, [db, id]);
+
+  if (isNotFound) {
     return notFound();
   }
 
-  const profile = userDoc.data() as any;
-
-  // Obtenemos los logros (badges)
-  const achievementsSnap = await adminDb.collection('users').doc(id).collection('achievements').orderBy('unlockedAt', 'desc').get();
-  const achievements = achievementsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-
-  // Obtenemos los retos aprobados (evitamos where() de passed para no requerir composite index manual si no existe)
-  const submissionsSnap = await adminDb.collection('users').doc(id).collection('challenge_submissions').orderBy('submittedAt', 'desc').limit(50).get();
-  const submissions = submissionsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) })).filter(s => s.passed).slice(0, 15);
+  if (loading || !profile) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+           <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
 
   // Matemáticas de Gamificación
   const xp = profile.xp || 0;
   // Nivel simple: cada nivel requiere más y más XP (función cuadrática)
   const level = Math.floor(Math.sqrt(xp / 100)) + 1;
-  const xpForNextLevel = Math.pow(level, 2) * 100;
-  const progressPercentage = Math.min(100, (xp / xpForNextLevel) * 100);
 
+  // Use img tag for photoURL to bypass any Next.js Image optimization domain errors
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
       <Navbar />
       
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
+        <div className="mb-6">
+           <Link href="/leaderboard">
+             <Button variant="ghost" className="gap-2 font-bold text-slate-500 hover:text-slate-800"><ArrowLeft className="h-4 w-4" /> Volver al Ranking</Button>
+           </Link>
+        </div>
+
         {/* Profile Header */}
         <div className="bg-white rounded-[3rem] p-10 flex flex-col md:flex-row items-center md:items-start gap-10 shadow-2xl border mb-12 relative overflow-hidden">
           {profile.isPremiumSubscriber && (
@@ -53,8 +102,9 @@ export default async function PublicProfilePage({ params }: ProfilePageProps) {
           
           <div className="relative">
             <div className="w-40 h-40 rounded-full border-8 border-slate-50 shadow-xl overflow-hidden bg-slate-200 shrink-0 relative flex items-center justify-center">
-              {profile.photoURL ? (
-                <Image src={profile.photoURL} alt={profile.displayName || 'Estudiante'} fill className="object-cover" />
+              {profile.profileImageUrl || profile.photoURL ? (
+                {/* Usamos img común para evitar bloqueos del next.config.ts por dominios externos */}
+                <img src={profile.profileImageUrl || profile.photoURL} alt={profile.displayName || 'Estudiante'} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-6xl font-bold text-slate-400">{(profile.displayName || 'U')[0].toUpperCase()}</span>
               )}
@@ -123,7 +173,7 @@ export default async function PublicProfilePage({ params }: ProfilePageProps) {
                       <p className="text-sm text-slate-500 font-medium italic">"{sub.feedback}"</p>
                     </div>
                     <div className="shrink-0 text-right md:border-l md:pl-6">
-                       <Badge className="bg-emerald-500 hover:bg-emerald-600 h-8 px-4 text-sm font-bold mb-2">Score: {sub.score?.toFixed(1)}/5.0</Badge>
+                       <Badge className="bg-emerald-500 hover:bg-emerald-600 h-8 px-4 text-sm font-bold mb-2">Score: {Number(sub.score || 0).toFixed(1)}/5.0</Badge>
                        <p className="text-xs text-slate-400 font-medium flex items-center justify-end gap-1">
                          <Clock className="h-3 w-3" />
                          {sub.submittedAt?.toDate ? new Date(sub.submittedAt.toDate()).toLocaleDateString() : 'Recientemente'}
