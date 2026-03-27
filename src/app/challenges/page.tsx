@@ -178,12 +178,21 @@ export default function ChallengesCataloguePage() {
                         )}
                       </CardContent>
                       <CardFooter className="p-8 pt-0 mt-auto">
-                        <Button className="w-full h-12 rounded-2xl gap-2 font-bold shadow-sm group-hover:shadow-md transition-all" asChild>
-                          <Link href={`/challenges/${challenge.id}`}>
-                            Empezar Actividad
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                        {challenge.isFree || profile?.isPremiumSubscriber || isAdmin ? (
+                          <Button className="w-full h-12 rounded-2xl gap-2 font-bold shadow-sm group-hover:shadow-md transition-all" asChild>
+                            <Link href={`/challenges/${challenge.id}`}>
+                              Empezar Actividad
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 font-bold border-amber-200 text-amber-600 hover:bg-amber-50 shadow-sm" asChild>
+                            <Link href="/checkout">
+                              <Lock className="h-4 w-4" />
+                              Mejorar a Premium
+                            </Link>
+                          </Button>
+                        )}
                       </CardFooter>
                     </Card>
                   ))}

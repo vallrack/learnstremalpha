@@ -63,6 +63,16 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
       return 'correct'; // simplified — could be enhanced with a map
   };
 
+  if (!url || url.trim() === '') {
+      return (
+        <div className="max-w-4xl mx-auto rounded-[3rem] p-12 shadow-inner border-4 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-center space-y-4">
+          <XCircle className="h-16 w-16 text-slate-300" />
+          <h3 className="text-xl font-bold font-headline text-slate-500">Video No Configurado</h3>
+          <p className="text-sm text-slate-400 font-medium">Esta actividad no cuenta con una URL de video válida.<br/>Contacta con soporte o con el instructor.</p>
+        </div>
+      );
+  }
+
   return (
       <div className="space-y-4">
         {/* Video Player Container */}

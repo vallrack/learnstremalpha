@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { User, CreditCard, Shield, Crown, CheckCircle, Loader2, Save, UserCircle, ShieldAlert, Code2, Award, Terminal, Star, ExternalLink, Share2, Copy } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useCollection } from '@/firebase';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import { User, CreditCard, Shield, Crown, CheckCircle, Loader2, Save, UserCircle, ShieldAlert, Code2, Award, Terminal, Star, ExternalLink, Share2, Copy, Camera, Upload, ImageIcon } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useCollection, useStorage } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -21,6 +23,7 @@ import { useRouter } from 'next/navigation';
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const storage = useStorage();
   const { toast } = useToast();
   const router = useRouter();
   
@@ -39,6 +42,54 @@ export default function ProfilePage() {
   
   const [displayName, setDisplayName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarProgress, setAvatarProgress] = useState(0);
+
+  const DEFAULT_AVATARS = [
+    'https://api.dicebear.com/7.x/adventurer/svg?seed=A',
+    'https://api.dicebear.com/7.x/adventurer/svg?seed=B',
+    'https://api.dicebear.com/7.x/adventurer/svg?seed=C',
+    'https://api.dicebear.com/7.x/adventurer/svg?seed=D',
+    'https://api.dicebear.com/7.x/adventurer/svg?seed=E',
+    'https://api.dicebear.com/7.x/bottts/svg?seed=1'
+  ];
+
+  const handleSetAvatar = (url: string) => {
+    if (!db || !user?.uid) return;
+    updateDocumentNonBlocking(doc(db, 'users', user.uid), { profileImageUrl: url });
+    setIsAvatarDialogOpen(false);
+    toast({ title: 'Avatar actualizado', description: 'Tu foto de perfil se ha actualizado correctamente.' });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage || !user?.uid) return;
+
+    setUploadingAvatar(true);
+    setAvatarProgress(0);
+    
+    try {
+      const storageRef = ref(storage, `users/${user.uid}/avatar_${Date.now()}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => setAvatarProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
+        (error) => {
+          console.error("Avatar upload failed", error);
+          toast({ variant: 'destructive', title: 'Error', description: 'No se pudo subir la imagen.' });
+          setUploadingAvatar(false);
+        }, 
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          handleSetAvatar(url);
+          setUploadingAvatar(false);
+        }
+      );
+    } catch (err) {
+      setUploadingAvatar(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -83,10 +134,66 @@ export default function ProfilePage() {
       <main className="max-w-6xl mx-auto px-6 py-12">
         <header className="mb-12 flex flex-col md:flex-row items-center gap-8 bg-white p-10 rounded-[3rem] border shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 p-12 opacity-5"><Terminal className="h-40 w-40" /></div>
-          <Avatar className="h-40 w-40 border-8 border-white shadow-2xl">
-            <AvatarImage src={profile?.profileImageUrl} />
-            <AvatarFallback className="bg-primary/10 text-primary text-5xl font-bold">{displayName?.[0] || 'U'}</AvatarFallback>
-          </Avatar>
+          
+          <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
+            <DialogTrigger asChild>
+              <div className="relative group cursor-pointer inline-block shrink-0">
+                <Avatar className="h-40 w-40 border-8 border-white shadow-2xl transition-transform group-hover:scale-105 group-hover:shadow-3xl">
+                  <AvatarImage src={profile?.profileImageUrl || profile?.photoURL} className="object-cover" />
+                  <AvatarFallback className="bg-primary/10 text-primary text-5xl font-bold">{displayName?.[0] || 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-bold ring-4 ring-white">
+                  <Camera className="h-8 w-8 mb-1" />
+                  Cambiar
+                </div>
+              </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md rounded-[2.5rem]">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-headline">Foto de Perfil</DialogTitle>
+                <DialogDescription>Elige un avatar predefinido o sube uno propio.</DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6 py-4">
+                <div className="space-y-3">
+                  <Label className="font-bold text-xs uppercase text-slate-500">Avatares Rápidos</Label>
+                  <div className="flex flex-wrap gap-3 justify-center bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                    {DEFAULT_AVATARS.map((url, i) => (
+                      <div key={i} onClick={() => handleSetAvatar(url)} className="w-16 h-16 rounded-full overflow-hidden bg-white border border-slate-200 cursor-pointer hover:border-primary hover:shadow-md hover:scale-110 transition-all">
+                        <img src={url} alt={`Avatar ${i}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="relative flex items-center py-2">
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink-0 mx-4 text-xs font-bold text-slate-400 uppercase">O sube el tuyo</span>
+                  <div className="flex-grow border-t border-slate-200"></div>
+                </div>
+
+                <div className="space-y-3">
+                  {uploadingAvatar ? (
+                    <div className="border-2 border-dashed border-primary/40 bg-primary/5 rounded-2xl p-6 text-center space-y-4">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="text-sm font-bold text-primary">Subiendo imagen...</p>
+                      <Progress value={avatarProgress} className="h-2 w-full" />
+                    </div>
+                  ) : (
+                    <>
+                      <input type="file" id="avatar-upload" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                      <label htmlFor="avatar-upload" className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-2xl p-8 cursor-pointer hover:bg-slate-50 hover:border-primary transition-all group">
+                        <Upload className="h-8 w-8 text-slate-400 group-hover:text-primary mb-2 transition-colors" />
+                        <span className="text-sm font-bold text-slate-600 group-hover:text-primary transition-colors">Seleccionar foto de tu PC</span>
+                        <span className="text-xs text-slate-400 mt-1">PNG, JPG, WEBP (Max. 2MB)</span>
+                      </label>
+                    </>
+                  )}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <div className="text-center md:text-left flex-1 space-y-4 relative z-10">
             <div>
               <h1 className="text-5xl font-headline font-bold text-slate-900">{displayName || 'Estudiante'}</h1>

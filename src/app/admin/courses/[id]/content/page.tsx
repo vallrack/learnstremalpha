@@ -300,11 +300,14 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
       lessonData.questions = questions;
     }
 
+    // Eliminar campos undefined para evitar error de Firestore (Ej: instructorId faltante o challengeId vacío)
+    const safeData = Object.fromEntries(Object.entries(lessonData).filter(([_, v]) => v !== undefined));
+
     if (editingLesson) {
-      updateDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', editingLesson.id), lessonData);
+      updateDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', editingLesson.id), safeData);
     } else {
       addDocumentNonBlocking(collection(db, 'courses', course.id, 'modules', moduleId, 'lessons'), {
-        ...lessonData,
+        ...safeData,
         createdAt: serverTimestamp(),
       });
     }

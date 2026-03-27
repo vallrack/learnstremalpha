@@ -27,9 +27,9 @@ export default async function PublicProfilePage({ params }: ProfilePageProps) {
   const achievementsSnap = await adminDb.collection('users').doc(id).collection('achievements').orderBy('unlockedAt', 'desc').get();
   const achievements = achievementsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
 
-  // Obtenemos los retos aprobados
-  const submissionsSnap = await adminDb.collection('users').doc(id).collection('challenge_submissions').where('passed', '==', true).orderBy('submittedAt', 'desc').limit(15).get();
-  const submissions = submissionsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+  // Obtenemos los retos aprobados (evitamos where() de passed para no requerir composite index manual si no existe)
+  const submissionsSnap = await adminDb.collection('users').doc(id).collection('challenge_submissions').orderBy('submittedAt', 'desc').limit(50).get();
+  const submissions = submissionsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) })).filter(s => s.passed).slice(0, 15);
 
   // Matemáticas de Gamificación
   const xp = profile.xp || 0;
