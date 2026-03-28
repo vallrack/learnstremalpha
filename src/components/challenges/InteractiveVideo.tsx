@@ -93,7 +93,7 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
   // Extraer el ID para Forzar miniatura y evitar API oEmbed caída (noembed.com)
   const ytMatch = safeUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))((\w|-){11})/);
   const ytId = ytMatch ? ytMatch[1] : null;
-  const lightMode = ytId ? `https://i.ytimg.com/vi/${ytId}/maxresdefault.jpg` : true;
+  const lightMode = ytId ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg` : true;
 
   const Player = ReactPlayer as React.ElementType<any>;
 
