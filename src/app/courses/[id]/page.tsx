@@ -8,9 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert, Code2 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { doc, collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { doc, collection, query, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -19,6 +19,7 @@ export default function CourseDetailPage() {
   const db = useFirestore();
   const { user } = useUser();
   const [showPreview, setShowPreview] = useState(false);
+  const [firstLessonPath, setFirstLessonPath] = useState<{ lessonId: string; moduleId: string } | null>(null);
 
   const courseRef = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -38,6 +39,22 @@ export default function CourseDetailPage() {
     return doc(db, 'users', user.uid, 'courseProgress', id);
   }, [db, user?.uid, id]);
   const { data: progress } = useDoc(progressRef);
+
+  // Cargar la primera lección del curso para el botón "Continuar Aprendiendo"
+  useEffect(() => {
+    if (!db || !id) return;
+    const loadFirstLesson = async () => {
+      try {
+        const modulesSnap = await getDocs(query(collection(db, 'courses', id, 'modules'), orderBy('orderIndex', 'asc'), limit(1)));
+        if (modulesSnap.empty) return;
+        const firstModule = modulesSnap.docs[0];
+        const lessonsSnap = await getDocs(query(collection(db, 'courses', id, 'modules', firstModule.id, 'lessons'), orderBy('orderIndex', 'asc'), limit(1)));
+        if (lessonsSnap.empty) return;
+        setFirstLessonPath({ lessonId: lessonsSnap.docs[0].id, moduleId: firstModule.id });
+      } catch { /* silencioso */ }
+    };
+    loadFirstLesson();
+  }, [db, id]);
 
   if (isCourseLoading) {
     return (
@@ -286,11 +303,16 @@ export default function CourseDetailPage() {
                     <Button 
                       className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20"
                       onClick={() => {
-                        const curriculum = document.getElementById('curriculum');
-                        curriculum?.scrollIntoView({ behavior: 'smooth' });
+                        if (!user) {
+                          router.push('/login');
+                        } else if (accessDenied) {
+                          router.push(`/checkout?courseId=${id}`);
+                        } else if (firstLessonPath) {
+                          router.push(`/courses/${id}/learn/${firstLessonPath.lessonId}?moduleId=${firstLessonPath.moduleId}`);
+                        }
                       }}
                     >
-                      Continuar Aprendiendo
+                      {!user ? 'Iniciar sesión para aprender' : accessDenied ? 'Obtener Acceso' : 'Continuar Aprendiendo'}
                     </Button>
                   )}
                 </div>
