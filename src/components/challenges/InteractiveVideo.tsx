@@ -87,6 +87,7 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
           rel: 0,
           modestbranding: 1,
           enablejsapi: 1,
+          origin: typeof window !== 'undefined' ? window.location.origin : 'https://learnstream2.vercel.app',
           fs: 1
         },
         events: {
