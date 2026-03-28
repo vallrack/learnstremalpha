@@ -60,6 +60,19 @@ export default function AdminApplicationsPage() {
       revenueSharePercentage: parseInt(revenueShare)
     });
 
+    // 3. Notificar al solicitante
+    import('firebase/firestore').then(({ addDoc, collection: col }) => {
+      addDoc(col(db, 'notifications'), {
+        userId: selectedApp.userId,
+        title: '¡Solicitud Aprobada!',
+        message: 'Tu perfil como instructor ha sido activado. Ya puedes empezar a publicar cursos.',
+        read: false,
+        link: '/admin/finances',
+        type: 'success',
+        createdAt: new Date()
+      });
+    });
+
     setIsDialogOpen(false);
     setSelectedApp(null);
   };

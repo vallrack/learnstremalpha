@@ -89,6 +89,17 @@ export async function verifyEpaycoTransaction(
         };
         await adminDb.collection('instructor_applications').add(applicationData);
         await userRef.update(updateData);
+        
+        // Notify Admins
+        await adminDb.collection('notifications').add({
+          userId: 'admin',
+          title: 'Nueva Solicitud de Instructor',
+          message: `${extraData?.userName || 'Un postulante'} ha pagado su licencia y espera revisión.`,
+          read: false,
+          link: '/admin/applications',
+          type: 'info',
+          createdAt: new Date()
+        });
       }
 
       return { success: true, message: 'La transacción ha sido validada y procesada exitosamente.' };

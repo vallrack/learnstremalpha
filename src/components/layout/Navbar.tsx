@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/sheet';
 import { useTranslation } from '@/lib/i18n/use-translation';
 import { useState } from 'react';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 
 export function Navbar() {
   const { user, isUserLoading } = useUser();
@@ -281,6 +282,8 @@ export function Navbar() {
           <Crown className="h-4 w-4 fill-primary" />
           <span className="hidden sm:inline">{user ? t.common.upgrade : 'Ver Planes'}</span>
         </Button>
+
+        {user && <NotificationBell />}
 
         {user ? (
           <DropdownMenu>
