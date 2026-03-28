@@ -34,11 +34,6 @@ export function NotificationBell() {
     if (!db || !user?.uid || !profile) return null;
     
     // Admins need to see 'admin' targeted notifications OR their own
-    // Limitation in Firestore: 'in' array cannot be used dynamically if role changes often in simple queries,
-    // but we can query specific to their role or just fetch their personal ones.
-    // For simplicity and Firestore limits, we will query where userId == their uid. 
-    // IF admin, we also fetch admin notifications in a separate query or combine them.
-    // However, since we can use 'in', let's do:
     if (profile.role === 'admin') {
       return query(
         collection(db, 'notifications'), 
