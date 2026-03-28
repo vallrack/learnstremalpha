@@ -77,9 +77,9 @@ service cloud.firestore {
     }
 
     match /notifications/{notifId} {
-      allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || (resource.data.userId == 'admin' && isAdmin()));
-      allow update: if isOwner(resource.data.userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow delete: if isAdmin() || isOwner(resource.data.userId);
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || (resource.data.userId == 'admin' && isAdmin()));
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
     match /transactions/{transId} {

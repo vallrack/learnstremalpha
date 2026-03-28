@@ -39,17 +39,26 @@ export function NotificationBell() {
     // For simplicity and Firestore limits, we will query where userId == their uid. 
     // IF admin, we also fetch admin notifications in a separate query or combine them.
     // However, since we can use 'in', let's do:
-    const targetIds = [user.uid];
-    if (profile.role === 'admin') targetIds.push('admin');
+    if (profile.role === 'admin') {
+      return query(
+        collection(db, 'notifications'), 
+        where('userId', 'in', [user.uid, 'admin']),
+        orderBy('createdAt', 'desc')
+      );
+    }
     
     return query(
       collection(db, 'notifications'), 
-      where('userId', 'in', targetIds),
+      where('userId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
   }, [db, user?.uid, profile?.role]);
 
-  const { data: notifications, isLoading } = useCollection(notificationsQuery);
+  const { data: notifications, isLoading, error } = useCollection(notificationsQuery);
+
+  if (error) {
+    console.error("Notification query failed:", error);
+  }
 
   const unreadCount = notifications?.filter((n: any) => !n.read).length || 0;
 
@@ -103,10 +112,10 @@ export function NotificationBell() {
         <ScrollArea className="h-[400px]">
           {isLoading ? (
             <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : !notifications || notifications.length === 0 ? (
+          ) : !notifications || notifications.length === 0 || error ? (
             <div className="p-8 text-center flex flex-col items-center text-muted-foreground">
               <Bell className="h-8 w-8 mb-2 opacity-20" />
-              <p className="text-sm">No tienes notificaciones nuevas.</p>
+              <p className="text-sm">{error ? "Error al cargar notificaciones" : "No tienes notificaciones nuevas."}</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
