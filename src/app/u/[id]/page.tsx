@@ -103,7 +103,6 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
           <div className="relative">
             <div className="w-40 h-40 rounded-full border-8 border-slate-50 shadow-xl overflow-hidden bg-slate-200 shrink-0 relative flex items-center justify-center">
               {profile.profileImageUrl || profile.photoURL ? (
-                {/* Usamos img común para evitar bloqueos del next.config.ts por dominios externos */}
                 <img src={profile.profileImageUrl || profile.photoURL} alt={profile.displayName || 'Estudiante'} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-6xl font-bold text-slate-400">{(profile.displayName || 'U')[0].toUpperCase()}</span>
