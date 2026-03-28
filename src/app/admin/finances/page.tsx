@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, orderBy, setDoc } from 'firebase/firestore';
@@ -51,7 +51,7 @@ export default function FinancesPage() {
   const { data: bankData, isLoading: isBankLoading } = useDoc(bankRef);
 
   // Parse bank configuration when initialized
-  useMemo(() => {
+  useEffect(() => {
     if (bankData?.bankType) setBankType(bankData.bankType);
     if (bankData?.bankNumber) setBankNumber(bankData.bankNumber);
     if (bankData?.bankName) setBankName(bankData.bankName);
@@ -204,12 +204,19 @@ export default function FinancesPage() {
                       </TableHeader>
                       <TableBody>
                         {transactions.map((t: any) => {
-                          const date = t.createdAt?.toDate ? t.createdAt.toDate() : new Date(t.createdAt);
+                          let date;
+                          try {
+                            date = t.createdAt?.toDate ? t.createdAt.toDate() : (t.createdAt ? new Date(t.createdAt) : new Date(0));
+                          } catch (e) {
+                            date = new Date(0);
+                          }
+                          const dateString = isNaN(date.getTime()) ? 'Fecha inválida' : `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                          
                           return (
                             <TableRow key={t.id}>
-                              <TableCell className="font-medium whitespace-nowrap text-xs">{date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
-                              <TableCell className="max-w-[150px] truncate" title={t.courseTitle}>{t.courseTitle}</TableCell>
-                              {isAdmin && <TableCell className="text-xs max-w-[100px] truncate" title={t.instructorId}>{t.instructorId.slice(0, 8)}...</TableCell>}
+                              <TableCell className="font-medium whitespace-nowrap text-xs">{dateString}</TableCell>
+                              <TableCell className="max-w-[150px] truncate" title={t.courseTitle}>{t.courseTitle || 'Desconocido'}</TableCell>
+                              {isAdmin && <TableCell className="text-xs max-w-[100px] truncate" title={t.instructorId}>{t.instructorId ? `${t.instructorId.slice(0, 8)}...` : 'N/A'}</TableCell>}
                               <TableCell className="text-right font-mono font-medium">${t.amount?.toLocaleString()}</TableCell>
                               <TableCell className="text-right font-mono text-rose-600 text-xs">${t.adminShare?.toLocaleString()}</TableCell>
                               <TableCell className="text-right font-mono text-emerald-600 font-bold">${t.instructorShare?.toLocaleString()}</TableCell>
