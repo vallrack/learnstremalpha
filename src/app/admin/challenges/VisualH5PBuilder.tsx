@@ -226,10 +226,14 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
                <Card key={i} className="rounded-xl border-dashed border-primary/40 bg-primary/5">
                  <CardContent className="p-4 space-y-4 relative">
                    <div className="absolute top-4 right-4"><Button type="button" size="icon" variant="destructive" className="h-6 w-6 rounded-full" onClick={() => { const n = [...checks]; n.splice(i, 1); update({...data, checkpoints: n}) }}><Trash2 className="h-3 w-3" /></Button></div>
-                   <div className="grid grid-cols-[100px_1fr] gap-4">
+                   <div className="grid grid-cols-[140px_1fr] gap-4">
                      <div className="grid gap-1">
-                       <Label className="text-[10px] uppercase font-bold text-primary">Segundo Exacto</Label>
-                       <Input type="number" value={c.seconds} onChange={(e) => { const n = [...checks]; n[i].seconds = parseInt(e.target.value)||0; update({...data, checkpoints: n}) }} className="h-8 font-mono text-center" />
+                       <Label className="text-[10px] uppercase font-bold text-primary">Minutos : Segundos</Label>
+                       <div className="flex items-center gap-1">
+                         <Input type="number" min="0" value={Math.floor((c.seconds||0) / 60)} onChange={(e) => { const m = parseInt(e.target.value)||0; const s = (c.seconds||0) % 60; const n = [...checks]; n[i].seconds = m * 60 + s; update({...data, checkpoints: n}) }} className="h-8 font-mono text-center px-1" />
+                         <span className="font-bold text-slate-400">:</span>
+                         <Input type="number" min="0" max="59" value={(c.seconds||0) % 60} onChange={(e) => { const m = Math.floor((c.seconds||0) / 60); const s = parseInt(e.target.value)||0; const n = [...checks]; n[i].seconds = m * 60 + s; update({...data, checkpoints: n}) }} className="h-8 font-mono text-center px-1" />
+                       </div>
                      </div>
                      <div className="grid gap-1">
                        <Label className="text-[10px] uppercase font-bold text-primary">Pregunta Pop-up</Label>

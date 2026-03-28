@@ -70,16 +70,23 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
   const ytMatch = safeUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))((\w|-){11})/);
   const ytId = ytMatch ? ytMatch[1] : null;
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // IFrame API Setup
   useEffect(() => {
     if (!mounted || !ytId) return;
 
     const initPlayer = () => {
-      const targetId = `yt-player-${ytId}`;
-      const el = document.getElementById(targetId);
-      if (!el || playerRef.current) return;
+      if (!containerRef.current || playerRef.current) return;
       
-      playerRef.current = new window.YT.Player(targetId, {
+      const targetDiv = document.createElement('div');
+      targetDiv.style.width = '100%';
+      targetDiv.style.height = '100%';
+      
+      containerRef.current.innerHTML = '';
+      containerRef.current.appendChild(targetDiv);
+      
+      playerRef.current = new window.YT.Player(targetDiv, {
         videoId: ytId,
         playerVars: {
           autoplay: 0,
@@ -113,15 +120,16 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
         const tag = document.createElement('script');
         tag.id = 'youtube-api-script';
         tag.src = 'https://www.youtube.com/iframe_api';
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
+        document.head.appendChild(tag);
       }
       
-      const oldCb = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        if (oldCb) oldCb();
-        initPlayer();
-      };
+      // Polling es a prueba de balas contra React Strict Mode (que rompe los callbacks globales)
+      const checkYt = setInterval(() => {
+        if (window.YT && window.YT.Player) {
+          clearInterval(checkYt);
+          initPlayer();
+        }
+      }, 100);
     } else {
       setTimeout(initPlayer, 100);
     }
@@ -173,8 +181,8 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
            
            {/* Pure DOM insertion so React VDOM skips Diffing the replacing Youtube Iframe */}
            <div 
+             ref={containerRef}
              className={`w-full h-full absolute inset-0 ${isOverlayActive ? 'pointer-events-none' : 'pointer-events-auto'}`}
-             dangerouslySetInnerHTML={{ __html: `<div id="yt-player-${ytId}" style="width:100%;height:100%;"></div>` }} 
            />
            
            {/* Question Overlay */}
