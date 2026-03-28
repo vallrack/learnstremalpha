@@ -63,6 +63,11 @@ export default function InstructorApplyPage() {
       return;
     }
 
+    if (!user?.uid) {
+      toast({ variant: "destructive", title: "Error de usuario", description: "Debes iniciar sesión para postularte." });
+      return;
+    }
+
     if (!(window as any).ePayco) {
       toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la pasarela de pago." });
       return;
@@ -90,10 +95,10 @@ export default function InstructorApplyPage() {
         external: "false",
         response: `${window.location.origin}/instructor/apply/success`,
         name_billing: user?.displayName || "Postulante Instructor",
-        email_billing: user?.email,
+        email_billing: user?.email || "estudiante@learnstream.app",
         extra1: user?.uid,
-        extra2: specialty,
-        extra3: bio,
+        extra2: specialty.substring(0, 250),
+        extra3: bio.substring(0, 250),
       };
 
       handler.open(data);
