@@ -225,33 +225,33 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
             {checks.map((c: any, i: number) => (
                <Card key={i} className="rounded-xl border-dashed border-primary/40 bg-primary/5">
                  <CardContent className="p-4 space-y-4 relative">
-                   <div className="absolute top-4 right-4"><Button type="button" size="icon" variant="destructive" className="h-6 w-6 rounded-full" onClick={() => { const n = [...checks]; n.splice(i, 1); update({...data, checkpoints: n}) }}><Trash2 className="h-3 w-3" /></Button></div>
+                   <div className="absolute top-4 right-4"><Button type="button" size="icon" variant="destructive" className="h-6 w-6 rounded-full" onClick={() => update({...data, checkpoints: checks.filter((_:any, idx:number) => idx !== i)})}><Trash2 className="h-3 w-3" /></Button></div>
                    <div className="grid grid-cols-[140px_1fr] gap-4">
                      <div className="grid gap-1">
                        <Label className="text-[10px] uppercase font-bold text-primary">Minutos : Segundos</Label>
                        <div className="flex items-center gap-1">
-                         <Input type="number" min="0" value={Math.floor((c.seconds||0) / 60)} onChange={(e) => { const m = parseInt(e.target.value)||0; const s = (c.seconds||0) % 60; const n = [...checks]; n[i].seconds = m * 60 + s; update({...data, checkpoints: n}) }} className="h-8 font-mono text-center px-1" />
+                         <Input type="number" min="0" value={Math.floor((c.seconds||0) / 60)} onChange={(e) => { const m = parseInt(e.target.value)||0; const s = (c.seconds||0) % 60; update({...data, checkpoints: checks.map((chk:any, idx:number) => idx === i ? {...chk, seconds: m * 60 + s} : chk)}) }} className="h-8 font-mono text-center px-1" />
                          <span className="font-bold text-slate-400">:</span>
-                         <Input type="number" min="0" max="59" value={(c.seconds||0) % 60} onChange={(e) => { const m = Math.floor((c.seconds||0) / 60); const s = parseInt(e.target.value)||0; const n = [...checks]; n[i].seconds = m * 60 + s; update({...data, checkpoints: n}) }} className="h-8 font-mono text-center px-1" />
+                         <Input type="number" min="0" max="59" value={(c.seconds||0) % 60} onChange={(e) => { const m = Math.floor((c.seconds||0) / 60); const s = parseInt(e.target.value)||0; update({...data, checkpoints: checks.map((chk:any, idx:number) => idx === i ? {...chk, seconds: m * 60 + s} : chk)}) }} className="h-8 font-mono text-center px-1" />
                        </div>
                      </div>
                      <div className="grid gap-1">
                        <Label className="text-[10px] uppercase font-bold text-primary">Pregunta Pop-up</Label>
-                       <Input value={c.question} onChange={(e) => { const n = [...checks]; n[i].question = e.target.value; update({...data, checkpoints: n}) }} className="h-8 font-bold text-xs" placeholder="¿Qué significa...?" />
+                       <Input value={c.question} onChange={(e) => update({...data, checkpoints: checks.map((chk:any, idx:number) => idx === i ? {...chk, question: e.target.value} : chk)})} className="h-8 font-bold text-xs" placeholder="¿Qué significa...?" />
                      </div>
                    </div>
                    <div className="bg-white p-3 rounded-lg border grid grid-cols-2 gap-2">
                       {(c.options || ['','','','']).map((opt: string, optIdx: number) => (
                          <div key={optIdx} className="flex items-center gap-2">
-                           <input type="radio" checked={c.correctIndex === optIdx} onChange={() => { const n = [...checks]; n[i].correctIndex = optIdx; update({...data, checkpoints: n}) }} />
-                           <Input value={opt} onChange={(e) => { const n = [...checks]; n[i].options[optIdx] = e.target.value; update({...data, checkpoints: n}) }} className="h-7 text-[10px]" placeholder={`Opción ${optIdx+1}`} />
+                           <input type="radio" checked={c.correctIndex === optIdx} onChange={() => update({...data, checkpoints: checks.map((chk:any, idx:number) => idx === i ? {...chk, correctIndex: optIdx} : chk)})} />
+                           <Input value={opt} onChange={(e) => { const newOpts = [...c.options]; newOpts[optIdx] = e.target.value; update({...data, checkpoints: checks.map((chk:any, idx:number) => idx === i ? {...chk, options: newOpts} : chk)}); }} className="h-7 text-[10px]" placeholder={`Opción ${optIdx+1}`} />
                          </div>
                       ))}
                    </div>
                  </CardContent>
                </Card>
-            ))}
-            {checks.length === 0 && <p className="text-center text-xs text-slate-400 italic py-4">No hay pausas configuradas.</p>}
+             ))}
+             {checks.length === 0 && <p className="text-center text-xs text-slate-400 italic py-4">No hay pausas configuradas.</p>}
          </div>
       </div>
     );
