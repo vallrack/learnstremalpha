@@ -98,7 +98,16 @@ export default function CourseDetailPage() {
 
   const closingDate = course.closingDate instanceof Timestamp ? course.closingDate.toDate() : (course.closingDate ? new Date(course.closingDate) : null);
   const isExpired = closingDate && closingDate < new Date();
-  const accessDenied = isExpired && !isPremium;
+  
+  const isAuthor = user?.uid === course.instructorId;
+  const hasPurchased = profile?.purchasedCourses?.includes(id);
+  const isFreeCourse = course.isFree === true;
+  
+  // Acceso permitido si: Es gratis, es Admin, es el autor, compró el curso, o tiene subscripción Premium global
+  const hasValidAccess = isFreeCourse || isPremium || isAuthor || hasPurchased;
+  
+  // Acceso denegado si no tiene acceso válido, o si está expirado y no eres del equipo/premium
+  const accessDenied = !hasValidAccess || (isExpired && !isPremium && !isAuthor);
 
   const formatVideoUrl = (url: string) => {
     if (!url) return '';
@@ -156,17 +165,30 @@ export default function CourseDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-12">
             {accessDenied && (
-              <section className="bg-rose-50 border border-rose-200 p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 shadow-sm">
+              <section className="bg-rose-50 border border-rose-200 p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 shadow-sm animate-in fade-in slide-in-from-top-4">
                 <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center shrink-0">
                   <Lock className="h-10 w-10 text-rose-600" />
                 </div>
                 <div className="flex-1 text-center md:text-left space-y-2">
-                  <h2 className="text-2xl font-headline font-bold text-rose-900">Curso Finalizado</h2>
-                  <p className="text-rose-700">Este programa ha cerrado. Solo los estudiantes **Premium** mantienen el acceso vitalicio.</p>
+                  <h2 className="text-2xl font-headline font-bold text-rose-900">
+                    {isExpired ? "Curso Finalizado" : "Contenido Exclusivo"}
+                  </h2>
+                  <p className="text-rose-700">
+                    {isExpired 
+                      ? "Este programa ha cerrado. Solo los estudiantes Premium mantienen el acceso vitalicio." 
+                      : "Debes adquirir este curso o tener una suscripción Premium para acceder al material y obtener tu certificado."}
+                  </p>
+                  {!isFreeCourse && !hasPurchased && (
+                    <p className="inline-block mt-2 font-bold px-3 py-1 bg-white text-rose-800 rounded-lg text-sm border border-rose-200">
+                      Precio Individual: ${course.price?.toLocaleString() || 120000} COP
+                    </p>
+                  )}
                 </div>
-                <Button className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200">
-                  Mejorar a Premium
-                </Button>
+                <Link href={`/checkout?courseId=${id}`}>
+                  <Button className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200 whitespace-nowrap">
+                    Obtener Acceso
+                  </Button>
+                </Link>
               </section>
             )}
 

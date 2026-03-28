@@ -25,9 +25,55 @@ export async function verifyEpaycoTransaction(
       };
 
       if (type === 'premium') {
-        updateData.isPremiumSubscriber = true;
-        updateData.premiumUpdatedAt = new Date().toISOString();
-        await userRef.update(updateData);
+        const extra3 = result.data.x_extra3;
+        
+        if (extra3 && extra3 !== 'none' && extra3 !== 'premium') {
+          // Es una compra de curso individual
+          const courseId = extra3;
+          const amount = Number(result.data.x_amount);
+          
+          // Obtener datos del curso para saber a quién pagarle y cuánto porcentaje
+          const courseDoc = await adminDb.collection('courses').doc(courseId).get();
+          
+          if (courseDoc.exists) {
+            const courseData = courseDoc.data();
+            const instructorId = courseData?.instructorId;
+            const revenueShare = courseData?.instructorRevenueShare ?? 70; // 70% por defecto
+            
+            const instructorCut = Math.floor(amount * (revenueShare / 100));
+            const adminCut = amount - instructorCut;
+
+            // 1. Guardar la transacción financiera
+            await adminDb.collection('transactions').add({
+              userId,
+              userEmail: extraData?.userEmail || result.data.x_customer_email || '',
+              courseId,
+              courseTitle: courseData?.title || 'Curso',
+              instructorId,
+              amount,
+              instructorShare: instructorCut,
+              adminShare: adminCut,
+              ref_payco,
+              createdAt: new Date(),
+              status: 'completed'
+            });
+
+            // 2. Dar acceso al curso añadiéndolo a purchasedCourses
+            const userSnap = await userRef.get();
+            const userData = userSnap.data();
+            const currentPurchased = userData?.purchasedCourses || [];
+            
+            if (!currentPurchased.includes(courseId)) {
+              updateData.purchasedCourses = [...currentPurchased, courseId];
+            }
+          }
+          await userRef.update(updateData);
+        } else {
+          // Suscripción Premium Global Vitalicia
+          updateData.isPremiumSubscriber = true;
+          updateData.premiumUpdatedAt = new Date().toISOString();
+          await userRef.update(updateData);
+        }
       } else if (type === 'instructor') {
         updateData.instructorStatus = 'pending';
         // Creación segura de solicitud de instructor

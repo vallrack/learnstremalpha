@@ -46,6 +46,8 @@ export default function AdminCoursesPage() {
   const [isFree, setIsFree] = useState(true);
   const [closingDate, setClosingDate] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [price, setPrice] = useState<number>(0);
+  const [instructorRevenueShare, setInstructorRevenueShare] = useState<number>(70);
 
   const coursesQuery = useMemoFirebase(() => {
     if (!db || !profile) return null;
@@ -71,6 +73,8 @@ export default function AdminCoursesPage() {
     setIsFree(true);
     setClosingDate('');
     setIsActive(true);
+    setPrice(0);
+    setInstructorRevenueShare(70);
   };
 
   const handleEditClick = (course: any) => {
@@ -83,6 +87,8 @@ export default function AdminCoursesPage() {
     setPreviewVideoUrl(course.previewVideoUrl || '');
     setIsFree(course.isFree ?? true);
     setIsActive(course.isActive ?? true);
+    setPrice(course.price || 0);
+    setInstructorRevenueShare(course.instructorRevenueShare ?? 70);
     
     if (course.closingDate) {
       const date = course.closingDate instanceof Timestamp ? course.closingDate.toDate() : new Date(course.closingDate);
@@ -129,6 +135,8 @@ export default function AdminCoursesPage() {
       category,
       technology,
       isFree,
+      price: isFree ? 0 : Number(price),
+      instructorRevenueShare: isAdmin ? Number(instructorRevenueShare) : (editingCourseId ? undefined : 70), // Keep existing or set to 70 if new for non-admins
       isActive,
       previewVideoUrl,
       updatedAt: serverTimestamp(),
@@ -331,13 +339,35 @@ export default function AdminCoursesPage() {
                       </div>
 
                       <div className="bg-slate-50 p-4 rounded-2xl border space-y-4">
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ajustes de Publicación</p>
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ajustes de Publicación y Precio</p>
                         <div className="flex flex-col gap-3">
                           <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm">
-                            <Label htmlFor="isFree" className="text-sm font-medium cursor-pointer">Curso Gratuito</Label>
+                            <Label htmlFor="isFree" className="text-sm font-medium cursor-pointer flex-1">Curso Gratuito</Label>
                             <input type="checkbox" id="isFree" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" />
                           </div>
-                          <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm">
+                          
+                          {!isFree && (
+                            <div className="grid gap-2 p-3 bg-white rounded-xl border border-emerald-100 shadow-sm animate-in fade-in slide-in-from-top-2">
+                              <Label className="font-bold text-sm text-emerald-700">Precio Individual (COP)</Label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                                <Input type="number" min="0" step="1000" value={price} onChange={(e) => setPrice(Number(e.target.value))} className="rounded-xl h-11 pl-8 font-mono font-bold border-emerald-200 focus-visible:ring-emerald-500" placeholder="Ej: 50000" />
+                              </div>
+                            </div>
+                          )}
+
+                          {isAdmin && !isFree && (
+                             <div className="grid gap-2 p-3 bg-amber-50 rounded-xl border border-amber-200 shadow-sm mt-1 animate-in fade-in">
+                               <Label className="font-bold text-sm text-amber-900">Participación del Instructor (%)</Label>
+                               <div className="relative">
+                                 <Input type="number" min="0" max="100" value={instructorRevenueShare} onChange={(e) => setInstructorRevenueShare(Number(e.target.value))} className="rounded-xl h-11 pr-8 font-mono font-bold bg-white border-amber-200 focus-visible:ring-amber-500" />
+                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">%</span>
+                               </div>
+                               <p className="text-[10px] text-amber-700/80 font-medium">Plataforma retiene el {100 - instructorRevenueShare}% (${((price * (100 - instructorRevenueShare)) / 100).toLocaleString()}).</p>
+                             </div>
+                          )}
+
+                          <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm mt-2">
                             <Label htmlFor="isActive" className="text-sm font-medium cursor-pointer">Publicar Inmediatamente</Label>
                             <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" />
                           </div>
@@ -413,7 +443,10 @@ export default function AdminCoursesPage() {
                         {course.isFree ? (
                           <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg text-[10px]">Gratis</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg text-[10px]">Premium</Badge>
+                          <div className="flex flex-col gap-1 items-start">
+                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg text-[10px]">Premium: ${course.price?.toLocaleString() || 0} COP</Badge>
+                            {isAdmin && <span className="text-[9px] text-slate-500 font-bold bg-slate-100 px-1.5 py-0.5 rounded leading-none">{course.instructorRevenueShare ?? 70}% rev. inst.</span>}
+                          </div>
                         )}
                       </div>
                     </TableCell>

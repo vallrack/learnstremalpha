@@ -22,7 +22,8 @@ import {
   Tag,
   GraduationCap,
   FileText,
-  Trophy
+  Trophy,
+  Landmark
 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -83,6 +84,7 @@ export function Navbar() {
   }
 
   const adminLinks = [
+    { href: '/admin/finances', label: 'Finanzas', icon: Landmark, roles: ['admin', 'instructor'] },
     { href: '/admin/challenges', label: 'Desafíos', icon: Code2, roles: ['admin', 'instructor'] },
     { href: '/admin', label: 'Catálogo Cursos', icon: LayoutDashboard, roles: ['admin', 'instructor'] },
     { href: '/admin/applications', label: 'Solicitudes Instructor', icon: FileText, roles: ['admin'] },

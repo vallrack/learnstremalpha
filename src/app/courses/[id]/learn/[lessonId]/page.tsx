@@ -21,7 +21,8 @@ import {
   Award,
   Code2,
   ArrowRight,
-  HelpCircle
+  HelpCircle,
+  Lock
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
@@ -75,6 +76,12 @@ function LessonPlayerContent() {
   }, [db, courseId]);
   const { data: modules, isLoading: isModulesLoading } = useCollection(modulesQuery);
 
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+
   const handleMarkAsCompleted = async () => {
     if (!db || !user || user.isAnonymous || !courseId) return;
     const progressRef = doc(db, 'users', user.uid, 'courseProgress', courseId);
@@ -109,6 +116,37 @@ function LessonPlayerContent() {
   }
 
   if (!course || !currentLesson) return <div className="h-screen flex items-center justify-center">No encontrado</div>;
+
+  const isPremium = profile?.role === 'admin' || !!profile?.isPremiumSubscriber;
+  const isAuthor = user?.uid === course.instructorId;
+  const hasPurchased = profile?.purchasedCourses?.includes(courseId);
+  const isFreeCourse = course.isFree === true;
+  const hasValidAccess = isFreeCourse || isPremium || isAuthor || hasPurchased;
+
+  if (!hasValidAccess) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-24 h-24 bg-rose-100 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-rose-500/10">
+            <Lock className="h-10 w-10 text-rose-600" />
+          </div>
+          <h1 className="text-4xl font-headline font-bold mb-4">Acceso Restringido</h1>
+          <p className="text-muted-foreground max-w-md mb-8 text-lg">
+            Debes adquirir este curso o tener una suscripción Premium para acceder a esta lección.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button variant="outline" onClick={() => router.push(`/courses/${courseId}`)} className="rounded-2xl h-14 px-8 text-lg font-bold">
+              Ver Detalles del Curso
+            </Button>
+            <Button onClick={() => router.push(`/checkout?courseId=${courseId}`)} className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200">
+              Obtener Acceso
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const videoSource = currentLesson.videoUrl || (currentLesson.title.startsWith('http') ? currentLesson.title : null);
 

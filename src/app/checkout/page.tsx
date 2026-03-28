@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  MessageCircle
+  MessageCircle,
+  BookOpen
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
@@ -28,9 +29,19 @@ import Script from 'next/script';
 import Image from 'next/image';
 
 export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <CheckoutContent />
+    </Suspense>
+  );
+}
+
+function CheckoutContent() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const courseId = searchParams.get('courseId');
   const { toast } = useToast();
   
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,22 +50,30 @@ export default function CheckoutPage() {
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
-  const BASE_PRICE = 120000; // Valor base en COP
-
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
 
+  const courseRef = useMemoFirebase(() => {
+    if (!db || !courseId) return null;
+    return doc(db, 'courses', courseId);
+  }, [db, courseId]);
+  const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
+
+  const BASE_PRICE = courseId ? (course?.price || 0) : 120000;
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-    if (profile?.isPremiumSubscriber) {
+    // Only redirect if they are trying to buy Premium, but they already have it.
+    // If they are buying a specific course, we shouldn't redirect them unless they already own this course (which we'll check on the success page or elsewhere).
+    if (!courseId && profile?.isPremiumSubscriber) {
       router.push('/dashboard');
     }
-  }, [user, isUserLoading, router, profile]);
+  }, [user, isUserLoading, router, profile, courseId]);
 
   const finalPrice = useMemo(() => {
     if (!appliedCoupon) return BASE_PRICE;
@@ -137,8 +156,8 @@ export default function CheckoutPage() {
       });
 
       const data = {
-        name: "LearnStream Premium",
-        description: "Acceso vitalicio a cursos y desafíos IA",
+        name: courseId && course ? `Curso: ${course.title}` : "LearnStream Premium",
+        description: courseId && course ? "Acceso de por vida al curso" : "Acceso vitalicio a cursos y desafíos IA",
         invoice: `LS-${Date.now()}-${user.uid.substring(0, 5)}`,
         currency: "cop",
         amount: finalPrice.toString(),
@@ -152,6 +171,7 @@ export default function CheckoutPage() {
         email_billing: user.email,
         extra1: user.uid, 
         extra2: appliedCoupon?.id || "none",
+        extra3: courseId || "premium",
       };
 
       handler.open(data);
@@ -163,7 +183,7 @@ export default function CheckoutPage() {
     }
   };
 
-  if (isUserLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isUserLoading || isCourseLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const whatsappLink = `https://wa.me/573054694239?text=Hola%20LearnStream,%20tengo%20problemas%20con%20el%20pago%20de%20mi%20suscripci%C3%B3n%20Premium%20y%20me%20gustar%C3%ADa%20recibir%20ayuda.`;
 
@@ -204,26 +224,48 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           <div className="space-y-8">
             <div>
-              <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">Potencia tu carrera hoy</h1>
-              <p className="text-lg text-muted-foreground">Desbloquea herramientas profesionales con medios de pago locales a través de ePayco.</p>
+              <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">
+                {courseId && course ? `Inscríbete en: ${course.title}` : "Potencia tu carrera hoy"}
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                {courseId && course ? "Adquiere acceso de por vida a este programa certificado." : "Desbloquea herramientas profesionales con medios de pago locales a través de ePayco."}
+              </p>
             </div>
 
             <div className="space-y-4">
-              {[
-                { icon: Zap, title: "Pagos con Nequi y Daviplata", desc: "Usa tus billeteras digitales favoritas o PSE para activar tu cuenta al instante." },
-                { icon: Star, title: "Evaluación por IA", desc: "Feedback detallado e insignias de maestría en tus retos de código." },
-                { icon: Award, title: "Certificados de Valor", desc: "Diplomas verificados listos para compartir en tu portfolio profesional." }
-              ].map((feat, i) => (
-                <div key={i} className="flex gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                  <div className="bg-primary/10 p-3 rounded-xl h-fit">
-                    <feat.icon className="h-6 w-6 text-primary" />
+              {courseId && course ? (
+                [
+                  { icon: Zap, title: "Pagos con Nequi y Daviplata", desc: "Usa tus billeteras digitales favoritas o PSE." },
+                  { icon: BookOpen, title: "Acceso Vitalicio al Curso", desc: "Aprende a tu propio ritmo sin límites de tiempo." },
+                  { icon: Award, title: "Certificado de Finalización", desc: "Diploma verificado para tu portafolio profesional." }
+                ].map((feat, i) => (
+                  <div key={i} className="flex gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="bg-primary/10 p-3 rounded-xl h-fit">
+                      <feat.icon className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900">{feat.title}</h4>
+                      <p className="text-sm text-muted-foreground">{feat.desc}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900">{feat.title}</h4>
-                    <p className="text-sm text-muted-foreground">{feat.desc}</p>
+                ))
+              ) : (
+                [
+                  { icon: Zap, title: "Pagos con Nequi y Daviplata", desc: "Usa tus billeteras digitales favoritas o PSE para activar tu cuenta al instante." },
+                  { icon: Star, title: "Evaluación por IA", desc: "Feedback detallado e insignias de maestría en tus retos de código." },
+                  { icon: Award, title: "Certificados de Valor", desc: "Diplomas verificados listos para compartir en tu portfolio profesional." }
+                ].map((feat, i) => (
+                  <div key={i} className="flex gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="bg-primary/10 p-3 rounded-xl h-fit">
+                      <feat.icon className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900">{feat.title}</h4>
+                      <p className="text-sm text-muted-foreground">{feat.desc}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             <div className="p-6 bg-slate-900 rounded-[2rem] text-white">
@@ -250,8 +292,10 @@ export default function CheckoutPage() {
             <CardContent className="p-8 space-y-8">
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-dashed">
-                  <span className="text-slate-600 font-medium">Plan Premium Vitalicio</span>
-                  <span className="font-bold">$120.000</span>
+                  <span className="text-slate-600 font-medium whitespace-pre-wrap flex-1 pr-4">
+                    {courseId && course ? `Curso: ${course.title}` : 'Plan Premium Vitalicio'}
+                  </span>
+                  <span className="font-bold shrink-0">${BASE_PRICE.toLocaleString()}</span>
                 </div>
 
                 <div className="space-y-2">
