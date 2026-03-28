@@ -20,7 +20,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, addDoc } from 'firebase/firestore';
 import { 
   Dialog, 
   DialogContent, 
@@ -61,17 +61,15 @@ export default function AdminApplicationsPage() {
     });
 
     // 3. Notificar al solicitante
-    import('firebase/firestore').then(({ addDoc, collection: col }) => {
-      addDoc(col(db, 'notifications'), {
-        userId: selectedApp.userId,
-        title: '¡Solicitud Aprobada!',
-        message: 'Tu perfil como instructor ha sido activado. Ya puedes empezar a publicar cursos.',
-        read: false,
-        link: '/admin/finances',
-        type: 'success',
-        createdAt: new Date()
-      });
-    });
+    addDoc(collection(db, 'notifications'), {
+      userId: selectedApp.userId,
+      title: '¡Solicitud Aprobada!',
+      message: 'Tu perfil como instructor ha sido activado. Ya puedes empezar a publicar cursos.',
+      read: false,
+      link: '/admin/finances',
+      type: 'success',
+      createdAt: new Date()
+    }).catch(err => console.error("Error creating notification", err));
 
     setIsDialogOpen(false);
     setSelectedApp(null);
@@ -169,7 +167,7 @@ export default function AdminApplicationsPage() {
                 <div className="space-y-4">
                   <div className="bg-slate-50 p-6 rounded-3xl space-y-4 border">
                     <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Bio del Experto</h4>
-                    <p className="text-sm leading-relaxed text-slate-700 italic">"{selectedApp.bio}"</p>
+                    <p className="text-sm leading-relaxed text-slate-700 italic">"{selectedApp?.bio || 'Sin descripción'}"</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">

@@ -76,9 +76,9 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   }
 
   // Matemáticas de Gamificación
-  const xp = profile.xp || 0;
+  const xp = Number(profile.xp || 0);
   // Nivel simple: cada nivel requiere más y más XP (función cuadrática)
-  const level = Math.floor(Math.sqrt(xp / 100)) + 1;
+  const level = !isNaN(xp) && xp >= 0 ? Math.floor(Math.sqrt(xp / 100)) + 1 : 1;
 
   // Use img tag for photoURL to bypass any Next.js Image optimization domain errors
   return (

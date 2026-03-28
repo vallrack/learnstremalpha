@@ -39,7 +39,7 @@ export default function InstructorApplyPage() {
   const [bio, setBio] = useState('');
   const [specialty, setSpecialty] = useState('');
 
-  const LICENSE_FEE = 250000; // Valor de la licencia de creador en COP
+  const LICENSE_FEE = 150000; // Valor de la licencia reducido temporalmente para bypass de límite ePayco
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;

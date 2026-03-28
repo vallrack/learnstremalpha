@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { Bell, Check, Loader2, Info, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -17,6 +17,11 @@ export function NotificationBell() {
   const db = useFirestore();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // We need the user's role to determine if they should receive 'admin' notifications
   const profileRef = useMemoFirebase(() => {
@@ -130,7 +135,7 @@ export function NotificationBell() {
                         {notif.message}
                       </p>
                       <p className="text-[10px] font-medium text-slate-400 capitalize pt-1">
-                        {formatDistanceToNow(date, { addSuffix: true, locale: es })}
+                        {mounted ? formatDistanceToNow(date, { addSuffix: true, locale: es }) : '...'}
                       </p>
                     </div>
                   </div>

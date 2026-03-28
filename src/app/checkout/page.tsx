@@ -273,7 +273,7 @@ function CheckoutContent() {
                 <span className="text-slate-400">Inversión vitalicia:</span>
                 <div className="text-right">
                   {appliedCoupon && (
-                    <p className="text-xs text-rose-400 line-through font-bold opacity-60">$120.000 COP</p>
+                    <p className="text-xs text-rose-400 line-through font-bold opacity-60">${BASE_PRICE.toLocaleString()} COP</p>
                   )}
                   <span className="text-3xl font-bold">${finalPrice.toLocaleString()}<span className="text-sm font-normal opacity-60"> COP</span></span>
                 </div>
