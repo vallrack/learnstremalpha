@@ -43,6 +43,7 @@ export default function AdminCoursesPage() {
   const [category, setCategory] = useState('');
   const [technology, setTechnology] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [previewVideoUrl, setPreviewVideoUrl] = useState('');
   const [isFree, setIsFree] = useState(true);
   const [closingDate, setClosingDate] = useState('');
@@ -70,6 +71,7 @@ export default function AdminCoursesPage() {
     setCategory('');
     setTechnology('');
     setImageUrl('');
+    setUploadingImage(false);
     setPreviewVideoUrl('');
     setIsFree(true);
     setClosingDate('');
@@ -103,13 +105,38 @@ export default function AdminCoursesPage() {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
+    if (!file) return;
+
+    setUploadingImage(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 450;
+        let width = img.width;
+        let height = img.height;
+
+        // Mantener aspect ratio sin superar el máximo
+        if (width > MAX_WIDTH) { height = Math.round(height * MAX_WIDTH / width); width = MAX_WIDTH; }
+        if (height > MAX_HEIGHT) { width = Math.round(width * MAX_HEIGHT / height); height = MAX_HEIGHT; }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Comprimir a WebP para reducir tamaño (igual que las fotos de perfil)
+        const dataUrl = canvas.toDataURL('image/webp', 0.8);
+        setImageUrl(dataUrl);
+        setUploadingImage(false);
       };
-      reader.readAsDataURL(file);
-    }
+      img.onerror = () => setUploadingImage(false);
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => setUploadingImage(false);
+    reader.readAsDataURL(file);
   };
 
   const handleUrlChange = (val: string) => {
@@ -296,7 +323,12 @@ export default function AdminCoursesPage() {
                         <Label className="font-bold">Imagen de Portada</Label>
                         <div className="relative group">
                           <div className={`aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-colors ${imageUrl ? 'border-primary/20 bg-primary/5' : 'border-slate-200 bg-slate-50'}`}>
-                            {imageUrl ? (
+                            {uploadingImage ? (
+                              <div className="flex flex-col items-center gap-3 text-primary">
+                                <Loader2 className="h-8 w-8 animate-spin" />
+                                <p className="text-xs font-bold">Comprimiendo imagen...</p>
+                              </div>
+                            ) : imageUrl ? (
                               <>
                                 <Image 
                                   src={imageUrl} 
@@ -387,8 +419,8 @@ export default function AdminCoursesPage() {
                   </div>
 
                   <DialogFooter className="pt-4 border-t">
-                    <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20">
-                      {editingCourseId ? 'Guardar Cambios en el Curso' : 'Publicar Nuevo Programa'}
+                    <Button type="submit" disabled={uploadingImage} className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20">
+                      {uploadingImage ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Procesando imagen...</> : editingCourseId ? 'Guardar Cambios en el Curso' : 'Publicar Nuevo Programa'}
                     </Button>
                   </DialogFooter>
                 </form>
