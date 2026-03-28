@@ -100,7 +100,7 @@ export default function LeaderboardPage() {
                             <Link href={`/u/${user.id}`} className="flex items-center gap-4 group/item">
                               <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-100 border-4 border-white shadow-sm ring-1 ring-slate-100">
                                 {user.profileImageUrl || user.photoURL ? (
-                                  <Image src={user.profileImageUrl || user.photoURL} alt={user.displayName || 'Estudiante'} width={48} height={48} className="object-cover" />
+                                  <img src={user.profileImageUrl || user.photoURL} alt={user.displayName || 'Estudiante'} className="w-full h-full object-cover" />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center font-bold text-slate-400">
                                     {user.displayName?.[0] || '?'}
@@ -180,7 +180,7 @@ function LeaderboardCard({ user, rank, variant }: { user: any, rank: number, var
          <div className={`w-32 h-32 rounded-full p-1 mb-6 relative z-10 ${c.bg} shadow-2xl`}>
             <div className="w-full h-full rounded-full border-4 border-white overflow-hidden bg-slate-200 relative">
                 {user.profileImageUrl || user.photoURL ? (
-                  <Image src={user.profileImageUrl || user.photoURL} alt={user.displayName || 'Estudiante'} fill className="object-cover" />
+                  <img src={user.profileImageUrl || user.photoURL} alt={user.displayName || 'Estudiante'} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-slate-400">
                      {user.displayName?.[0] || '?'}

@@ -64,35 +64,46 @@ export default function ProfilePage() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !storage || !user?.uid) return;
+    if (!file || !db || !user?.uid) return;
 
     setUploadingAvatar(true);
-    setAvatarProgress(0);
-    
-    try {
-      const storageRef = ref(storage, `users/${user.uid}/avatar_${Date.now()}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+    setAvatarProgress(50); // Fake progress to show activity
 
-      uploadTask.on('state_changed', 
-        (snapshot) => setAvatarProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
-        (error) => {
-          console.error("Avatar upload failed", error);
-          toast({ variant: 'destructive', title: 'Error', description: 'No se pudo subir la imagen.' });
-          setUploadingAvatar(false);
-        }, 
-        async () => {
-          try {
-             const url = await getDownloadURL(uploadTask.snapshot.ref);
-             handleSetAvatar(url);
-          } catch (err) {
-             console.error("Error al obtener la URL", err);
-             toast({ variant: 'destructive', title: 'Error', description: 'Imagen subida, pero no se pudo obtener su enlace público.' });
-          } finally {
-             setUploadingAvatar(false);
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 200;
+          const MAX_HEIGHT = 200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          } else {
+            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
           }
-        }
-      );
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Convertir a Base64 super comprimido para guardarlo gratis en la base de datos Firestore (no genera costos de Storage)
+          const dataUrl = canvas.toDataURL('image/webp', 0.8);
+          
+          handleSetAvatar(dataUrl);
+          setUploadingAvatar(false);
+          setAvatarProgress(100);
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
+      console.error("Avatar compression failed", err);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo procesar la imagen seleccionada.' });
       setUploadingAvatar(false);
     }
   };
