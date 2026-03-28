@@ -1,7 +1,6 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import ReactPlayer from 'react-player';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlayCircle, CheckCircle2, XCircle, Diamond } from 'lucide-react';
+import { PlayCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export type VideoCheckpoint = {
@@ -13,45 +12,44 @@ export type VideoCheckpoint = {
 
 type FeedbackState = { type: 'correct' | 'incorrect'; checkpointSeconds: number } | null;
 
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
+
 export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string, checkpoints: VideoCheckpoint[], onComplete: (score: number) => void }) {
   const [mounted, setMounted] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [activeCheckpoint, setActiveCheckpoint] = useState<VideoCheckpoint | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
   const [clearedCheckpoints, setClearedCheckpoints] = useState<number[]>([]);
   const [correctCount, setCorrectCount] = useState(0);
   const [feedbackState, setFeedbackState] = useState<FeedbackState>(null);
   const [duration, setDuration] = useState(0);
   const [playedFraction, setPlayedFraction] = useState(0);
+  
   const playerRef = useRef<any>(null);
 
-  const handleProgress = useCallback((state: any) => {
-      const { playedSeconds, played } = state;
-      setPlayedFraction(played);
-      const hit = checkpoints.find(c => playedSeconds >= c.seconds && playedSeconds < c.seconds + 1.5 && !clearedCheckpoints.includes(c.seconds));
-      if (hit) {
-          setPlaying(false);
-          setActiveCheckpoint(hit);
-      }
-  }, [checkpoints, clearedCheckpoints]);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const answerCheckpoint = (index: number) => {
       if (!activeCheckpoint) return;
-      
       const isCorrect = activeCheckpoint.correctIndex === index;
       if (isCorrect) setCorrectCount(c => c + 1);
       
-      // Show feedback for 1.5 seconds before resuming
       setFeedbackState({ type: isCorrect ? 'correct' : 'incorrect', checkpointSeconds: activeCheckpoint.seconds });
       setClearedCheckpoints(prev => [...prev, activeCheckpoint.seconds]);
       setActiveCheckpoint(null);
       
       setTimeout(() => {
           setFeedbackState(null);
-          setPlaying(true);
+          // Resume playing
+          if (playerRef.current && playerRef.current.playVideo) {
+             playerRef.current.playVideo();
+          }
       }, 1500);
   };
 
@@ -60,28 +58,7 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
       onComplete(score);
   };
 
-  const getCheckpointStatus = (cp: VideoCheckpoint): 'pending' | 'correct' | 'incorrect' => {
-      if (!clearedCheckpoints.includes(cp.seconds)) return 'pending';
-      // We can't easily track per-checkpoint correctness from current state alone,
-      // so we track it via feedbackState history. For simplicity, cleared = done.
-      return 'correct'; // simplified — could be enhanced with a map
-  };
-
-  if (!mounted) {
-      return <div className="max-w-4xl mx-auto aspect-video animate-pulse bg-slate-900 rounded-[3rem] shadow-2xl border-4 border-slate-800"></div>;
-  }
-
-  if (!url || typeof url !== 'string' || url.trim() === '') {
-      return (
-        <div className="max-w-4xl mx-auto rounded-[3rem] p-12 shadow-inner border-4 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-center space-y-4">
-          <XCircle className="h-16 w-16 text-slate-300" />
-          <h3 className="text-xl font-bold font-headline text-slate-500">Video No Configurado</h3>
-          <p className="text-sm text-slate-400 font-medium">Esta actividad no cuenta con una URL de video válida.<br/>Contacta con soporte o con el instructor.</p>
-        </div>
-      );
-  }
-
-  // Sanitizar URL de posibles caracteres invisibles u espacios
+  // URL Sanitization
   let safeUrl = url ? String(url).trim().replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') : '';
   if (safeUrl.startsWith('<iframe')) {
       const match = safeUrl.match(/src="([^"]+)"/);
@@ -90,30 +67,113 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
       safeUrl = 'https://' + safeUrl;
   }
 
-  // Extraer el ID para Forzar miniatura y evitar API oEmbed caída (noembed.com)
   const ytMatch = safeUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))((\w|-){11})/);
   const ytId = ytMatch ? ytMatch[1] : null;
-  const lightMode = ytId ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg` : true;
 
-  const Player = ReactPlayer as React.ElementType<any>;
+  // IFrame API Setup
+  useEffect(() => {
+    if (!mounted || !ytId) return;
+
+    const initPlayer = () => {
+      const targetId = `yt-player-${ytId}`;
+      const el = document.getElementById(targetId);
+      if (!el || playerRef.current) return;
+      
+      playerRef.current = new window.YT.Player(targetId, {
+        videoId: ytId,
+        playerVars: {
+          autoplay: 0,
+          controls: 1, // Let user have standard YouTube controls
+          rel: 0,
+          modestbranding: 1,
+          enablejsapi: 1,
+          fs: 1
+        },
+        events: {
+          onReady: (e: any) => {
+            setDuration(e.target.getDuration() || 0);
+          },
+          onStateChange: (e: any) => {
+            if (e.data === window.YT.PlayerState.PLAYING) {
+              setPlaying(true);
+            } else {
+              setPlaying(false);
+            }
+            if (e.data === window.YT.PlayerState.ENDED) {
+              handleEnded();
+            }
+          }
+        }
+      });
+    };
+
+    if (!window.YT || !window.YT.Player) {
+      if (!document.getElementById('youtube-api-script')) {
+        const tag = document.createElement('script');
+        tag.id = 'youtube-api-script';
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
+      }
+      
+      const oldCb = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (oldCb) oldCb();
+        initPlayer();
+      };
+    } else {
+      setTimeout(initPlayer, 100);
+    }
+  }, [mounted, ytId]);
+
+  // Progress Polling Hook
+  useEffect(() => {
+    if (!playing || !playerRef.current || !playerRef.current.getCurrentTime) return;
+    
+    const interval = setInterval(() => {
+      try {
+        const currentTime = playerRef.current.getCurrentTime();
+        const d = playerRef.current.getDuration() || 1;
+        setPlayedFraction(currentTime / d);
+        
+        const hit = checkpoints.find(c => currentTime >= c.seconds && currentTime < c.seconds + 1.5 && !clearedCheckpoints.includes(c.seconds));
+        if (hit) {
+          playerRef.current.pauseVideo(); // pause video natively
+          setActiveCheckpoint(hit);
+          setPlaying(false);
+        }
+      } catch (e) {}
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [playing, checkpoints, clearedCheckpoints]);
+
+  if (!mounted) {
+      return <div className="max-w-4xl mx-auto aspect-video animate-pulse bg-slate-900 rounded-[3rem] shadow-2xl border-4 border-slate-800"></div>;
+  }
+
+  if (!ytId) {
+      return (
+        <div className="max-w-4xl mx-auto rounded-[3rem] p-12 shadow-inner border-4 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-center space-y-4">
+          <XCircle className="h-16 w-16 text-slate-300" />
+          <h3 className="text-xl font-bold font-headline text-slate-500">Formato de Video Inválido</h3>
+          <p className="text-sm text-slate-400 font-medium">Verifica que la URL sea un enlace válido de YouTube.</p>
+        </div>
+      );
+  }
+
+  // Cover up the video entirely when a checkpoint is active so controls can't be clicked
+  const isOverlayActive = activeCheckpoint !== null || feedbackState !== null;
 
   return (
       <div className="space-y-4">
         {/* Video Player Container */}
         <div className="max-w-4xl mx-auto rounded-[3rem] overflow-hidden shadow-2xl border-4 border-slate-900 bg-black relative aspect-video">
-           <Player
-              ref={playerRef}
-              url={safeUrl}
-              playing={playing}
-              controls={!activeCheckpoint && !feedbackState}
-              light={lightMode}
-              width="100%"
-              height="100%"
-              onProgress={handleProgress}
-              onDuration={(d: number) => setDuration(d)}
-              onEnded={handleEnded}
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
+           
+           {/* Pure DOM insertion so React VDOM skips Diffing the replacing Youtube Iframe */}
+           <div 
+             className={`w-full h-full absolute inset-0 ${isOverlayActive ? 'pointer-events-none' : 'pointer-events-auto'}`}
+             dangerouslySetInnerHTML={{ __html: `<div id="yt-player-${ytId}" style="width:100%;height:100%;"></div>` }} 
            />
            
            {/* Question Overlay */}
@@ -125,14 +185,14 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
                      exit={{ opacity: 0 }} 
                      className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-10 z-50 text-center"
                   >
-                      <motion.div initial={{ y: 50, scale: 0.9 }} animate={{ y: 0, scale: 1 }} className="max-w-xl w-full bg-white rounded-[2.5rem] p-10 shadow-2xl border-4 border-emerald-500/20">
-                          <div className="bg-emerald-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
-                              <PlayCircle className="h-8 w-8 text-emerald-600" />
+                      <motion.div initial={{ y: 50, scale: 0.9 }} animate={{ y: 0, scale: 1 }} className="max-w-xl w-full bg-white rounded-[2.5rem] p-10 shadow-2xl border-4 border-primary/20">
+                          <div className="bg-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                              <PlayCircle className="h-8 w-8 text-primary" />
                           </div>
                           <h3 className="text-2xl font-headline font-bold text-slate-900 mb-8 leading-tight">{activeCheckpoint.question}</h3>
                           <div className="space-y-4">
                               {activeCheckpoint.options.map((opt, i) => (
-                                  <Button key={i} onClick={() => answerCheckpoint(i)} variant="outline" className="w-full h-auto py-4 px-6 text-left justify-start rounded-2xl border-2 border-slate-100 font-bold text-slate-700 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-700 transition-all whitespace-normal shadow-sm">
+                                  <Button key={i} onClick={() => answerCheckpoint(i)} variant="outline" className="w-full h-auto py-4 px-6 text-left justify-start rounded-2xl border-2 border-slate-100 font-bold text-slate-700 hover:bg-primary/10 hover:border-primary hover:text-primary transition-all whitespace-normal shadow-sm">
                                       {opt}
                                   </Button>
                               ))}
@@ -231,8 +291,7 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
                           : 'bg-amber-400 shadow-amber-200 animate-pulse'
                       }`}
                     />
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                       <div className="bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-xl">
                         {isCleared ? '✅ Respondido' : `⏱️ ${Math.floor(cp.seconds / 60)}:${String(Math.floor(cp.seconds % 60)).padStart(2, '0')}`}
                       </div>
