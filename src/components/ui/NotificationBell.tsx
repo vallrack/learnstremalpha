@@ -31,9 +31,9 @@ export function NotificationBell() {
   const { data: profile } = useDoc(profileRef);
 
   const notificationsQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid || !profile) return null;
+    // ✅ Esperar a que profile esté completamente cargado con su rol
+    if (!db || !user?.uid || !profile?.role) return null;
     
-    // Admins need to see 'admin' targeted notifications OR their own
     if (profile.role === 'admin') {
       return query(
         collection(db, 'notifications'), 
