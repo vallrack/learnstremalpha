@@ -15,6 +15,14 @@ export function FirebaseErrorListener() {
   useEffect(() => {
     // The callback now expects a strongly-typed error, matching the event payload.
     const handleError = (error: FirestorePermissionError) => {
+      // Ignore permission errors on non-critical paths like notifications.
+      // Those components handle errors gracefully themselves.
+      const ignoredPaths = ['notifications', 'notifications-query'];
+      const errorPath = error.request?.path || '';
+      if (ignoredPaths.some(p => errorPath.includes(p))) {
+        console.warn('Suppressed non-critical permission error:', errorPath);
+        return;
+      }
       // Set error in state to trigger a re-render.
       setError(error);
     };
