@@ -90,6 +90,11 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
       safeUrl = 'https://' + safeUrl;
   }
 
+  // Extraer el ID para Forzar miniatura y evitar API oEmbed caída (noembed.com)
+  const ytMatch = safeUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))((\w|-){11})/);
+  const ytId = ytMatch ? ytMatch[1] : null;
+  const lightMode = ytId ? `https://i.ytimg.com/vi/${ytId}/maxresdefault.jpg` : true;
+
   const Player = ReactPlayer as React.ElementType<any>;
 
   return (
@@ -101,7 +106,7 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
               url={safeUrl}
               playing={playing}
               controls={!activeCheckpoint && !feedbackState}
-              light={true}
+              light={lightMode}
               width="100%"
               height="100%"
               onProgress={handleProgress}
