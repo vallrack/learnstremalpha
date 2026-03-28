@@ -124,5 +124,12 @@ service cloud.firestore {
       allow read: if isAdmin() || (isSignedIn() && resource.data.instructorId == request.auth.uid);
       allow create, update, delete: if isAdmin();
     }
+
+    // ⭐ Reseñas: legibles por todos, escribibles solo por el propietario
+    match /reviews/{courseId}/ratings/{userId} {
+      allow read: if true;
+      allow create, update: if isOwner(userId);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
   }
 }

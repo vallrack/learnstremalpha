@@ -22,18 +22,23 @@ import {
   Code2,
   ArrowRight,
   HelpCircle,
-  Lock
+  Lock,
+  Star,
+  Send
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useState, Suspense } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { FloatingAITutor } from '@/components/ai/FloatingAITutor';
@@ -53,6 +58,13 @@ function LessonPlayerContent() {
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  
+  // --- Encuesta de satisfacción ---
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [surveyRating, setSurveyRating] = useState(0);
+  const [surveyHover, setSurveyHover] = useState(0);
+  const [surveyComment, setSurveyComment] = useState('');
+  const [surveySubmitting, setSurveySubmitting] = useState(false);
 
   const courseId = params.id as string;
   const lessonId = params.lessonId as string;
@@ -95,21 +107,44 @@ function LessonPlayerContent() {
 
     // Enviar certificado por correo
     const { sendCertificateAction } = await import('@/app/actions/email');
-    sendCertificateAction(user.uid, courseId).then(res => {
-      if (res.success) {
-        toast({
-          title: "¡Certificado enviado!",
-          description: "Revisa tu bandeja de entrada; hemos enviado tu diploma oficial.",
-        });
-      }
-    });
+    sendCertificateAction(user.uid, courseId);
 
     toast({
       title: "¡Lección completada!",
       description: "Tu progreso ha sido guardado.",
       action: <Button size="sm" className="gap-2" onClick={() => router.push(`/courses/${courseId}/certificate`)}><Award className="h-4 w-4" /> Certificado</Button>,
     });
+
+    // Abrir encuesta de satisfacción
+    setShowSurvey(true);
   };
+
+  const handleSubmitSurvey = async () => {
+    if (!db || !user || surveyRating === 0) return;
+    setSurveySubmitting(true);
+    try {
+      const profile = (await import('firebase/firestore').then(m => m.getDoc(doc(db, 'users', user.uid)))).data();
+      await setDoc(doc(db, 'reviews', courseId, 'ratings', user.uid), {
+        userId: user.uid,
+        courseId,
+        rating: surveyRating,
+        comment: surveyComment.trim(),
+        displayName: profile?.displayName || user.email?.split('@')[0] || 'Estudiante',
+        profileImageUrl: profile?.profileImageUrl || profile?.photoURL || null,
+        createdAt: serverTimestamp(),
+      });
+      toast({ title: '¡Gracias por tu reseña!', description: 'Tu opinión ayuda a mejorar la calidad del curso.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar tu reseña. Intenta más tarde.' });
+    } finally {
+      setSurveySubmitting(false);
+      setShowSurvey(false);
+      setSurveyRating(0);
+      setSurveyComment('');
+    }
+  };
+
+
 
   if (isCourseLoading || isLessonLoading || isModulesLoading) {
     return <div className="h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-muted-foreground animate-pulse font-medium">Cargando lección...</p></div>;
@@ -219,6 +254,82 @@ function LessonPlayerContent() {
         </main>
       </div>
       <FloatingAITutor lessonTitle={currentLesson.title} lessonContent={currentLesson.description || ''} />
+
+      {/* Modal de Encuesta de Satisfacción */}
+      <Dialog open={showSurvey} onOpenChange={setShowSurvey}>
+        <DialogContent className="sm:max-w-md rounded-[2.5rem] p-0 overflow-hidden">
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-8 text-center space-y-2">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-primary/20 mb-4">
+              <Award className="h-8 w-8 text-primary" />
+            </div>
+            <DialogTitle className="text-2xl font-headline font-bold">¡Felicitaciones!</DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Completaste <span className="font-bold text-slate-800">{course?.title}</span>. ¿Cómo fue tu experiencia?
+            </DialogDescription>
+          </div>
+          <div className="p-8 space-y-6">
+            {/* Stars */}
+            <div className="text-center space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Tu calificación</p>
+              <div className="flex items-center justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onMouseEnter={() => setSurveyHover(star)}
+                    onMouseLeave={() => setSurveyHover(0)}
+                    onClick={() => setSurveyRating(star)}
+                    className="transition-transform hover:scale-125 focus:outline-none"
+                  >
+                    <Star
+                      className={`h-10 w-10 transition-colors ${
+                        star <= (surveyHover || surveyRating)
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-slate-200'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              {surveyRating > 0 && (
+                <p className="text-sm font-bold text-primary animate-in fade-in">
+                  {['', '😞 Muy malo', '😐 Regular', '🙂 Bien', '😊 Muy bien', '🤩 ¡Excelente!'][surveyRating]}
+                </p>
+              )}
+            </div>
+
+            {/* Comment */}
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Comentario (opcional)</Label>
+              <Textarea
+                placeholder="¿Qué fue lo que más te gustó? ¿Qué mejorarías?"
+                value={surveyComment}
+                onChange={(e) => setSurveyComment(e.target.value)}
+                className="rounded-2xl resize-none min-h-[80px] text-sm border-slate-200"
+                maxLength={500}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="ghost"
+                className="flex-1 rounded-2xl h-12 text-slate-500"
+                onClick={() => setShowSurvey(false)}
+              >
+                Omitir
+              </Button>
+              <Button
+                className="flex-1 rounded-2xl h-12 font-bold gap-2 shadow-lg shadow-primary/20"
+                disabled={surveyRating === 0 || surveySubmitting}
+                onClick={handleSubmitSurvey}
+              >
+                {surveySubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Enviar reseña
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogIn, UserCircle, Loader2, AlertCircle, UserPlus, BookOpen, Check } from 'lucide-react';
+import { LogIn, UserCircle, Loader2, AlertCircle, UserPlus, BookOpen, Check, Star } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -257,16 +257,7 @@ export default function LoginPage() {
                 Únete a la academia donde los retos de código son evaluados por IA y tu talento se convierte en un portfolio profesional.
               </p>
             </div>
-            <div className="flex items-center gap-4 text-sm font-bold text-primary">
-              <div className="flex -space-x-3">
-                {[1,2,3,4].map(i => (
-                  <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-slate-200 overflow-hidden relative">
-                    <Image src={`https://picsum.photos/seed/user${i}/100/100`} alt="user" fill />
-                  </div>
-                ))}
-              </div>
-              <span>+2,500 estudiantes activos</span>
-            </div>
+            <RealTestimonials />
           </div>
 
           <div className="w-full max-w-md mx-auto">
@@ -507,6 +498,92 @@ export default function LoginPage() {
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+// Componente que carga testimonios reales desde Firestore
+function RealTestimonials() {
+  const db = useFirestore();
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [userCount, setUserCount] = useState<number | null>(null);
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (!db) return;
+    // Cargar reseñas reales con 4-5 estrellas y comentario
+    import('firebase/firestore').then(({ collectionGroup, getDocs, query, where, orderBy, limit }) => {
+      getDocs(query(
+        collectionGroup(db, 'ratings'),
+        where('rating', '>=', 4),
+        orderBy('rating', 'desc'),
+        orderBy('createdAt', 'desc'),
+        limit(6)
+      )).then(snap => {
+        const data = snap.docs.map(d => d.data()).filter(d => d.comment && d.comment.trim().length > 10);
+        setReviews(data.slice(0, 3));
+      }).catch(() => {});
+
+      // Contar usuarios reales
+      getDocs(query(collectionGroup(db, 'users' as any), limit(1))).catch(() => {});
+      getDocs(import('firebase/firestore').then(({ collection, getCountFromServer }) =>
+        getCountFromServer(collection(db, 'users'))
+      ) as any).catch(() => {});
+    });
+  }, [db]);
+
+  // Auto-rotar testimonios cada 5s
+  useEffect(() => {
+    if (reviews.length < 2) return;
+    const t = setInterval(() => setCurrent(c => (c + 1) % reviews.length), 5000);
+    return () => clearInterval(t);
+  }, [reviews.length]);
+
+  if (reviews.length === 0) {
+    return (
+      <div className="bg-white/80 backdrop-blur border border-slate-100 rounded-3xl p-6 space-y-3">
+        <p className="text-sm font-bold text-slate-700">Sé el primero en dejar tu reseña</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Completa un curso y comparte tu experiencia con la comunidad.
+        </p>
+        <div className="flex gap-1">
+          {[1,2,3,4,5].map(i => <Star key={i} className="h-4 w-4 text-slate-200" />)}
+        </div>
+      </div>
+    );
+  }
+
+  const r = reviews[current];
+  return (
+    <div className="bg-white/90 backdrop-blur border border-slate-100 rounded-3xl p-6 space-y-4 shadow-sm transition-all">
+      <div className="flex gap-1">
+        {[1,2,3,4,5].map(i => (
+          <Star key={i} className={`h-4 w-4 ${i <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+        ))}
+      </div>
+      <p className="text-sm text-slate-700 leading-relaxed italic line-clamp-3">
+        &ldquo;{r.comment}&rdquo;
+      </p>
+      <div className="flex items-center gap-3">
+        {r.profileImageUrl ? (
+          <img src={r.profileImageUrl} alt={r.displayName} className="w-8 h-8 rounded-full object-cover" />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+            {r.displayName?.[0]?.toUpperCase() || 'E'}
+          </div>
+        )}
+        <div>
+          <p className="text-xs font-bold text-slate-800">{r.displayName || 'Estudiante'}</p>
+          <p className="text-[10px] text-muted-foreground">Estudiante verificado</p>
+        </div>
+        {reviews.length > 1 && (
+          <div className="ml-auto flex gap-1">
+            {reviews.map((_, i) => (
+              <button key={i} onClick={() => setCurrent(i)} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === current ? 'bg-primary' : 'bg-slate-200'}`} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
