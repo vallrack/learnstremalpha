@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, DollarSign, WalletCards, Building2, User, Landmark, ShieldAlert, ArrowRightCircle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { WaitingHall } from '@/components/instructor/WaitingHall';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -129,6 +130,15 @@ export default function FinancesPage() {
       setIsSavingRecord(false);
     }
   };
+
+  if (profile?.instructorStatus === 'pending') {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC]">
+        <Navbar />
+        <WaitingHall />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">

@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
+import { WaitingHall } from '@/components/instructor/WaitingHall';
 import { 
   Plus, 
   Edit, 
@@ -203,6 +204,15 @@ export default function AdminChallengesPage() {
   const addQuestion = () => {
     setQuestions([...questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
   };
+
+  if (profile?.instructorStatus === 'pending') {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC]">
+        <Navbar />
+        <WaitingHall />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">

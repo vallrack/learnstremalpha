@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
+import { WaitingHall } from '@/components/instructor/WaitingHall';
 import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock, Users, Eye, Upload, Image as ImageIcon, X, Link as LinkIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -189,6 +190,15 @@ export default function AdminCoursesPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground font-medium">Cargando catálogo académico...</p>
         </main>
+      </div>
+    );
+  }
+
+  if (profile?.instructorStatus === 'pending') {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC]">
+        <Navbar />
+        <WaitingHall />
       </div>
     );
   }

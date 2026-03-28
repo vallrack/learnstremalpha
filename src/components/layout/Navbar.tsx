@@ -23,7 +23,8 @@ import {
   GraduationCap,
   FileText,
   Trophy,
-  Landmark
+  Landmark,
+  Clock
 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -64,7 +65,8 @@ export function Navbar() {
 
   const isAdmin = profile?.role === 'admin';
   const isInstructor = profile?.role === 'instructor';
-  const hasManagementAccess = isAdmin || isInstructor;
+  const isPendingInstructor = profile?.instructorStatus === 'pending';
+  const hasManagementAccess = isAdmin || isInstructor || isPendingInstructor;
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -230,22 +232,34 @@ export function Navbar() {
           {user && hasManagementAccess && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 rounded-xl text-amber-600 hover:text-amber-700 hover:bg-amber-50">
+                <Button variant="ghost" size="sm" className={`gap-2 rounded-xl ${isPendingInstructor ? 'text-amber-500 bg-amber-50 animate-pulse' : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'}`}>
                   <GraduationCap className="h-4 w-4" />
-                  <span className="hidden lg:inline">{isAdmin ? 'Gestión Admin' : 'Panel Instructor'}</span>
+                  <span className="hidden lg:inline">
+                    {isAdmin ? 'Gestión Admin' : isPendingInstructor ? 'Revisión en Proceso' : 'Panel Instructor'}
+                  </span>
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 rounded-2xl shadow-xl border-amber-100">
-                <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-amber-600 px-4 pt-3 pb-1">Administración</DropdownMenuLabel>
-                {visibleAdminLinks.map((link) => (
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-amber-600 px-4 pt-3 pb-1">
+                  {isPendingInstructor ? 'Estado de Solicitud' : 'Administración'}
+                </DropdownMenuLabel>
+                {isPendingInstructor ? (
+                  <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
+                    <Link href="/instructor/apply" className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-amber-500" />
+                      Ver Sala de Espera
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
+                  visibleAdminLinks.map((link) => (
                   <DropdownMenuItem key={link.href} asChild className="p-3 cursor-pointer rounded-xl mx-1">
                     <Link href={link.href} className="flex items-center gap-2">
                       <link.icon className="h-4 w-4 text-amber-600" />
                       {link.label}
                     </Link>
                   </DropdownMenuItem>
-                ))}
+                )))}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import Script from 'next/script';
 import Image from 'next/image';
+import { WaitingHall } from '@/components/instructor/WaitingHall';
 
 export default function InstructorApplyPage() {
   const { user, isUserLoading } = useUser();
@@ -111,6 +112,15 @@ export default function InstructorApplyPage() {
   };
 
   if (isUserLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+
+  if (profile?.instructorStatus === 'pending') {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC]">
+        <Navbar />
+        <WaitingHall />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
