@@ -201,9 +201,48 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
          </div>
          
          <div className="grid gap-4 mt-6">
-           <Label className="font-bold text-xs uppercase text-slate-500">3. Mapeo Correcto (Respuestas)</Label>
-           <Textarea value={JSON.stringify(data.correctMapping || {}, null, 2)} onChange={(e) => { try { const m = JSON.parse(e.target.value); update({...data, correctMapping: m}); } catch(err) { /* invalid JSON */ } }} className="font-mono text-xs min-h-[100px]" placeholder={'{\n  "h1": "s1"\n}'} />
-           <p className="text-[10px] text-rose-500">NOTA: El mapeo se edita en JSON. Ejemplo: {`{"ID_HUECO": "ID_BLOQUE"}`}</p>
+           <Label className="font-bold text-xs uppercase text-slate-500">3. Vinculación de Respuestas</Label>
+           <p className="text-[10px] text-slate-500">Asigna el fragmento correcto a cada hueco que creaste en el código base.</p>
+           
+           {(() => {
+              const matches = (data.template || '').match(/\{\{\{(.*?)\}\}\}/g) || [];
+              const blanks = matches.map((m: string) => m.replace(/[{}]/g, ''));
+              
+              if (blanks.length === 0) {
+                 return (
+                    <div className="bg-slate-50 border border-dashed rounded-xl p-6 text-center text-slate-400 text-xs font-medium">
+                       No has definido huecos. Escribe <code className="bg-slate-200 px-1 py-0.5 rounded text-primary font-mono">{'{{{id}}}'}</code> en la Plantilla.
+                    </div>
+                 );
+              }
+
+              return (
+                 <div className="grid gap-3 bg-slate-50/50 p-4 rounded-xl border border-slate-200/60">
+                    {blanks.map((blankId: string) => (
+                       <div key={blankId} className="flex items-center gap-3 bg-white p-2 rounded-lg border shadow-sm group hover:border-primary/40 transition-colors">
+                          <div className="bg-slate-800 text-emerald-400 font-mono text-xs px-3 py-1.5 rounded-md font-bold w-24 text-center shadow-inner">
+                             {blankId}
+                          </div>
+                          <span className="text-slate-300 font-bold group-hover:text-primary/50 transition-colors">→</span>
+                          <select 
+                             value={(data.correctMapping || {})[blankId] || ''}
+                             onChange={(e) => {
+                                const m = { ...(data.correctMapping || {}) };
+                                m[blankId] = e.target.value;
+                                update({...data, correctMapping: m});
+                             }}
+                             className="flex-1 h-9 text-xs border border-slate-200 rounded-md px-3 bg-slate-50 font-mono text-slate-700 outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all cursor-pointer font-medium hover:bg-white"
+                          >
+                             <option value="" disabled>Selecciona el bloque correcto...</option>
+                             {(data.snippets || []).map((sn: any) => (
+                                <option key={sn.id} value={sn.id}>{sn.id}: {sn.text || '(Vacío)'}</option>
+                             ))}
+                          </select>
+                       </div>
+                    ))}
+                 </div>
+              );
+           })()}
          </div>
       </div>
     );
