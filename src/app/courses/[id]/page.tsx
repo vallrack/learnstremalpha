@@ -250,6 +250,10 @@ export default function CourseDetailPage() {
                   <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Contenido del Curso</h2>
                   <CourseCurriculum courseId={id} />
                 </section>
+
+                <section>
+                  <CourseReviews courseId={id} />
+                </section>
               </>
             )}
           </div>
@@ -407,6 +411,83 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
           </Button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function CourseReviews({ courseId }: { courseId: string }) {
+  const db = useFirestore();
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db || !courseId) return;
+    import('firebase/firestore').then(({ collection, getDocs, query, orderBy }) => {
+      getDocs(query(collection(db, 'reviews', courseId, 'ratings'), orderBy('createdAt', 'desc')))
+        .then(snap => setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    });
+  }, [db, courseId]);
+
+  if (loading) return null;
+  if (reviews.length === 0) return null;
+
+  const avg = reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length;
+  const dist = [5, 4, 3, 2, 1].map(star => ({ star, count: reviews.filter(r => r.rating === star).length }));
+
+  return (
+    <div className="bg-white rounded-[2rem] border shadow-sm p-8">
+      <h2 className="text-2xl font-headline font-bold mb-6">Reseñas de Estudiantes</h2>
+
+      {/* Summary row */}
+      <div className="flex flex-col md:flex-row gap-8 mb-8 pb-8 border-b">
+        <div className="text-center shrink-0">
+          <div className="text-6xl font-black text-slate-900">{avg.toFixed(1)}</div>
+          <div className="flex gap-1 justify-center my-2">
+            {[1,2,3,4,5].map(i => (
+              <Star key={i} className={`h-5 w-5 ${i <= Math.round(avg) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground font-medium">{reviews.length} reseña{reviews.length !== 1 ? 's' : ''}</p>
+        </div>
+        <div className="flex-1 space-y-2">
+          {dist.map(({ star, count }) => (
+            <div key={star} className="flex items-center gap-3">
+              <span className="text-xs font-bold w-4 text-right text-slate-500">{star}</span>
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />
+              <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : '0%' }} />
+              </div>
+              <span className="text-xs text-muted-foreground w-4">{count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Review list */}
+      <div className="space-y-6">
+        {reviews.slice(0, 6).map((r) => (
+          <div key={r.id} className="flex gap-4">
+            {r.profileImageUrl ? (
+              <img src={r.profileImageUrl} alt={r.displayName} className="w-10 h-10 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                {r.displayName?.[0]?.toUpperCase() || 'E'}
+              </div>
+            )}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-sm font-bold">{r.displayName || 'Estudiante'}</p>
+                <div className="flex gap-0.5">
+                  {[1,2,3,4,5].map(i => <Star key={i} className={`h-3 w-3 ${i <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />)}
+                </div>
+              </div>
+              {r.comment && <p className="text-sm text-muted-foreground leading-relaxed">{r.comment}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

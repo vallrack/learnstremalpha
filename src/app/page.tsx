@@ -4,12 +4,13 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { CourseCard } from '@/components/courses/CourseCard';
-import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, Loader2, BookOpen, GraduationCap, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, BookOpen, GraduationCap, CheckCircle2, ArrowRight, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, limit, where, doc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const { t } = useTranslation();
@@ -151,6 +152,9 @@ export default function Home() {
           </section>
         )}
 
+        {/* Testimonios reales */}
+        <LandingTestimonials />
+
         {/* Instructor Invitation Section (Improved Design) */}
         <section className="py-24 px-6 relative">
           <div className="max-w-7xl mx-auto">
@@ -253,5 +257,73 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function LandingTestimonials() {
+  const db = useFirestore();
+  const [reviews, setReviews] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!db) return;
+    import('firebase/firestore').then(({ collectionGroup, getDocs, query, where, orderBy, limit: fsLimit }) => {
+      getDocs(query(
+        collectionGroup(db, 'ratings'),
+        where('rating', '>=', 4),
+        orderBy('rating', 'desc'),
+        orderBy('createdAt', 'desc'),
+        fsLimit(6)
+      )).then(snap => {
+        const data = snap.docs.map(d => d.data()).filter(d => d.comment?.trim().length > 15);
+        setReviews(data.slice(0, 6));
+      }).catch(() => {});
+    });
+  }, [db]);
+
+  if (reviews.length === 0) return null;
+
+  return (
+    <section className="py-24 px-6 bg-slate-950">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-400 text-xs uppercase tracking-widest font-black mb-4">
+            <Star className="h-3.5 w-3.5 fill-amber-400" /> Testimonios reales
+          </div>
+          <h2 className="text-3xl md:text-5xl font-headline font-extrabold text-white mb-4 leading-tight">
+            Lo que dicen nuestros estudiantes
+          </h2>
+          <p className="text-slate-400 max-w-xl mx-auto">
+            Reseñas auténticas de quienes ya recorrieron el camino.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {reviews.map((r, i) => (
+            <div key={i} className="bg-white/5 border border-white/10 rounded-[2rem] p-7 space-y-4 hover:bg-white/8 transition-colors">
+              <div className="flex gap-1">
+                {[1,2,3,4,5].map(s => (
+                  <Star key={s} className={`h-4 w-4 ${s <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-white/10'}`} />
+                ))}
+              </div>
+              <p className="text-slate-300 text-sm leading-relaxed italic line-clamp-4">
+                &ldquo;{r.comment}&rdquo;
+              </p>
+              <div className="flex items-center gap-3 pt-2 border-t border-white/10">
+                {r.profileImageUrl ? (
+                  <img src={r.profileImageUrl} alt={r.displayName} className="w-9 h-9 rounded-full object-cover" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-primary/30 flex items-center justify-center text-white font-bold text-sm">
+                    {r.displayName?.[0]?.toUpperCase() || 'E'}
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-bold text-white">{r.displayName || 'Estudiante'}</p>
+                  <p className="text-[10px] text-slate-500">Estudiante verificado ✓</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }

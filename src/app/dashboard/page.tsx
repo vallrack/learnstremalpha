@@ -166,36 +166,7 @@ export default function DashboardPage() {
               <div className="bg-amber-100 p-2 rounded-xl"><Wallet className="h-5 w-5 text-amber-600" /></div>
               <h2 className="text-2xl font-headline font-bold">Resumen de Instructor</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="rounded-[2rem] border-none shadow-sm bg-slate-900 text-white p-8">
-                <div className="flex justify-between items-start mb-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Ganancias Totales</p>
-                  <TrendingUp className="h-5 w-5 text-emerald-400" />
-                </div>
-                <h3 className="text-4xl font-headline font-bold mb-2">${(profile.totalEarnings || 0).toLocaleString()} <span className="text-sm opacity-50 font-normal">COP</span></h3>
-                <p className="text-xs text-slate-500">Tasa de comisión activa: {profile.revenueSharePercentage || 70}%</p>
-              </Card>
-              
-              <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8">
-                <div className="flex justify-between items-start mb-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cursos Publicados</p>
-                  <BookOpen className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="text-4xl font-headline font-bold text-slate-900">{myCourses?.length || 0}</h3>
-                <Link href="/admin">
-                  <Button variant="link" className="p-0 h-auto text-xs font-bold text-primary mt-2">Gestionar Contenido →</Button>
-                </Link>
-              </Card>
-
-              <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8">
-                <div className="flex justify-between items-start mb-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Impacto Social</p>
-                  <Users className="h-5 w-5 text-blue-500" />
-                </div>
-                <h3 className="text-4xl font-headline font-bold text-slate-900">+50</h3>
-                <p className="text-xs text-muted-foreground mt-2">Estudiantes aprendiendo de ti</p>
-              </Card>
-            </div>
+            <InstructorAnalytics userId={user!.uid} myCourses={myCourses || []} profile={profile} />
           </section>
         )}
 
@@ -335,5 +306,74 @@ export default function DashboardPage() {
 function CheckCircle2({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
+  );
+}
+
+function InstructorAnalytics({ userId, myCourses, profile }: { userId: string; myCourses: any[]; profile: any }) {
+  const db = useFirestore();
+  const [stats, setStats] = useState({ sales: 0, students: 0, avgRating: 0, totalReviews: 0 });
+
+  useEffect(() => {
+    if (!db || !userId) return;
+    import('firebase/firestore').then(({ collection, getDocs, query, where, collectionGroup }) => {
+      // Ventas y estudiantes únicos desde transactions
+      getDocs(query(collection(db, 'transactions'), where('instructorId', '==', userId))).then(snap => {
+        const sales = snap.size;
+        const uniqueStudents = new Set(snap.docs.map(d => d.data().userId)).size;
+
+        // Rating promedio desde reviews de los cursos del instructor
+        const courseIds = myCourses.map(c => c.id);
+        if (courseIds.length === 0) { setStats(s => ({ ...s, sales, students: uniqueStudents })); return; }
+        Promise.all(courseIds.map(cid =>
+          getDocs(collection(db, 'reviews', cid, 'ratings'))
+        )).then(snaps => {
+          const allRatings = snaps.flatMap(s => s.docs.map(d => d.data().rating || 0));
+          const avgRating = allRatings.length ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length : 0;
+          setStats({ sales, students: uniqueStudents, avgRating, totalReviews: allRatings.length });
+        }).catch(() => {});
+      }).catch(() => {});
+    });
+  }, [db, userId, myCourses]);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <Card className="rounded-[2rem] border-none shadow-sm bg-slate-900 text-white p-8 md:col-span-2">
+        <div className="flex justify-between items-start mb-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Ganancias Totales</p>
+          <TrendingUp className="h-5 w-5 text-emerald-400" />
+        </div>
+        <h3 className="text-4xl font-headline font-bold mb-2">${(profile?.totalEarnings || 0).toLocaleString()} <span className="text-sm opacity-50 font-normal">COP</span></h3>
+        <p className="text-xs text-slate-500">Comisión activa: {profile?.revenueSharePercentage || 70}%</p>
+      </Card>
+
+      <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8">
+        <div className="flex justify-between items-start mb-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cursos</p>
+          <BookOpen className="h-5 w-5 text-primary" />
+        </div>
+        <h3 className="text-4xl font-headline font-bold text-slate-900">{myCourses.length}</h3>
+        <Link href="/admin"><Button variant="link" className="p-0 h-auto text-xs font-bold text-primary mt-2">Gestionar →</Button></Link>
+      </Card>
+
+      <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8">
+        <div className="flex justify-between items-start mb-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Estudiantes</p>
+          <Users className="h-5 w-5 text-blue-500" />
+        </div>
+        <h3 className="text-4xl font-headline font-bold text-slate-900">{stats.students}</h3>
+        <p className="text-xs text-muted-foreground mt-2">{stats.sales} venta{stats.sales !== 1 ? 's' : ''} totales</p>
+      </Card>
+
+      {stats.totalReviews > 0 && (
+        <Card className="rounded-[2rem] border-none shadow-sm bg-amber-50 border-amber-100 p-8">
+          <div className="flex justify-between items-start mb-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-600">Rating Promedio</p>
+            <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+          </div>
+          <h3 className="text-4xl font-headline font-bold text-slate-900">{stats.avgRating.toFixed(1)}</h3>
+          <p className="text-xs text-amber-600 mt-2 font-medium">{stats.totalReviews} reseña{stats.totalReviews !== 1 ? 's' : ''}</p>
+        </Card>
+      )}
+    </div>
   );
 }
