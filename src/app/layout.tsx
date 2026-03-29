@@ -36,16 +36,16 @@ export default function RootLayout({
         <script src="https://js.puter.com/v2/"></script>
       </head>
       <body className="font-body antialiased">
-        <BrandingProvider>
-          <TranslationProvider>
-            <FirebaseClientProvider>
+        <TranslationProvider>
+          <FirebaseClientProvider>
+            <BrandingProvider>
               <InactivityLogout />
               {children}
               <FloatingWhatsApp />
               <Toaster />
-            </FirebaseClientProvider>
-          </TranslationProvider>
-        </BrandingProvider>
+            </BrandingProvider>
+          </FirebaseClientProvider>
+        </TranslationProvider>
       </body>
     </html>
   );
