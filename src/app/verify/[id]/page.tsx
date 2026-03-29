@@ -26,11 +26,27 @@ export default function VerifyCertificatePage() {
     
     const verifyDocument = async () => {
       try {
+        if (certId === 'PREVIEW-ID') {
+          // Si es un escaneo de prueba desde el admin, mostramos datos simulados exitosos
+          setTimeout(() => {
+            setCertData({
+              studentName: 'Estudiante (Modo Vista Previa)',
+              courseTitle: 'Nombre del Curso',
+              technology: 'Tecnología',
+              instructorName: 'Instructor a Cargo',
+              issuedAt: { toDate: () => new Date() },
+              isValid: true
+            });
+            setLoading(false);
+          }, 800);
+          return;
+        }
+
         const docRef = doc(db, 'certificates', certId);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists() && docSnap.data().isValid !== false) {
-          setCertData(docSnap.data());
+          setCertData({ ...docSnap.data(), id: docSnap.id });
         } else {
           setError(true);
         }
@@ -38,7 +54,9 @@ export default function VerifyCertificatePage() {
         console.error("Error verifying certificate:", err);
         setError(true);
       } finally {
-        setLoading(false);
+        if (certId !== 'PREVIEW-ID') {
+          setLoading(false);
+        }
       }
     };
 
