@@ -47,14 +47,19 @@ export function useCollection<T = any>(
           next(null, results);
         },
         (error: FirestoreError) => {
-          const contextualError = new FirestorePermissionError({
-            operation: 'list',
-            path: memoizedTargetRefOrQuery?.type === 'collection' 
-              ? (memoizedTargetRefOrQuery as CollectionReference).path 
-              : ((memoizedTargetRefOrQuery as any)?._query?.path?.canonicalString() || 'unknown-query'),
-          });
-          errorEmitter.emit('permission-error', contextualError);
-          next(contextualError, undefined);
+          if (error.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+              operation: 'list',
+              path: memoizedTargetRefOrQuery?.type === 'collection' 
+                ? (memoizedTargetRefOrQuery as CollectionReference).path 
+                : ((memoizedTargetRefOrQuery as any)?._query?.path?.canonicalString() || 'unknown-query'),
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            next(contextualError, undefined);
+          } else {
+            console.error('Firestore Error in useCollection:', error.message);
+            next(error, undefined);
+          }
         }
       );
       
