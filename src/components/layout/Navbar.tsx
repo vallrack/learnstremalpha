@@ -96,6 +96,7 @@ export function Navbar() {
     { href: '/admin/applications', label: 'Solicitudes Instructor', icon: FileText, roles: ['admin'] },
     { href: '/admin/students', label: 'Usuarios y Roles', icon: Users, roles: ['admin'] },
     { href: '/admin/promotions', label: 'Promociones', icon: Tag, roles: ['admin'] },
+    { href: '/admin/academy', label: 'Configuración Academia', icon: Settings, roles: ['admin'] },
   ];
 
   const visibleAdminLinks = adminLinks.filter(link => link.roles.includes(profile?.role || ''));

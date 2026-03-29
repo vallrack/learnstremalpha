@@ -2,32 +2,48 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { BrandingConfig, DEFAULT_BRANDING, TENANTS_MAP } from './branding-config';
+import { useFirestore } from '@/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const BrandingContext = createContext<BrandingConfig>(DEFAULT_BRANDING);
 
 export function BrandingProvider({ children }: { children: React.ReactNode }) {
   const [brand, setBrand] = useState<BrandingConfig>(DEFAULT_BRANDING);
+  const db = useFirestore();
 
   useEffect(() => {
-    // Multi-tenancy logic (Option B)
-    if (typeof window !== 'undefined') {
+    if (!db) return;
+
+    const settingsRef = doc(db, 'settings', 'branding');
+    const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+      // 1. Resolve domain branding (Option B)
       const hostname = window.location.hostname;
-      // Primero intentamos match exacto, luego por pedazo de dominio
       const tenantKey = Object.keys(TENANTS_MAP).find(key => hostname.includes(key));
-      
       const activeBrand = tenantKey && Object.keys(TENANTS_MAP[tenantKey]).length > 0
         ? { ...DEFAULT_BRANDING, ...TENANTS_MAP[tenantKey] }
         : DEFAULT_BRANDING;
 
-      setBrand(activeBrand);
+      // 2. Resolve database brand (if exists)
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const finalBrand = {
+          ...activeBrand,
+          ...data
+        };
+        setBrand(finalBrand);
 
-      // Aplicar color primario dinámico si existe
-      if (activeBrand.primaryColor) {
-        document.documentElement.style.setProperty('--primary', activeBrand.primaryColor);
-        document.documentElement.style.setProperty('--ring', activeBrand.primaryColor);
+        // 3. Dynamic Styles
+        if (finalBrand.primaryColor) {
+           document.documentElement.style.setProperty('--primary', finalBrand.primaryColor);
+           document.documentElement.style.setProperty('--ring', finalBrand.primaryColor);
+        }
+      } else {
+        setBrand(activeBrand);
       }
-    }
-  }, []);
+    });
+
+    return () => unsubscribe();
+  }, [db]);
 
   return (
     <BrandingContext.Provider value={brand}>
