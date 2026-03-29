@@ -29,12 +29,12 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
         activityType,
       });
       
-      if (result.success && result.data) {
+      if (result.success) {
         setJsonConfig(result.data.activityConfig);
         setIsAIOpen(false);
         setAiLessonContent('');
       } else {
-        setAiError(result.error || 'Error desconocido desde el servidor IA.');
+        setAiError(result.error);
       }
     } catch (err: any) {
       setAiError(err?.message || 'Error de conexión al generar la actividad con IA.');

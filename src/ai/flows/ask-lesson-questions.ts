@@ -1,5 +1,4 @@
 'use server';
-export const maxDuration = 60;
 /**
  * @fileOverview An AI lesson assistant that answers questions based on provided lesson content using RAG.
  */

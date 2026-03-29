@@ -1,6 +1,4 @@
-
 'use server';
-export const maxDuration = 60;
 /**
  * @fileOverview AI flow to evaluate student coding and language challenges.
  *

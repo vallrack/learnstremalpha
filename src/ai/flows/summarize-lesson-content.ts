@@ -1,7 +1,5 @@
 'use server';
 
-export const maxDuration = 60;
-
 /**
  * @fileOverview This file defines a Genkit flow for summarizing lesson content.
  */

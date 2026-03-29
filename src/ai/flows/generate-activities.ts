@@ -3,9 +3,6 @@
  * @fileOverview AI flow to auto-generate H5P-style activity content from lesson text.
  */
 
-// Aumentar el límite de tiempo de Vercel (Hobby plan soporta hasta 60s maxDuration en App Router v14+)
-export const maxDuration = 60;
-
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
