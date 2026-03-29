@@ -9,16 +9,25 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
 import { useBrand } from '@/lib/branding/BrandingProvider';
-import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, initializeFirebase } from '@/firebase';
 import { collection, query, limit, where, doc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
 
 export default function Home() {
   const { t } = useTranslation();
-  const { name, tagline, logoUrl } = useBrand();
+  const { name, tagline, logoUrl, isDemoEnabled, demoExpiration } = useBrand();
   const db = useFirestore();
   const { user } = useUser();
+  const { toast } = useToast();
+  const router = useRouter();
+  const { auth } = initializeFirebase();
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+  
   const instructorImageUrl = "https://lh3.googleusercontent.com/d/1FujdqLfrqmCYNzP-TfuGlO9SKaBN8HIh";
 
   // Verificación de acceso administrativo
@@ -29,6 +38,39 @@ export default function Home() {
   const { data: profile } = useDoc(profileRef);
   const hasManagementAccess = profile?.role === 'admin' || profile?.role === 'instructor';
 
+  const isDemoAvailable = isDemoEnabled && (!demoExpiration || new Date(demoExpiration) >= new Date());
+
+  const handleDemoLogin = () => {
+    if (!isDemoAvailable) return;
+    
+    setIsDemoLoading(true);
+    try {
+      // Iniciamos login no bloqueante
+      initiateEmailSignIn(auth, 'demo@learnstream.ai', 'DemoStream2026!');
+      
+      toast({
+        title: "Iniciando Modo Demo...",
+        description: "Serás redirigido al panel de instructor en un momento.",
+      });
+      
+      // El redireccionamiento lo manejará el efecto de autenticación global en el layout
+      // o podemos forzarlo aquí después de un breve delay si el estado no cambia rápido.
+      setTimeout(() => {
+        router.push('/admin/courses');
+      }, 1500);
+      
+    } catch (error: any) {
+      console.error("Demo login error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error al acceder al Demo",
+        description: "El servicio demo no está disponible en este momento. Inténtalo más tarde.",
+      });
+      setIsDemoLoading(false);
+    }
+  };
+
+  const coursesDependencies = [db];
   const coursesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(
@@ -36,7 +78,7 @@ export default function Home() {
       where('isActive', '==', true),
       limit(3)
     );
-  }, [db]);
+  }, coursesDependencies);
 
   const { data: featuredCourses, isLoading } = useCollection(coursesQuery);
 
@@ -71,10 +113,22 @@ export default function Home() {
                     {t.home.exploreBtn}
                   </Button>
                 </Link>
-                <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold rounded-full gap-2 hover:bg-slate-50">
-                  <PlayCircle className="h-5 w-5" />
-                  {t.home.viewDemoBtn}
-                </Button>
+                {isDemoAvailable && (
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="h-14 px-8 text-lg font-semibold rounded-full gap-2 hover:bg-slate-50 border-2"
+                    onClick={handleDemoLogin}
+                    disabled={isDemoLoading}
+                  >
+                    {isDemoLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <PlayCircle className="h-5 w-5" />
+                    )}
+                    {t.home.viewDemoBtn}
+                  </Button>
+                )}
               </div>
 
               {/* Trust Badge */}

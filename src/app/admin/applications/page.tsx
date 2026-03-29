@@ -15,8 +15,16 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldCheck,
-  Percent
+  Percent,
+  Settings,
+  Tv,
+  Gamepad,
+  Sparkles,
+  Lock,
+  Unlock,
+  Check
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -37,6 +45,12 @@ export default function AdminApplicationsPage() {
   const db = useFirestore();
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [revenueShare, setRevenueShare] = useState('70');
+  const [targetRole, setTargetRole] = useState<'instructor' | 'academy'>('instructor');
+  const [permissions, setPermissions] = useState({
+    canCreateCourses: true,
+    canCreateChallenges: true,
+    canUseAI: true
+  });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const appsQuery = useMemoFirebase(() => {
@@ -53,20 +67,29 @@ export default function AdminApplicationsPage() {
       status: 'approved'
     });
 
-    // 2. Convertir usuario en instructor y asignar porcentaje
+    // 2. Convertir usuario y asignar rol/permisos/porcentaje
     updateDocumentNonBlocking(doc(db, 'users', selectedApp.userId), {
-      role: 'instructor',
+      role: targetRole,
       instructorStatus: 'active',
-      revenueSharePercentage: parseInt(revenueShare)
+      revenueSharePercentage: parseInt(revenueShare),
+      permissions: permissions,
+      subscription: {
+        status: 'active',
+        plan: targetRole === 'academy' ? 'manual_activation' : 'none',
+        activatedAt: new Date(),
+        expiresAt: targetRole === 'academy' ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : null // 1 año por defecto en manual
+      }
     });
 
     // 3. Notificar al solicitante
     addDoc(collection(db, 'notifications'), {
       userId: selectedApp.userId,
-      title: '¡Solicitud Aprobada!',
-      message: 'Tu perfil como instructor ha sido activado. Ya puedes empezar a publicar cursos.',
+      title: targetRole === 'academy' ? '¡Tu Academia ha sido Activada!' : '¡Solicitud de Instructor Aprobada!',
+      message: targetRole === 'academy' 
+        ? 'Ya puedes gestionar tu propia academia con permisos personalizados.'
+        : 'Tu perfil como instructor ha sido activado. Ya puedes empezar a publicar cursos.',
       read: false,
-      link: '/admin/finances',
+      link: '/admin/courses',
       type: 'success',
       createdAt: new Date()
     }).catch(err => console.error("Error creating notification", err));
@@ -181,21 +204,83 @@ export default function AdminApplicationsPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4 border-t pt-6">
-                  <Label className="font-bold flex items-center gap-2">
-                    <Percent className="h-4 w-4 text-primary" />
-                    Ganancia del Instructor (%)
-                  </Label>
-                  <div className="flex items-center gap-4">
-                    <Input 
-                      type="number" 
-                      value={revenueShare} 
-                      onChange={(e) => setRevenueShare(e.target.value)}
-                      className="rounded-xl h-12 text-center text-xl font-bold max-w-[120px]"
-                    />
-                    <p className="text-xs text-muted-foreground flex-1">
-                      Este instructor recibirá el **{revenueShare}%** de cada curso vendido. La plataforma retendrá el {100 - parseInt(revenueShare)}%.
-                    </p>
+                <div className="space-y-6 border-t pt-6">
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-4">
+                        <Label className="font-bold flex items-center gap-2">
+                          <Settings className="h-4 w-4 text-primary" />
+                          Rol a Asignar
+                        </Label>
+                        <div className="flex gap-2">
+                           <Button 
+                             variant={targetRole === 'instructor' ? 'default' : 'outline'} 
+                             size="sm" 
+                             className="rounded-xl flex-1"
+                             onClick={() => setTargetRole('instructor')}
+                           >
+                             Instructor
+                           </Button>
+                           <Button 
+                             variant={targetRole === 'academy' ? 'default' : 'outline'} 
+                             size="sm" 
+                             className="rounded-xl flex-1"
+                             onClick={() => setTargetRole('academy')}
+                           >
+                             Academia
+                           </Button>
+                        </div>
+                     </div>
+                     <div className="space-y-4">
+                        <Label className="font-bold flex items-center gap-2">
+                          <Percent className="h-4 w-4 text-primary" />
+                          Revenue Share (%)
+                        </Label>
+                        <Input 
+                          type="number" 
+                          value={revenueShare} 
+                          onChange={(e) => setRevenueShare(e.target.value)}
+                          className="rounded-xl h-10 text-center font-bold"
+                        />
+                     </div>
+                  </div>
+
+                  <div className="space-y-4 bg-slate-50 p-6 rounded-[2rem] border">
+                     <Label className="font-bold flex items-center gap-2 mb-2">
+                       <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                       Permisos Granulares
+                     </Label>
+                     <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-3">
+                              <Tv className="h-4 w-4 text-slate-400" />
+                              <span className="text-sm font-medium">Crear y Editar Cursos</span>
+                           </div>
+                           <Switch 
+                             checked={permissions.canCreateCourses} 
+                             onCheckedChange={v => setPermissions({...permissions, canCreateCourses: v})} 
+                           />
+                        </div>
+                        <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-3">
+                              <Gamepad className="h-4 w-4 text-slate-400" />
+                              <span className="text-sm font-medium">Crear Desafíos Interactivos</span>
+                           </div>
+                           <Switch 
+                             checked={permissions.canCreateChallenges} 
+                             onCheckedChange={v => setPermissions({...permissions, canCreateChallenges: v})} 
+                           />
+                        </div>
+                        <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-3">
+                              <Sparkles className="h-4 w-4 text-slate-400" />
+                              <span className="text-sm font-medium">Usar Funciones de IA</span>
+                           </div>
+                           <Switch 
+                             checked={permissions.canUseAI} 
+                             onCheckedChange={v => setPermissions({...permissions, canUseAI: v})} 
+                           />
+                        </div>
+                     </div>
                   </div>
                 </div>
               </div>

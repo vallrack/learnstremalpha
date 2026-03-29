@@ -6,6 +6,12 @@ export interface BrandingConfig {
   supportWhatsapp: string;
   primaryColor?: string;
   domain?: string;
+  // Demo settings
+  isDemoEnabled?: boolean;
+  demoExpiration?: string;
+  // Academy Pricing settings
+  academyMonthlyPrice?: number;
+  academyAnnualPrice?: number;
 }
 
 export const DEFAULT_BRANDING: BrandingConfig = {
@@ -15,6 +21,10 @@ export const DEFAULT_BRANDING: BrandingConfig = {
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'ventas@learnstream.com',
   supportWhatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || '573054694239',
   domain: process.env.NEXT_PUBLIC_APP_DOMAIN || 'learnstream.app',
+  isDemoEnabled: false,
+  demoExpiration: '',
+  academyMonthlyPrice: 299000,
+  academyAnnualPrice: 2490000,
 };
 
 // Mapa para multi-tenencia (Opción B)

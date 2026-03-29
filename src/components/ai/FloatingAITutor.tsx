@@ -14,7 +14,15 @@ interface Message {
   content: string;
 }
 
-export function FloatingAITutor({ lessonTitle, lessonContent }: { lessonTitle: string, lessonContent: string }) {
+export function FloatingAITutor({ 
+  lessonTitle, 
+  lessonContent,
+  isDisabled = false 
+}: { 
+  lessonTitle: string, 
+  lessonContent: string,
+  isDisabled?: boolean
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -29,7 +37,7 @@ export function FloatingAITutor({ lessonTitle, lessonContent }: { lessonTitle: s
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (isDisabled || !input.trim() || isLoading) return;
 
     const userMessage: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
@@ -65,34 +73,54 @@ export function FloatingAITutor({ lessonTitle, lessonContent }: { lessonTitle: s
   return (
     <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-4">
       {isOpen && (
-        <Card className="w-[380px] h-[500px] rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-none overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 fade-in duration-300">
-          <CardHeader className="bg-gradient-to-r from-primary to-blue-600 p-6 text-white pb-8">
-            <div className="flex items-center justify-between mb-2">
+        <Card className="w-[380px] h-[500px] rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-none overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 fade-in duration-300 ring-1 ring-slate-200">
+          <CardHeader className="bg-gradient-to-br from-indigo-600 via-primary to-blue-600 p-6 text-white pb-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+            <div className="flex items-center justify-between mb-2 relative z-10">
                <div className="flex items-center gap-3">
-                  <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
+                  <div className="bg-white/20 p-2.5 rounded-2xl backdrop-blur-md shadow-inner">
                      <Stars className="h-5 w-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-headline font-bold">{t.aiTutor.toggle}</CardTitle>
-                    <p className="text-[10px] uppercase font-black tracking-widest opacity-70">Context Aware Tutor</p>
+                    <CardTitle className="text-xl font-headline font-bold">{t.aiTutor.toggle}</CardTitle>
+                    <p className="text-[9px] uppercase font-black tracking-widest opacity-80 flex items-center gap-1">
+                      <Sparkles className="h-2 w-2" /> Powered by LearnStream AI
+                    </p>
                   </div>
                </div>
-               <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8 text-white hover:bg-white/20 rounded-lg">
+               <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-9 w-9 text-white hover:bg-white/20 rounded-xl transition-colors">
                   <X className="h-5 w-5" />
                </Button>
             </div>
           </CardHeader>
           
           <CardContent ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#F8FAFC]">
-             {messages.length === 0 ? (
-               <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40">
-                  <Bot className="h-12 w-12 text-primary" />
-                  <p className="text-xs font-bold px-8 leading-relaxed italic">{t.aiTutor.disclaimer}</p>
+             {isDisabled ? (
+               <div className="h-full flex flex-col items-center justify-center text-center space-y-6 p-4">
+                  <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center shadow-inner border border-amber-100">
+                    <AlertCircle className="h-10 w-10 text-amber-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-headline font-bold text-slate-900 text-lg">Función Restringida</h3>
+                    <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                      Tu academia actual no tiene habilitadas las herramientas de Inteligencia Artificial.
+                    </p>
+                  </div>
+                  <Button variant="outline" className="rounded-2xl border-2 font-bold hover:bg-white" onClick={() => window.open('/register-academy', '_blank')}>
+                    Saber más sobre el Plan Pro
+                  </Button>
+               </div>
+             ) : messages.length === 0 ? (
+               <div className="h-full flex flex-col items-center justify-center text-center space-y-5 opacity-50 px-6">
+                  <div className="bg-primary/5 p-5 rounded-[2rem]">
+                    <Bot className="h-12 w-12 text-primary" />
+                  </div>
+                  <p className="text-[13px] font-bold text-slate-600 leading-relaxed italic">"{t.aiTutor.disclaimer}"</p>
                </div>
              ) : (
                messages.map((m, i) => (
                  <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-4 rounded-2xl text-[13px] leading-relaxed shadow-sm ${m.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-white border rounded-tl-none text-slate-700'}`}>
+                    <div className={`max-w-[85%] p-4 rounded-2xl text-[14px] leading-relaxed shadow-sm ring-1 ring-slate-100 ${m.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-white rounded-tl-none text-slate-700'}`}>
                        {m.content}
                     </div>
                  </div>
@@ -100,41 +128,43 @@ export function FloatingAITutor({ lessonTitle, lessonContent }: { lessonTitle: s
              )}
              {isLoading && (
                <div className="flex justify-start">
-                  <div className="bg-white border p-4 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
+                  <div className="bg-white border p-4 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-3 ring-1 ring-slate-100">
                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.aiTutor.thinking}</span>
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.aiTutor.thinking}</span>
                   </div>
                </div>
              )}
           </CardContent>
 
-          <CardFooter className="p-4 bg-white border-t">
-             <div className="flex w-full gap-2 bg-slate-50 p-2 rounded-2xl border ring-1 ring-slate-100 shadow-inner">
-                <Input 
-                  placeholder={t.aiTutor.placeholder} 
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  className="border-none bg-transparent focus-visible:ring-0 shadow-none text-xs"
-                />
-                <Button size="icon" onClick={handleSend} disabled={!input.trim() || isLoading} className="h-9 w-9 rounded-xl shrink-0">
-                   <Send className="h-4 w-4" />
-                </Button>
-             </div>
-          </CardFooter>
+          {!isDisabled && (
+            <CardFooter className="p-4 bg-white border-t">
+              <div className="flex w-full gap-2 bg-slate-50 p-2 rounded-2xl border ring-1 ring-slate-100 shadow-inner group-focus-within:ring-primary/20 transition-all">
+                  <Input 
+                    placeholder={t.aiTutor.placeholder} 
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    className="border-none bg-transparent focus-visible:ring-0 shadow-none text-sm placeholder:text-slate-400"
+                  />
+                  <Button size="icon" onClick={handleSend} disabled={!input.trim() || isLoading} className="h-10 w-10 rounded-xl shrink-0 shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+                    <Send className="h-4 w-4" />
+                  </Button>
+              </div>
+            </CardFooter>
+          )}
         </Card>
       )}
 
       <Button 
         onClick={() => setIsOpen(!isOpen)}
-        className={`h-16 w-16 rounded-full shadow-2xl transition-all duration-500 flex items-center justify-center group ${isOpen ? 'bg-slate-900 border-4 border-white' : 'bg-gradient-to-tr from-primary to-blue-600 scale-110'}`}
+        className={`h-16 w-16 rounded-3xl shadow-2xl transition-all duration-500 flex items-center justify-center group ${isOpen ? 'bg-slate-900 border-4 border-white' : 'bg-gradient-to-tr from-indigo-600 to-primary scale-110'}`}
       >
         {isOpen ? (
           <X className="h-6 w-6 text-white" />
         ) : (
           <div className="relative">
-             <MessageCircle className="h-7 w-7 text-white transition-transform group-hover:scale-110" />
-             <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+             <MessageCircle className="h-8 w-8 text-white transition-transform group-hover:scale-110" />
+             <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
           </div>
         )}
       </Button>

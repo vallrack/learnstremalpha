@@ -178,7 +178,9 @@ function LessonPlayerContent() {
 
   if (!course || !currentLesson) return <div className="h-screen flex items-center justify-center">No encontrado</div>;
 
-  const isPremium = profile?.role === 'admin' || !!profile?.isPremiumSubscriber;
+  const isAcademy = profile?.role === 'academy';
+  const isAcademyActive = isAcademy && profile?.subscription?.status === 'active';
+  const isPremium = profile?.role === 'admin' || !!profile?.isPremiumSubscriber || isAcademyActive;
   const isAuthor = user?.uid === course.instructorId;
   const hasPurchased = profile?.purchasedCourses?.includes(courseId);
   const isFreeCourse = course.isFree === true;
@@ -213,14 +215,20 @@ function LessonPlayerContent() {
               <Button onClick={() => router.push('/login')} className="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 font-bold shadow-xl shadow-primary/10">
                 Iniciar Sesión Gratis
               </Button>
+            ) : isAcademy ? (
+              <Button onClick={() => router.push('/admin/academy')} className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200">
+                Renovar Suscripción Academia
+              </Button>
             ) : (
               <Button variant="outline" onClick={() => router.push(`/courses/${courseId}`)} className="rounded-2xl h-14 px-8 text-lg font-bold">
                 Ver Otros Cursos
               </Button>
             )}
-            <Button onClick={() => router.push(`/checkout?courseId=${courseId}`)} className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200">
-              {isFreeCourse ? 'Suscripción Premium' : 'Obtener Acceso'} 
-            </Button>
+            {!isAcademy && (
+              <Button onClick={() => router.push(`/checkout?courseId=${courseId}`)} className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200">
+                {isFreeCourse ? 'Suscripción Premium' : 'Obtener Acceso'} 
+              </Button>
+            )}
           </div>
         </main>
       </div>
@@ -297,7 +305,11 @@ function LessonPlayerContent() {
           </div>
         </main>
       </div>
-      <FloatingAITutor lessonTitle={currentLesson.title} lessonContent={currentLesson.description || ''} />
+      <FloatingAITutor 
+        lessonTitle={currentLesson.title} 
+        lessonContent={currentLesson.description || ''} 
+        isDisabled={isAcademy && profile?.permissions?.canUseAI === false}
+      />
 
       {/* Modal de Encuesta de Satisfacción */}
       <Dialog open={showSurvey} onOpenChange={setShowSurvey}>

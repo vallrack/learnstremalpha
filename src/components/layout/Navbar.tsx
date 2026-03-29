@@ -25,9 +25,10 @@ import {
   Trophy,
   Landmark,
   Clock,
-  Compass
+  Compass,
+  Zap
 } from 'lucide-react';
-import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -52,18 +53,14 @@ import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useBrand } from '@/lib/branding/BrandingProvider';
 
 export function Navbar() {
-  const { user, isUserLoading } = useUser();
+  const { user, profile, isUserLoading } = useUser();
   const auth = useAuth();
-  const db = useFirestore();
   const router = useRouter();
   const { t, language, setLanguage } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const profileRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
-  const { data: profile } = useDoc(profileRef);
+  const isDemoAccount = user?.email === 'demo@learnstream.ai';
+
 
   const isAdmin = profile?.role === 'admin';
   const isInstructor = profile?.role === 'instructor';
@@ -102,7 +99,23 @@ export function Navbar() {
   const visibleAdminLinks = adminLinks.filter(link => link.roles.includes(profile?.role || ''));
 
   return (
-    <nav className="border-b bg-white px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <>
+      {isDemoAccount && (
+        <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 py-2.5 px-4 text-center relative z-[60] shadow-lg">
+          <div className="max-w-7xl mx-auto flex items-center justify-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2 text-white font-bold text-sm">
+              <Zap className="h-4 w-4 fill-white animate-pulse" />
+              <span>ESTÁS EN MODO DEMO: Explora las funciones educativas sin límites.</span>
+            </div>
+            <Link href="/register-academy">
+              <Button size="sm" className="h-8 bg-white text-amber-600 hover:bg-amber-50 font-black rounded-full px-6 transition-transform hover:scale-105 border-none">
+                CREAR MI ACADEMIA REPRO
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+      <nav className="border-b bg-white px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-4 md:gap-8">
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
           <SheetTrigger asChild>
@@ -351,5 +364,6 @@ export function Navbar() {
         )}
       </div>
     </nav>
+    </>
   );
 }

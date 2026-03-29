@@ -414,10 +414,12 @@ function ModuleLessons({ courseId, moduleId, hasValidAccess, isFreeCourse, modul
             </div>
           </div>
           {(!hasValidAccess && (lesson.isPremium || moduleIsPremium || !isFreeCourse)) ? (
-            <div className="flex items-center gap-2 text-muted-foreground px-4 py-2 bg-slate-50 rounded-lg">
-              <Lock className="h-4 w-4" />
-              <span className="text-xs font-bold uppercase tracking-widest">{!hasValidAccess && !isFreeCourse ? 'Contenido Privado' : 'Premium'}</span>
-            </div>
+            <Link href={`/checkout?courseId=${courseId}`}>
+              <Button variant="ghost" size="sm" className="rounded-lg h-9 gap-2 text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 font-bold border-rose-100 border">
+                <Lock className="h-3.5 w-3.5" />
+                <span className="text-[10px] uppercase tracking-widest hidden sm:inline">Desbloquear</span>
+              </Button>
+            </Link>
           ) : (
             <Button variant="ghost" size="sm" className={`rounded-lg h-9 gap-1 font-bold ${lesson.type === 'challenge' ? 'text-primary bg-primary/5 hover:bg-primary/10' : ''}`} asChild>
                <Link href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${moduleId}`}>

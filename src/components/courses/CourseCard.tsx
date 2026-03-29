@@ -58,7 +58,7 @@ export function CourseCard({ course }: { course: any }) {
           </div>
           <span className="text-[11px] font-bold text-slate-600 truncate max-w-[150px]">Por {course.instructorName || 'Experto'}</span>
         </div>
-        <Link href={`/courses/${course.id}`}>
+        <Link href={course.isFree ? `/courses/${course.id}` : `/checkout?courseId=${course.id}`}>
           <div className="text-primary hover:text-primary/80 transition-all hover:scale-110">
             <PlayCircle className="h-8 w-8 fill-primary/10" />
           </div>

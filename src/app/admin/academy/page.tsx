@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useBrand } from '@/lib/branding/BrandingProvider';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Save, Globe, Palette, Mail, MessageCircle, Link, Loader2 } from 'lucide-react';
+import { Save, Globe, Palette, Mail, MessageCircle, Link, Loader2, PlayCircle, CreditCard, Calendar } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AcademySettings() {
@@ -40,7 +41,11 @@ export default function AcademySettings() {
         primaryColor: formData.primaryColor,
         supportEmail: formData.supportEmail,
         supportWhatsapp: formData.supportWhatsapp,
-        domain: formData.domain
+        domain: formData.domain,
+        isDemoEnabled: formData.isDemoEnabled,
+        demoExpiration: formData.demoExpiration,
+        academyMonthlyPrice: Number(formData.academyMonthlyPrice),
+        academyAnnualPrice: Number(formData.academyAnnualPrice),
       }, { merge: true });
       
       toast({
@@ -180,6 +185,78 @@ export default function AcademySettings() {
                 </div>
              </CardContent>
            </Card>
+
+           {/* Demo Section */}
+           <Card className="rounded-[2.5rem] border-none shadow-sm overflow-hidden bg-white mt-8">
+             <CardHeader className="bg-slate-50/50 border-b p-8">
+               <CardTitle className="flex items-center gap-2 text-xl">
+                 <PlayCircle className="h-6 w-6 text-amber-500" />
+                 Acceso Demo Público
+               </CardTitle>
+               <CardDescription>Controla la visibilidad del botón de demo en la web.</CardDescription>
+             </CardHeader>
+             <CardContent className="p-8 space-y-8">
+                <div className="flex items-center justify-between p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                   <div className="space-y-1">
+                      <p className="font-bold text-amber-900 text-lg">Habilitar Botón de Demo</p>
+                      <p className="text-sm text-amber-700">Permite que cualquiera pruebe el sistema como instructor.</p>
+                   </div>
+                   <Switch 
+                     checked={formData.isDemoEnabled} 
+                     onCheckedChange={checked => setFormData({...formData, isDemoEnabled: checked})} 
+                   />
+                </div>
+
+                <div className="space-y-2">
+                   <Label className="font-bold text-slate-700 ml-1 flex items-center gap-2">
+                     <Calendar className="h-4 w-4 text-slate-400" /> Fecha de Cierre del Demo
+                   </Label>
+                   <Input 
+                     type="date"
+                     value={formData.demoExpiration || ''} 
+                     onChange={e => setFormData({...formData, demoExpiration: e.target.value})}
+                     className="rounded-2xl h-12 bg-slate-50 border-none shadow-none max-w-xs"
+                   />
+                   <p className="text-[10px] text-slate-400 font-medium ml-1 uppercase tracking-wider">Después de esta fecha el botón se ocultará automáticamente.</p>
+                </div>
+             </CardContent>
+           </Card>
+
+           {/* Pricing Section */}
+           <Card className="rounded-[2.5rem] border-none shadow-sm overflow-hidden bg-white mt-8">
+             <CardHeader className="bg-slate-50/50 border-b p-8">
+               <CardTitle className="flex items-center gap-2 text-xl">
+                 <CreditCard className="h-6 w-6 text-indigo-500" />
+                 Planes para Academias
+               </CardTitle>
+               <CardDescription>Define los costos de suscripción para las instituciones interesadas.</CardDescription>
+             </CardHeader>
+             <CardContent className="p-8 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                   <div className="space-y-2">
+                     <Label className="font-bold text-slate-700 ml-1">Costo Mensual (COP)</Label>
+                     <Input 
+                       type="number"
+                       value={formData.academyMonthlyPrice || 0} 
+                       onChange={e => setFormData({...formData, academyMonthlyPrice: Number(e.target.value)})}
+                       className="rounded-2xl h-12 bg-slate-50 border-none shadow-none text-xl font-bold"
+                       placeholder="Ej: 299000"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label className="font-bold text-slate-700 ml-1">Costo Anual (COP)</Label>
+                     <Input 
+                       type="number"
+                       value={formData.academyAnnualPrice || 0} 
+                       onChange={e => setFormData({...formData, academyAnnualPrice: Number(e.target.value)})}
+                       className="rounded-2xl h-12 bg-slate-50 border-none shadow-none text-xl font-bold"
+                       placeholder="Ej: 2490000"
+                     />
+                   </div>
+                </div>
+             </CardContent>
+           </Card>
+
 
            <div className="flex justify-end pt-4 pb-12">
               <Button 

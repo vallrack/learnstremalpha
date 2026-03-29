@@ -5,6 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseStorage } from 'firebase/storage';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 interface FirebaseProviderProps {
@@ -17,6 +18,7 @@ interface FirebaseProviderProps {
 
 interface UserAuthState {
   user: User | null;
+  profile: any | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
@@ -28,6 +30,7 @@ export interface FirebaseContextState {
   auth: Auth | null;
   storage: FirebaseStorage | null;
   user: User | null;
+  profile: any | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
@@ -38,12 +41,14 @@ export interface FirebaseServicesAndUser {
   auth: Auth;
   storage: FirebaseStorage;
   user: User | null;
+  profile: any | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
 
 export interface UserHookResult {
   user: User | null;
+  profile: any | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
@@ -59,30 +64,49 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
+    profile: null,
     isUserLoading: true,
     userError: null,
   });
 
   useEffect(() => {
     if (!auth) {
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+      setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
 
-    setUserAuthState({ user: null, isUserLoading: true, userError: null });
+    setUserAuthState({ user: null, profile: null, isUserLoading: true, userError: null });
 
-    const unsubscribe = onAuthStateChanged(
+    const unsubscribeAuth = onAuthStateChanged(
       auth,
       (firebaseUser) => {
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        if (firebaseUser) {
+           // Si el usuario existe, nos suscribimos a su perfil en Firestore
+           const profileRef = doc(firestore, 'users', firebaseUser.uid);
+           const unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
+             setUserAuthState({ 
+               user: firebaseUser, 
+               profile: docSnap.exists() ? docSnap.data() : null,
+               isUserLoading: false, 
+               userError: null 
+             });
+           }, (err) => {
+             console.error("FirebaseProvider: onSnapshot profile error:", err);
+             setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: null });
+           });
+           
+           return () => unsubscribeProfile();
+        } else {
+           setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
+        }
       },
       (error) => {
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
-        setUserAuthState({ user: null, isUserLoading: false, userError: error });
+        setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: error });
       }
     );
-    return () => unsubscribe();
-  }, [auth]);
+    return () => unsubscribeAuth();
+  }, [auth, firestore]);
 
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth && storage);
@@ -93,6 +117,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth: servicesAvailable ? auth : null,
       storage: servicesAvailable ? storage : null,
       user: userAuthState.user,
+      profile: userAuthState.profile,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
     };
@@ -123,6 +148,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     auth: context.auth,
     storage: context.storage,
     user: context.user,
+    profile: context.profile,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
   };
@@ -160,6 +186,6 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
 }
 
 export const useUser = (): UserHookResult => {
-  const { user, isUserLoading, userError } = useFirebase();
-  return { user, isUserLoading, userError };
+  const { user, profile, isUserLoading, userError } = useFirebase();
+  return { user, profile, isUserLoading, userError };
 };
