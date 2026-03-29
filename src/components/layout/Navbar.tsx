@@ -24,7 +24,8 @@ import {
   FileText,
   Trophy,
   Landmark,
-  Clock
+  Clock,
+  Compass
 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -77,6 +78,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/', label: t.common.language === 'es' ? 'Inicio' : 'Home', icon: Home },
+    { href: '/paths', label: 'Rutas', icon: Compass },
     { href: '/courses', label: t.common.courses, icon: BookOpen },
     { href: '/challenges', label: t.common.challenges, icon: Code2 },
     { href: '/leaderboard', label: t.common.leaderboard, icon: Trophy },
@@ -217,6 +219,7 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-6">
           <Link href="/courses" className="text-sm font-medium hover:text-primary transition-colors">{t.common.courses}</Link>
+          <Link href="/paths" className="text-sm font-medium hover:text-primary transition-colors">Rutas</Link>
           <Link href="/challenges" className="text-sm font-medium hover:text-primary transition-colors">{t.common.challenges}</Link>
           <Link href="/leaderboard" className="text-sm font-medium hover:text-primary transition-colors">{t.common.leaderboard}</Link>
           {user && (

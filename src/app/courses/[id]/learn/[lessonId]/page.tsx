@@ -24,11 +24,14 @@ import {
   HelpCircle,
   Lock,
   Star,
-  Send
+  Send,
+  MessageSquare,
+  ThumbsUp,
+  UserCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, collection, query, orderBy, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { useState, Suspense } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -250,6 +253,8 @@ function LessonPlayerContent() {
                         <h1 className="text-3xl font-headline font-bold mb-6">{currentLesson.title}</h1>
                         <div className="text-lg leading-relaxed text-muted-foreground space-y-6 whitespace-pre-wrap">{currentLesson.description || "Sin descripción."}</div>
                       </article>
+                      
+                      <LessonDiscussion courseId={courseId} lessonId={lessonId} />
                     </div>
                     <div className="space-y-6"><LessonResources courseId={courseId} moduleId={moduleId!} lessonId={lessonId} /></div>
                   </div>
@@ -444,6 +449,160 @@ function ModuleInSidebar({ module, courseId, activeLessonId, index }: { module: 
             </Link>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: string }) {
+  const db = useFirestore();
+  const { user } = useUser();
+  const { toast } = useToast();
+  const [newComment, setNewComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+
+  const discussionsQuery = useMemoFirebase(() => {
+    if (!db || !courseId || !lessonId) return null;
+    // Usamos una colección global indexada para facilitar consultas futuras de administración.
+    return query(
+      collection(db, 'lesson_discussions'),
+      where('courseId', '==', courseId),
+      where('lessonId', '==', lessonId),
+      orderBy('createdAt', 'desc')
+    );
+  }, [db, courseId, lessonId]);
+  
+  const { data: discussions, isLoading } = useCollection(discussionsQuery);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !user || !newComment.trim()) return;
+
+    if (user.isAnonymous) {
+      toast({ variant: "destructive", title: "Acceso denegado", description: "Inicia sesión para participar en las discusiones." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Importamos dinámicamente para evitar bloqueo inicial
+      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      
+      await addDoc(collection(db, 'lesson_discussions'), {
+        courseId,
+        lessonId,
+        userId: user.uid,
+        userName: profile?.displayName || user.email?.split('@')[0] || "Estudiante",
+        userPhotoUrl: profile?.profileImageUrl || profile?.photoURL || null,
+        isInstructor: profile?.role === 'instructor' || profile?.role === 'admin',
+        content: newComment.trim(),
+        upvotes: 0,
+        replies: [],
+        createdAt: serverTimestamp()
+      });
+      
+      setNewComment("");
+      toast({ title: "Comentario publicado", description: "Tu pregunta o aporte ya es visible para toda la comunidad." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo publicar el comentario." });
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-card p-8 rounded-3xl border shadow-sm animate-pulse flex flex-col items-center justify-center min-h-[200px]">
+        <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+        <p className="text-muted-foreground text-sm font-medium">Cargando comunidad...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card p-8 md:p-10 rounded-3xl border shadow-sm">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+          <MessageSquare className="h-6 w-6" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-headline font-bold">Comunidad y Dudas</h2>
+          <p className="text-sm text-muted-foreground">{discussions?.length || 0} contribuciones en esta clase</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mb-10 relative">
+        <Textarea 
+          placeholder="¿Tienes alguna duda con el código o quieres aportar un consejo?..." 
+          className="resize-none min-h-[120px] rounded-2xl p-4 text-base border-slate-200 focus-visible:ring-primary/20 bg-slate-50/50"
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          maxLength={1000}
+        />
+        <div className="flex justify-between items-center mt-3">
+          <p className="text-xs text-slate-400 font-medium">Soporta formato Markdown (``para código``)</p>
+          <Button 
+            type="submit" 
+            disabled={!newComment.trim() || isSubmitting} 
+            className="rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+          >
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Publicar"}
+          </Button>
+        </div>
+      </form>
+
+      <div className="space-y-6">
+        {discussions?.length === 0 ? (
+          <div className="text-center py-12 px-4 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+            <MessageSquare className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-slate-700 mb-1">Sé el primero en comentar</h3>
+            <p className="text-sm text-slate-500 max-w-sm mx-auto">Rompe el hielo. Inicia un debate, comparte un tip o hazle una pregunta al instructor.</p>
+          </div>
+        ) : (
+          discussions?.map((d: any) => (
+            <div key={d.id} className="flex gap-4 p-5 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
+              {d.userPhotoUrl ? (
+                <img src={d.userPhotoUrl} alt={d.userName} className="w-12 h-12 rounded-full object-cover shrink-0 border border-slate-100" />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200">
+                  <UserCircle2 className="h-7 w-7 text-slate-400" />
+                </div>
+              )}
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="font-bold text-slate-900">{d.userName}</span>
+                  {d.isInstructor && (
+                    <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 text-[10px] uppercase font-black tracking-widest px-2 py-0 h-5">Instructor Oficial</Badge>
+                  )}
+                  <span className="text-xs text-slate-400">
+                    {d.createdAt ? new Date(d.createdAt.toDate()).toLocaleDateString() : 'Justo ahora'}
+                  </span>
+                </div>
+                
+                <p className="text-slate-600 text-sm md:text-base leading-relaxed whitespace-pre-wrap break-words">
+                  {d.content}
+                </p>
+                
+                <div className="flex items-center gap-4 mt-4">
+                  <button className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-primary transition-colors">
+                    <ThumbsUp className="h-4 w-4" /> {d.upvotes || 0}
+                  </button>
+                  <button className="text-xs font-semibold text-slate-400 hover:text-primary transition-colors">
+                    Responder
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

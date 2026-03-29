@@ -22,7 +22,9 @@ import {
   Medal,
   Wallet,
   Users,
-  TrendingUp, CheckCircle2
+  TrendingUp, CheckCircle2,
+  MessageSquare,
+  ArrowRight
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit, doc, where } from 'firebase/firestore';
@@ -378,6 +380,12 @@ function InstructorAnalytics({ userId, myCourses, profile }: { userId: string; m
           <CourseRetentionAnalytics courseId={myCourses[0].id} />
         </div>
       )}
+
+      {myCourses.length > 0 && (
+        <div className="md:col-span-4 mt-4">
+          <InstructorPendingDiscussions courseIds={myCourses.map(c => c.id)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -559,6 +567,78 @@ function DailyMissions() {
           ))}
         </div>
       </CardContent>
+    </Card>
+  );
+}
+
+function InstructorPendingDiscussions({ courseIds }: { courseIds: string[] }) {
+  const db = useFirestore();
+  const [discussions, setDiscussions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db || !courseIds || courseIds.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    import('firebase/firestore').then(({ collection, getDocs, query, where, orderBy, limit }) => {
+      // Tomamos máx 10 ids por limitación de Firebase 'in'
+      const idsToQuery = courseIds.slice(0, 10);
+      getDocs(query(
+        collection(db, 'lesson_discussions'),
+        where('courseId', 'in', idsToQuery),
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      )).then(snap => {
+        setDiscussions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      }).catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+    });
+  }, [db, courseIds]);
+
+  if (loading || discussions.length === 0) return null;
+
+  return (
+    <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden relative mt-8">
+      <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-100 p-3 rounded-2xl">
+            <MessageSquare className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-xl font-headline font-bold text-slate-900">Dudas y Comunidad</h3>
+            <p className="text-sm text-muted-foreground">Últimas interacciones en tus cursos</p>
+          </div>
+        </div>
+        <Badge className="bg-blue-50 text-blue-700 border-none px-3 font-bold">{discussions.length} recientes</Badge>
+      </div>
+      
+      <div className="divide-y divide-slate-50">
+        {discussions.map(d => (
+          <div key={d.id} className="p-6 hover:bg-slate-50 transition-colors flex flex-col md:flex-row gap-4 items-start md:items-center justify-between group">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-bold text-slate-900 text-sm">{d.userName}</span>
+                <span className="text-xs text-slate-400 font-medium">
+                  • {d.createdAt ? new Date(d.createdAt.toDate()).toLocaleDateString() : 'Justo ahora'}
+                </span>
+                {d.isInstructor && <Badge className="bg-emerald-100 text-emerald-700 text-[9px] py-0 border-none px-2 uppercase font-black">Instructor</Badge>}
+              </div>
+              <p className="text-slate-600 text-sm truncate max-w-lg mb-2">{d.content}</p>
+            </div>
+            <Link href={`/courses/${d.courseId}/learn/${d.lessonId}`} className="shrink-0">
+              <Button size="sm" variant="outline" className="rounded-xl font-bold bg-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 shadow-sm pointer-events-none group-hover:pointer-events-auto">
+                <MessageSquare className="h-4 w-4" />
+                Responder en Lección
+              </Button>
+            </Link>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }

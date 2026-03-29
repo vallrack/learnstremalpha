@@ -4,13 +4,14 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { CourseCard } from '@/components/courses/CourseCard';
-import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, BookOpen, GraduationCap, CheckCircle2, ArrowRight, Star } from 'lucide-react';
+import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, BookOpen, GraduationCap, CheckCircle2, ArrowRight, Star, Check } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, limit, where, doc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -62,27 +63,46 @@ export default function Home() {
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto lg:mx-0">
                 {t.home.heroSubtitle}
               </p>
-              <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
+              
+              <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start mb-10">
                 <Link href="/courses">
-                  <Button size="lg" className="h-14 px-8 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90">
+                  <Button size="lg" className="h-14 px-8 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90 shadow-[0_0_40px_-10px_var(--tw-colors-primary)] transition-transform hover:scale-105">
                     {t.home.exploreBtn}
                   </Button>
                 </Link>
-                <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold rounded-full gap-2">
+                <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold rounded-full gap-2 hover:bg-slate-50">
                   <PlayCircle className="h-5 w-5" />
                   {t.home.viewDemoBtn}
                 </Button>
               </div>
+
+              {/* Trust Badge */}
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 text-sm text-slate-600">
+                <div className="flex -space-x-3">
+                  <img src="https://i.pravatar.cc/100?img=1" alt="User" className="w-10 h-10 rounded-full border-2 border-white" />
+                  <img src="https://i.pravatar.cc/100?img=2" alt="User" className="w-10 h-10 rounded-full border-2 border-white" />
+                  <img src="https://i.pravatar.cc/100?img=3" alt="User" className="w-10 h-10 rounded-full border-2 border-white" />
+                  <img src="https://i.pravatar.cc/100?img=4" alt="User" className="w-10 h-10 rounded-full border-2 border-white" />
+                  <div className="w-10 h-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-500">+10k</div>
+                </div>
+                <div className="flex flex-col items-center sm:items-start">
+                  <div className="flex gap-1">
+                    {[1,2,3,4,5].map(i => <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />)}
+                  </div>
+                  <span className="font-medium mt-0.5">Únete a más de 10,000 estudiantes</span>
+                </div>
+              </div>
+
             </div>
             
-            <div className="flex-1 relative w-full aspect-square max-w-[500px] mx-auto">
-              <div className="absolute inset-0 bg-primary/5 rounded-[3rem] -rotate-2 scale-105" />
-              <div className="relative w-full h-full rounded-[3rem] overflow-hidden bg-white shadow-2xl flex items-center justify-center p-8">
+            <div className="flex-1 relative w-full aspect-square max-w-[500px] mx-auto lg:translate-y-6">
+              <div className="absolute inset-0 bg-primary/20 rounded-[3rem] -rotate-6 scale-105 blur-xl transition-all duration-700 hover:rotate-0 hover:scale-100" />
+              <div className="relative w-full h-full rounded-[3rem] overflow-hidden bg-white shadow-2xl flex items-center justify-center p-8 border border-white/50">
                 <Image 
                   src={logoUrl} 
                   alt="Logo LearnStream"
                   fill
-                  className="object-contain p-12"
+                  className="object-contain p-12 drop-shadow-2xl"
                   priority
                 />
               </div>
@@ -91,26 +111,26 @@ export default function Home() {
         </section>
 
         {/* Features Section */}
-        <section className="py-20 bg-card border-y">
+        <section className="py-20 bg-slate-50/50 border-y border-slate-100">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                  <Rocket className="h-8 w-8 text-primary" />
+              <div className="flex flex-col items-center text-center p-6 rounded-[2rem] hover:bg-white hover:shadow-xl transition-all duration-300">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6">
+                  <Rocket className="h-8 w-8 text-indigo-600" />
                 </div>
                 <h3 className="text-xl font-headline font-semibold mb-3">{t.home.features.accelerated.title}</h3>
                 <p className="text-muted-foreground">{t.home.features.accelerated.desc}</p>
               </div>
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
-                  <ShieldCheck className="h-8 w-8 text-accent" />
+              <div className="flex flex-col items-center text-center p-6 rounded-[2rem] hover:bg-white hover:shadow-xl transition-all duration-300">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
+                  <ShieldCheck className="h-8 w-8 text-emerald-600" />
                 </div>
                 <h3 className="text-xl font-headline font-semibold mb-3">{t.home.features.certified.title}</h3>
                 <p className="text-muted-foreground">{t.home.features.certified.desc}</p>
               </div>
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                  <Zap className="h-8 w-8 text-primary" />
+              <div className="flex flex-col items-center text-center p-6 rounded-[2rem] hover:bg-white hover:shadow-xl transition-all duration-300">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mb-6">
+                  <Zap className="h-8 w-8 text-amber-600" />
                 </div>
                 <h3 className="text-xl font-headline font-semibold mb-3">{t.home.features.aiAssistant.title}</h3>
                 <p className="text-muted-foreground">{t.home.features.aiAssistant.desc}</p>
@@ -121,16 +141,16 @@ export default function Home() {
 
         {/* Real Featured Courses Section */}
         {shouldShowCoursesSection && (
-          <section className="py-24 px-6 bg-slate-50/50">
+          <section className="py-24 px-6 bg-white">
             <div className="max-w-7xl mx-auto">
-              <div className="flex flex-col md:flex-row items-center md:items-end justify-between mb-12 gap-6">
+              <div className="flex flex-col md:flex-row items-center md:items-end justify-between mb-16 gap-6">
                 <div className="text-center md:text-left">
-                  <h2 className="text-3xl font-headline font-bold mb-4">{t.home.coursesSection.title}</h2>
-                  <p className="text-muted-foreground">{t.home.coursesSection.subtitle}</p>
+                  <h2 className="text-3xl md:text-5xl font-headline font-extrabold mb-4">{t.home.coursesSection.title}</h2>
+                  <p className="text-muted-foreground text-lg">{t.home.coursesSection.subtitle}</p>
                 </div>
                 <Link href="/courses">
-                  <Button variant="link" className="text-primary font-bold p-0 h-auto text-lg">
-                    {t.home.coursesSection.viewAll}
+                  <Button variant="outline" className="font-bold h-12 px-6 rounded-full border-2 hover:bg-slate-50">
+                    {t.home.coursesSection.viewAll} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
               </div>
@@ -155,8 +175,11 @@ export default function Home() {
         {/* Testimonios reales */}
         <LandingTestimonials />
 
-        {/* Instructor Invitation Section (Improved Design) */}
-        <section className="py-24 px-6 relative">
+        {/* Planes & Pricing */}
+        <PricingSection />
+
+        {/* Instructor Invitation Section */}
+        <section className="py-24 px-6 relative bg-white">
           <div className="max-w-7xl mx-auto">
             <div className="bg-[#0F172A] rounded-[3.5rem] overflow-hidden flex flex-col lg:flex-row items-stretch shadow-2xl border border-white/5 relative">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30" />
@@ -192,7 +215,7 @@ export default function Home() {
 
                 <div className="pt-4">
                   <Link href="/instructor/apply">
-                    <Button className="h-16 px-12 text-xl font-black rounded-3xl bg-[#4F46E5] hover:bg-[#4338CA] transition-all hover:scale-[1.03] shadow-[0_0_40px_-5px_rgba(79,70,229,0.4)] gap-3">
+                    <Button className="h-16 px-12 text-xl font-black rounded-3xl bg-[#4F46E5] hover:bg-[#4338CA] transition-all hover:scale-[1.03] shadow-[0_0_40px_-5px_rgba(79,70,229,0.4)] gap-3 border-none text-white">
                       Empezar a enseñar hoy
                       <ArrowRight className="h-6 w-6" />
                     </Button>
@@ -215,20 +238,26 @@ export default function Home() {
           </div>
         </section>
 
+        {/* FAQ Section */}
+        <LandingFAQ />
+
         {/* CTA Section */}
-        <section className="py-20 px-6">
-          <div className="max-w-5xl mx-auto rounded-[3rem] bg-primary p-12 lg:p-20 text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+        <section className="py-24 px-6 bg-white pb-32">
+          <div className="max-w-5xl mx-auto rounded-[3.5rem] bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-12 lg:p-24 text-center relative overflow-hidden shadow-2xl border-4 border-slate-800">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
             
             <div className="relative z-10">
-              <h2 className="text-3xl lg:text-5xl font-headline font-bold text-white mb-6">{t.home.ctaTitle}</h2>
-              <p className="text-primary-foreground/80 text-lg mb-10 max-w-2xl mx-auto">
-                {t.home.ctaSubtitle}
+              <h2 className="text-4xl md:text-6xl font-headline font-extrabold text-white mb-6 leading-tight">Empieza a programar <br className="hidden md:block"/>tu futuro hoy mismo</h2>
+              <p className="text-slate-400 text-lg md:text-xl mb-12 max-w-2xl mx-auto">
+                No necesitas experiencia previa. Únete a miles de estudiantes que ya están transformando sus carreras profesionales con la ayuda de la Inteligencia Artificial.
               </p>
-              <Button size="lg" className="bg-white text-primary hover:bg-white/90 h-14 px-10 text-lg font-bold rounded-full">
-                {t.home.ctaBtn}
-              </Button>
+              <Link href="/register">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-white h-16 px-12 text-xl font-bold rounded-full shadow-[0_0_40px_-5px_var(--tw-colors-primary)] transition-transform hover:scale-105">
+                  Comenzar prueba gratis ahora
+                </Button>
+              </Link>
+              <p className="text-slate-500 text-sm mt-6">Sin tarjeta de crédito requerida.</p>
             </div>
           </div>
         </section>
@@ -323,6 +352,107 @@ function LandingTestimonials() {
             </div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+function PricingSection() {
+  return (
+    <section className="py-24 px-6 bg-slate-50">
+      <div className="max-w-7xl mx-auto text-center mb-16">
+        <h2 className="text-3xl md:text-5xl font-headline font-extrabold mb-4">Planes diseñados para tu éxito</h2>
+        <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          Comienza gratis o desbloquea todo el potencial con nuestra suscripción premium. Cancela en cualquier momento.
+        </p>
+      </div>
+
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        {/* Free Plan */}
+        <div className="bg-white rounded-[3rem] p-10 border shadow-sm flex flex-col items-center text-center">
+          <h3 className="text-2xl font-bold mb-2">Comunidad</h3>
+          <p className="text-muted-foreground mb-6">Ideal para dar tus primeros pasos.</p>
+          <div className="text-5xl font-black mb-6">$0 <span className="text-xl text-muted-foreground font-normal">/mes</span></div>
+          
+          <ul className="space-y-4 mb-8 text-left w-full pl-4 md:pl-10">
+            <li className="flex items-center gap-3"><Check className="h-5 w-5 text-emerald-500" /> Acceso a cursos gratuitos</li>
+            <li className="flex items-center gap-3"><Check className="h-5 w-5 text-emerald-500" /> Comunidad básica</li>
+            <li className="flex items-center gap-3 text-muted-foreground"><span className="w-5 h-5 flex items-center justify-center">-</span> Sin certificados oficiales</li>
+            <li className="flex items-center gap-3 text-muted-foreground"><span className="w-5 h-5 flex items-center justify-center">-</span> Sin IA ni proyectos reales</li>
+          </ul>
+          
+          <Link href="/register" className="w-full">
+            <Button size="lg" variant="outline" className="w-full text-lg h-14 rounded-full font-bold">Crear cuenta gratis</Button>
+          </Link>
+        </div>
+
+        {/* Premium Plan */}
+        <div className="bg-[#0F172A] text-white rounded-[3rem] p-10 shadow-2xl relative border border-[#1E293B] flex flex-col items-center text-center transform md:-translate-y-4">
+          <div className="absolute top-0 right-10 bg-primary text-white text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-b-lg">
+            Recomendado
+          </div>
+          <h3 className="text-2xl font-bold mb-2 text-white">PRO</h3>
+          <p className="text-slate-400 mb-6">La carrera completa hacia el seniority.</p>
+          <div className="text-5xl font-black mb-6 flex items-end justify-center">
+            $24 <span className="text-xl text-slate-400 font-normal mb-1 ml-1">USD/mes</span>
+          </div>
+          
+          <ul className="space-y-4 mb-8 text-left w-full pl-4 md:pl-10">
+            <li className="flex items-center gap-3"><Check className="h-5 w-5 text-emerald-400" /> <b>Acceso a todos los cursos VIP</b></li>
+            <li className="flex items-center gap-3"><Check className="h-5 w-5 text-emerald-400" /> Certificados Blockchain/QR</li>
+            <li className="flex items-center gap-3"><Check className="h-5 w-5 text-emerald-400" /> Tutor IA Personalizado</li>
+            <li className="flex items-center gap-3"><Check className="h-5 w-5 text-emerald-400" /> Proyectos reales para Portafolio</li>
+          </ul>
+          
+          <Link href="/register?plan=pro" className="w-full">
+            <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-white text-lg h-14 rounded-full font-bold shadow-[0_0_30px_-5px_var(--tw-colors-primary)]">
+              Desbloquear Premium
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LandingFAQ() {
+  return (
+    <section className="py-24 px-6 bg-white overflow-hidden" id="faq">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-5xl font-headline font-extrabold mb-4">Preguntas Frecuentes</h2>
+          <p className="text-muted-foreground text-lg">Todo lo que necesitas saber antes de empezar tu camino.</p>
+        </div>
+
+        <Accordion type="single" collapsible className="w-full space-y-4">
+          <AccordionItem value="item-1" className="bg-slate-50 px-6 rounded-2xl border-none data-[state=open]:shadow-md transition-all">
+            <AccordionTrigger className="hover:no-underline font-bold text-lg py-6">¿Obtengo certificado oficial al terminar?</AccordionTrigger>
+            <AccordionContent className="text-muted-foreground text-base leading-relaxed pb-6">
+              Sí, todos nuestros cursos premium incluyen un certificado validado con un código QR único. Puedes añadirlo a LinkedIn para que los reclutadores validen en tiempo real tus nuevas habilidades adquiridas.
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="item-2" className="bg-slate-50 px-6 rounded-2xl border-none data-[state=open]:shadow-md transition-all">
+            <AccordionTrigger className="hover:no-underline font-bold text-lg py-6">¿Qué métodos de pago aceptan?</AccordionTrigger>
+            <AccordionContent className="text-muted-foreground text-base leading-relaxed pb-6">
+              Aceptamos pagos internacionales a través de tarjeta de crédito/débito y múltiples métodos locales en Latinoamérica mediante nuestra pasarela Epayco.
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="item-3" className="bg-slate-50 px-6 rounded-2xl border-none data-[state=open]:shadow-md transition-all">
+            <AccordionTrigger className="hover:no-underline font-bold text-lg py-6">¿Cómo funciona el Tutor de IA?</AccordionTrigger>
+            <AccordionContent className="text-muted-foreground text-base leading-relaxed pb-6">
+              El asistente virtual de IA puede analizar tu código en tiempo real, explicarte conceptos complejos con ejemplos locales y crearte desafíos interactivos al vuelo para que no te quedes atascado en ninguna lección.
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="item-4" className="bg-slate-50 px-6 rounded-2xl border-none data-[state=open]:shadow-md transition-all">
+            <AccordionTrigger className="hover:no-underline font-bold text-lg py-6">¿Puedo ser instructor?</AccordionTrigger>
+            <AccordionContent className="text-muted-foreground text-base leading-relaxed pb-6">
+              ¡Claro que sí! Si dominas un tema técnico, puedes crear y monetizar tu propio curso. Tienes analíticas completas, embudos de conversión y te llevas el 70% de las regalías.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     </section>
   );
