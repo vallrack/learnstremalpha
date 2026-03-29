@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Crown, ShieldCheck, Award, Calendar, User } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { useBrand } from '@/lib/branding/BrandingProvider';
 
 interface CourseCertificateProps {
   studentName: string;
@@ -24,16 +25,17 @@ export function CourseCertificate({
   isPremium,
   completionDate,
   modulesCount,
-  instructorName = "Experto LearnStream",
+  instructorName,
   certificateId = "PREVIEW-ID",
 }: CourseCertificateProps) {
   const logoUrl = "https://dprogramadores.com.co/img/logoD.png";
   const signatureUrl = "https://drive.google.com/uc?export=view&id=1w2nzR-tylvAKiHe02fzdTKpRD7icoJua";
-  const platformLogoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
+  const { name, logoUrl: platformLogoUrl, domain } = useBrand();
+  const effectiveInstructorName = instructorName || `Experto ${name}`;
 
   const verifyUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/verify/${certificateId}`
-    : `https://learnstream.app/verify/${certificateId}`;
+    : `https://${domain}/verify/${certificateId}`;
 
   return (
     <div className="relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl">
@@ -67,7 +69,7 @@ export function CourseCertificate({
         <div className="relative w-24 h-24 flex items-center justify-center">
           <Image 
             src={platformLogoUrl} 
-            alt="LearnStream Logo" 
+            alt={`${name} Logo`} 
             fill 
             className="object-contain" 
           />
@@ -110,13 +112,13 @@ export function CourseCertificate({
 
         <div className="flex items-center gap-2 mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
           <User className="h-3.5 w-3.5 text-slate-400" />
-          <span className="text-[11px] font-bold text-slate-600">Instructor a cargo: <span className="text-primary">{instructorName}</span></span>
+          <span className="text-[11px] font-bold text-slate-600">Instructor a cargo: <span className="text-primary">{effectiveInstructorName}</span></span>
         </div>
 
         <p className="text-[10px] text-slate-400 max-w-lg leading-relaxed px-4">
           {isPremium 
-            ? `Certificación avanzada otorgada por LearnStream que valida el dominio de arquitecturas complejas y conceptos premium tras completar ${modulesCount} módulos académicos.`
-            : `Certificación básica que valida el conocimiento de los conceptos esenciales del programa de estudio en la plataforma LearnStream.`
+            ? `Certificación avanzada otorgada por ${name} que valida el dominio de arquitecturas complejas y conceptos premium tras completar ${modulesCount} módulos académicos.`
+            : `Certificación básica que valida el conocimiento de los conceptos esenciales del programa de estudio en la plataforma ${name}.`
           }
         </p>
       </main>

@@ -49,6 +49,7 @@ import {
 import { useTranslation } from '@/lib/i18n/use-translation';
 import { useState } from 'react';
 import { NotificationBell } from '@/components/ui/NotificationBell';
+import { useBrand } from '@/lib/branding/BrandingProvider';
 
 export function Navbar() {
   const { user, isUserLoading } = useUser();
@@ -74,7 +75,7 @@ export function Navbar() {
     router.push('/');
   };
 
-  const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
+  const { name, logoUrl } = useBrand();
 
   const navLinks = [
     { href: '/', label: t.common.language === 'es' ? 'Inicio' : 'Home', icon: Home },
@@ -114,7 +115,7 @@ export function Navbar() {
                 <div className="relative w-10 h-10">
                   <Image src={logoUrl} alt="Logo" fill className="object-contain" />
                 </div>
-                <span className="font-headline font-bold text-xl">LearnStream</span>
+                <span className="font-headline font-bold text-xl">{name}</span>
               </SheetTitle>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
@@ -153,7 +154,7 @@ export function Navbar() {
                       <div className="p-2 rounded-xl bg-primary text-white">
                         <GraduationCap className="h-4 w-4" />
                       </div>
-                      <span className="font-bold text-sm">Enseña en LearnStream</span>
+                      <span className="font-bold text-sm">Enseña en {name}</span>
                     </div>
                   </Link>
                 </section>
@@ -214,7 +215,7 @@ export function Navbar() {
                 className="object-contain" 
              />
           </div>
-          <span className="font-headline font-bold text-lg md:text-xl tracking-tight hidden xs:block">LearnStream</span>
+          <span className="font-headline font-bold text-lg md:text-xl tracking-tight hidden sm:inline">{name}</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-6">
@@ -228,7 +229,7 @@ export function Navbar() {
           
           {user && !isInstructor && (
             <Link href="/instructor/apply" className="text-xs font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-full hover:bg-primary/10 transition-colors">
-              Enseña en LearnStream
+              Enseña en {name}
             </Link>
           )}
 

@@ -350,7 +350,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
   };
 
   const addQuestion = () => {
-    setQuestions([...questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
+    setQuestions([...questions, { question: '', options: ['', '', ''], correctAnswer: 0 }]);
   };
 
   const updateQuestion = (index: number, field: string, value: any) => {
@@ -363,6 +363,28 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
     const newQuestions = [...questions];
     newQuestions[qIndex].options[oIndex] = value;
     setQuestions(newQuestions);
+  };
+
+  const addOption = (qIndex: number) => {
+    const newQuestions = [...questions];
+    if (newQuestions[qIndex].options.length < 6) {
+      newQuestions[qIndex].options.push('');
+      setQuestions(newQuestions);
+    }
+  };
+
+  const removeOption = (qIndex: number, oIndex: number) => {
+    const newQuestions = [...questions];
+    if (newQuestions[qIndex].options.length > 2) {
+      newQuestions[qIndex].options.splice(oIndex, 1);
+      // Ajustar la respuesta correcta si es necesario
+      if (newQuestions[qIndex].correctAnswer === oIndex) {
+        newQuestions[qIndex].correctAnswer = 0;
+      } else if (newQuestions[qIndex].correctAnswer > oIndex) {
+        newQuestions[qIndex].correctAnswer -= 1;
+      }
+      setQuestions(newQuestions);
+    }
   };
 
   return (
@@ -466,23 +488,45 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                               />
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {q.options.map((opt: string, oIndex: number) => (
-                                  <div key={oIndex} className="flex items-center gap-2">
+                                  <div key={oIndex} className="flex items-center gap-2 group">
                                     <input 
                                       type="radio" 
                                       name={`correct-${qIndex}`} 
                                       checked={q.correctAnswer === oIndex}
                                       onChange={() => updateQuestion(qIndex, 'correctAnswer', oIndex)}
-                                      className="h-4 w-4 text-primary"
+                                      className="h-4 w-4 text-primary shrink-0"
                                     />
-                                    <Input 
-                                      placeholder={`Opción ${oIndex + 1}`} 
-                                      value={opt} 
-                                      onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                                      required
-                                      className="rounded-lg h-9 text-xs bg-white"
-                                    />
+                                    <div className="flex-1 relative">
+                                      <Input 
+                                        placeholder={`Opción ${oIndex + 1}`} 
+                                        value={opt} 
+                                        onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                                        required
+                                        className="rounded-lg h-9 text-xs bg-white pr-8"
+                                      />
+                                      {q.options.length > 2 && (
+                                        <button 
+                                          type="button" 
+                                          onClick={() => removeOption(qIndex, oIndex)}
+                                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 ))}
+                                {q.options.length < 6 && (
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => addOption(qIndex)}
+                                    className="h-9 rounded-lg border-2 border-dashed text-[10px] font-bold text-muted-foreground hover:text-primary hover:border-primary/50"
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" /> Añadir Opción
+                                  </Button>
+                                )}
                               </div>
                             </div>
                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setQuestions(questions.filter((_, i) => i !== qIndex))}>
@@ -495,7 +539,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>Duración (min)</Label>
                     <Input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} className="rounded-xl" />

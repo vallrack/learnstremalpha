@@ -7,10 +7,20 @@ import { InactivityLogout } from '@/components/auth/InactivityLogout';
 import { Toaster } from '@/components/ui/toaster';
 import { FloatingWhatsApp } from '@/components/layout/FloatingWhatsApp';
 
-export const metadata: Metadata = {
-  title: 'LearnStream - Academia Digital Moderna',
-  description: 'Crea y consume cursos interactivos con asistencia de IA.',
-};
+import { BrandingProvider } from '@/lib/branding/BrandingProvider';
+import { headers } from 'next/headers';
+import { DEFAULT_BRANDING, TENANTS_MAP } from '@/lib/branding/branding-config';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const host = (await headers()).get('host') || '';
+  const tenantKey = Object.keys(TENANTS_MAP).find(key => host.includes(key));
+  const brand = tenantKey ? { ...DEFAULT_BRANDING, ...TENANTS_MAP[tenantKey] } : DEFAULT_BRANDING;
+
+  return {
+    title: `${brand.name} - ${brand.tagline}`,
+    description: 'Crea y consume cursos interactivos con asistencia de IA.',
+  };
+}
 
 export default function RootLayout({
   children,
@@ -26,14 +36,16 @@ export default function RootLayout({
         <script src="https://js.puter.com/v2/"></script>
       </head>
       <body className="font-body antialiased">
-        <TranslationProvider>
-          <FirebaseClientProvider>
-            <InactivityLogout />
-            {children}
-            <FloatingWhatsApp />
-            <Toaster />
-          </FirebaseClientProvider>
-        </TranslationProvider>
+        <BrandingProvider>
+          <TranslationProvider>
+            <FirebaseClientProvider>
+              <InactivityLogout />
+              {children}
+              <FloatingWhatsApp />
+              <Toaster />
+            </FirebaseClientProvider>
+          </TranslationProvider>
+        </BrandingProvider>
       </body>
     </html>
   );

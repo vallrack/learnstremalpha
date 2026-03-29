@@ -429,7 +429,7 @@ export default function AdminCoursesPage() {
           </div>
         </header>
 
-        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
+        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 border-none">

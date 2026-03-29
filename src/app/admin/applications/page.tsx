@@ -90,7 +90,7 @@ export default function AdminApplicationsPage() {
           <p className="text-muted-foreground">Revisa los perfiles de los expertos que han pagado su licencia de creador.</p>
         </header>
 
-        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
+        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-x-auto">
           {isLoading ? (
             <div className="p-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
           ) : applications && applications.length > 0 ? (

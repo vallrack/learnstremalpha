@@ -21,6 +21,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useBrand } from '@/lib/branding/BrandingProvider';
 import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
@@ -43,6 +44,7 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const courseId = searchParams.get('courseId');
   const { toast } = useToast();
+  const { name, supportWhatsapp } = useBrand();
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState('');
@@ -156,7 +158,7 @@ function CheckoutContent() {
       });
 
       const data = {
-        name: courseId && course ? `Curso: ${course.title}` : "LearnStream Premium",
+        name: courseId && course ? `Curso: ${course.title}` : `${name} Premium`,
         description: courseId && course ? "Acceso de por vida al curso" : "Acceso vitalicio a cursos y desafíos IA",
         invoice: `LS-${Date.now()}-${user.uid.substring(0, 5)}`,
         currency: "cop",
@@ -167,7 +169,7 @@ function CheckoutContent() {
         lang: "es",
         external: "false",
         response: `${window.location.origin}/checkout/success`,
-        name_billing: user.displayName || "Estudiante LearnStream",
+        name_billing: user.displayName || `Estudiante ${name}`,
         email_billing: user.email,
         extra1: user.uid, 
         extra2: appliedCoupon?.id || "none",
@@ -185,7 +187,7 @@ function CheckoutContent() {
 
   if (isUserLoading || isCourseLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
-  const whatsappLink = `https://wa.me/573054694239?text=Hola%20LearnStream,%20tengo%20problemas%20con%20el%20pago%20de%20mi%20suscripci%C3%B3n%20Premium%20y%20me%20gustar%C3%ADa%20recibir%20ayuda.`;
+  const whatsappLink = `https://wa.me/${supportWhatsapp}?text=Hola%20${name},%20tengo%20problemas%20con%20el%20pago%20de%20mi%20suscripci%C3%B3n%20Premium%20y%20me%20gustar%C3%ADa%20recibir%20ayuda.`;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">

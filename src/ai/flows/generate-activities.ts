@@ -44,8 +44,8 @@ const SortableSchema = z.object({
 const QuizSchema = z.object({
   questions: z.array(z.object({
     question: z.string().describe('La pregunta del quiz.'),
-    options: z.array(z.string()).length(4).describe('Exactamente 4 opciones de respuesta.'),
-    correctIndex: z.number().min(0).max(3).describe('Índice (0-3) de la opción correcta.'),
+    options: z.array(z.string()).min(2).max(5).describe('Entre 2 y 5 opciones de respuesta.'),
+    correctIndex: z.number().min(0).describe('Índice de la opción correcta (basado en el array de options).'),
   })).min(5).max(10).describe('Array de preguntas de opción múltiple.'),
 });
 
@@ -63,7 +63,7 @@ const InteractiveVideoSchema = z.object({
   checkpoints: z.array(z.object({
     seconds: z.number().describe('Segundo exacto de la pausa.'),
     question: z.string().describe('Pregunta que aparece.'),
-    options: z.array(z.string()).length(4).describe('4 opciones.'),
+    options: z.array(z.string()).min(2).max(5).describe('Entre 2 y 5 opciones.'),
     correctIndex: z.number().describe('Índice correcto.'),
   })).describe('Momentos de pausa en el video.'),
 });
@@ -124,9 +124,9 @@ REGLAS POR TIPO:
    - El JSON debe tener la forma: { "lines": [{ "id": "L1", "text": "..." }], "correctOrder": ["L1", "L2", ...] }
 
 4. SI activityType = "quiz":
-   - Genera 5-10 preguntas de opción múltiple con exactamente 4 opciones cada una.
+   - Genera 5-10 preguntas de opción múltiple con entre 2 y 5 opciones cada una (no siempre tienen que ser 4).
    - Las preguntas deben evaluar comprensión profunda de la lección.
-   - El JSON debe tener la forma: { "questions": [{ "question": "...", "options": ["A","B","C","D"], "correctIndex": 0 }] }
+   - El JSON debe tener la forma: { "questions": [{ "question": "...", "options": ["Opción 1", "Opción 2", ...], "correctIndex": 0 }] }
 
 5. SI activityType = "dragdrop":
    - Genera una plantilla de código con 2-4 "huecos" usando la sintaxis {{{s1}}}, {{{s2}}}, etc.

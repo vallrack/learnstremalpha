@@ -8,6 +8,7 @@ import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, BookOpen, GraduationCap
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
+import { useBrand } from '@/lib/branding/BrandingProvider';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, limit, where, doc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
@@ -15,9 +16,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 export default function Home() {
   const { t } = useTranslation();
+  const { name, tagline, logoUrl } = useBrand();
   const db = useFirestore();
   const { user } = useUser();
-  const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
   const instructorImageUrl = "https://lh3.googleusercontent.com/d/1FujdqLfrqmCYNzP-TfuGlO9SKaBN8HIh";
 
   // Verificación de acceso administrativo
@@ -58,7 +59,7 @@ export default function Home() {
               </div>
               <h1 className="text-4xl lg:text-7xl font-headline font-bold mb-6 leading-tight">
                 {t.home.heroTitle.split('LearnStream')[0]}
-                <span className="text-primary block">LearnStream</span>
+                <span className="text-primary block">{name}</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto lg:mx-0">
                 {t.home.heroSubtitle}
@@ -97,7 +98,7 @@ export default function Home() {
             
             <div className="flex-1 relative w-full aspect-square max-w-[500px] mx-auto lg:translate-y-6">
               <div className="absolute inset-0 bg-primary/20 rounded-[3rem] -rotate-6 scale-105 blur-xl transition-all duration-700 hover:rotate-0 hover:scale-100" />
-              <div className="relative w-full h-full rounded-[3rem] overflow-hidden bg-white shadow-2xl flex items-center justify-center p-8 border border-white/50">
+              <div className="relative w-full h-full rounded-3xl lg:rounded-[3rem] overflow-hidden bg-white shadow-2xl flex items-center justify-center p-8 border border-white/50">
                 <Image 
                   src={logoUrl} 
                   alt="Logo LearnStream"
@@ -181,7 +182,7 @@ export default function Home() {
         {/* Instructor Invitation Section */}
         <section className="py-24 px-6 relative bg-white">
           <div className="max-w-7xl mx-auto">
-            <div className="bg-[#0F172A] rounded-[3.5rem] overflow-hidden flex flex-col lg:flex-row items-stretch shadow-2xl border border-white/5 relative">
+            <div className="bg-[#0F172A] rounded-3xl lg:rounded-[3.5rem] overflow-hidden flex flex-col lg:flex-row items-stretch shadow-2xl border border-white/5 relative">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30" />
               
               <div className="flex-1 p-10 lg:p-24 space-y-10 z-10">
@@ -243,7 +244,7 @@ export default function Home() {
 
         {/* CTA Section */}
         <section className="py-24 px-6 bg-white pb-32">
-          <div className="max-w-5xl mx-auto rounded-[3.5rem] bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-12 lg:p-24 text-center relative overflow-hidden shadow-2xl border-4 border-slate-800">
+          <div className="max-w-5xl mx-auto rounded-3xl lg:rounded-[3.5rem] bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-12 lg:p-24 text-center relative overflow-hidden shadow-2xl border-4 border-slate-800">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
             
@@ -274,7 +275,7 @@ export default function Home() {
                 className="object-contain" 
               />
             </div>
-            <span className="font-headline font-bold text-lg">LearnStream</span>
+            <span className="font-headline font-bold text-lg">{name}</span>
           </div>
           <div className="flex gap-8 text-sm text-muted-foreground">
             <Link href="#" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Términos' : 'Terms'}</Link>
@@ -282,7 +283,7 @@ export default function Home() {
             <Link href="#" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Soporte' : 'Support'}</Link>
             <Link href="#" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Contacto' : 'Contact'}</Link>
           </div>
-          <p className="text-sm text-muted-foreground">© 2024 LearnStream. {t.common.language === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}</p>
+          <p className="text-sm text-muted-foreground">© 2024 {name}. {t.common.language === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}</p>
         </div>
       </footer>
     </div>

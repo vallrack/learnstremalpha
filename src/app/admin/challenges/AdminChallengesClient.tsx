@@ -202,7 +202,44 @@ export default function AdminChallengesClient() {
   };
 
   const addQuestion = () => {
-    setQuestions([...questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
+    setQuestions([...questions, { question: '', options: ['', '', ''], correctAnswer: 0 }]);
+  };
+
+  const removeQuestion = (index: number) => {
+    setQuestions(questions.filter((_, i) => i !== index));
+  };
+
+  const updateQuestion = (index: number, field: string, value: any) => {
+    const updated = [...questions];
+    if (field === 'question') updated[index].question = value;
+    if (field === 'correctAnswer') updated[index].correctAnswer = value;
+    setQuestions(updated);
+  };
+
+  const addOption = (qIndex: number) => {
+    const updated = [...questions];
+    if (updated[qIndex].options.length < 6) {
+      updated[qIndex].options.push('');
+      setQuestions(updated);
+    }
+  };
+
+  const removeOption = (qIndex: number, oIndex: number) => {
+    const updated = [...questions];
+    if (updated[qIndex].options.length > 2) {
+      updated[qIndex].options.splice(oIndex, 1);
+      // Ajustar respuesta correcta si es necesario
+      if (updated[qIndex].correctAnswer >= updated[qIndex].options.length) {
+        updated[qIndex].correctAnswer = updated[qIndex].options.length - 1;
+      }
+      setQuestions(updated);
+    }
+  };
+
+  const updateOption = (qIndex: number, oIndex: number, value: string) => {
+    const updated = [...questions];
+    updated[qIndex].options[oIndex] = value;
+    setQuestions(updated);
   };
 
   if (profile?.instructorStatus === 'pending') {
@@ -445,16 +482,67 @@ export default function AdminChallengesClient() {
                         </div>
                         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                           {questions.map((q, qIdx) => (
-                            <Card key={qIdx} className="rounded-xl border-slate-200">
-                              <CardContent className="p-4 space-y-3">
-                                <Input placeholder="Pregunta..." value={q.question} onChange={(e) => { const n = [...questions]; n[qIdx].question = e.target.value; setQuestions(n); }} className="h-8 text-xs font-bold" />
-                                <div className="grid grid-cols-2 gap-2">
+                            <Card key={qIdx} className="rounded-2xl border-2 border-slate-100 bg-slate-50/50">
+                              <CardContent className="p-5 space-y-4">
+                                <div className="flex items-center gap-3">
+                                  <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center bg-primary text-[10px]">{qIdx + 1}</Badge>
+                                  <Input 
+                                    placeholder="Escribe la pregunta..." 
+                                    value={q.question} 
+                                    onChange={(e) => updateQuestion(qIdx, 'question', e.target.value)} 
+                                    required
+                                    className="rounded-xl border-none shadow-none text-sm font-bold bg-transparent p-0 h-auto focus-visible:ring-0"
+                                  />
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
+                                    onClick={() => removeQuestion(qIdx)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                   {q.options.map((opt: string, oIdx: number) => (
-                                    <div key={oIdx} className="flex items-center gap-1">
-                                      <input type="radio" checked={q.correctAnswer === oIdx} onChange={() => { const n = [...questions]; n[qIdx].correctAnswer = oIdx; setQuestions(n); }} />
-                                      <Input value={opt} onChange={(e) => { const n = [...questions]; n[qIdx].options[oIdx] = e.target.value; setQuestions(n); }} className="h-7 text-[10px]" />
+                                    <div key={oIdx} className="flex items-center gap-2 group p-2 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                      <input 
+                                        type="radio" 
+                                        name={`correct-${qIdx}`}
+                                        checked={q.correctAnswer === oIdx} 
+                                        onChange={() => updateQuestion(qIdx, 'correctAnswer', oIdx)}
+                                        className="h-4 w-4 text-primary border-slate-300 focus:ring-primary"
+                                      />
+                                      <Input 
+                                        value={opt} 
+                                        onChange={(e) => updateOption(qIdx, oIdx, e.target.value)} 
+                                        placeholder={`Opción ${oIdx + 1}`}
+                                        className="h-8 text-[11px] border-none shadow-none bg-transparent p-0 focus-visible:ring-0"
+                                      />
+                                      {q.options.length > 2 && (
+                                        <Button 
+                                          type="button"
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-destructive transition-all"
+                                          onClick={() => removeOption(qIdx, oIdx)}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      )}
                                     </div>
                                   ))}
+                                  {q.options.length < 6 && (
+                                    <Button 
+                                      type="button" 
+                                      variant="ghost" 
+                                      onClick={() => addOption(qIdx)}
+                                      className="h-12 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 hover:text-primary hover:border-primary/30 transition-all text-xs font-bold gap-2"
+                                    >
+                                      <Plus className="h-4 w-4" /> Añadir Opción
+                                    </Button>
+                                  )}
                                 </div>
                               </CardContent>
                             </Card>
@@ -474,7 +562,7 @@ export default function AdminChallengesClient() {
           </Dialog>
         </header>
 
-        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
+        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-x-auto">
           <Table>
             <TableHeader><TableRow className="bg-slate-50 border-none"><TableHead className="pl-8 h-14">Actividad</TableHead><TableHead>Tipo</TableHead><TableHead>Ubicación</TableHead><TableHead>Acceso</TableHead><TableHead className="text-right pr-8">Acciones</TableHead></TableRow></TableHeader>
             <TableBody>

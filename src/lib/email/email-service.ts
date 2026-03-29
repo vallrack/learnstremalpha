@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { BrevoClient } from '@getbrevo/brevo';
+import { DEFAULT_BRANDING } from '../branding/branding-config';
 
 // Configuración de Resend
 const resend = new Resend(process.env.RESEND_API_KEY || 're_E8feRJYo_7ei253LwNVE7PQahPkqFoiPi');
@@ -21,9 +22,9 @@ export const emailService = {
   }) {
     try {
       const { data, error } = await resend.emails.send({
-        from: 'LearnStream <notifications@learnstream.com>',
+        from: `${DEFAULT_BRANDING.name} <notifications@${DEFAULT_BRANDING.domain}>`,
         to: [email],
-        subject: `¡Felicidades! Tu certificado de ${courseTitle} está listo`,
+        subject: `¡Felicidades! Tu certificado de ${courseTitle} está listo - ${DEFAULT_BRANDING.name}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <h1 style="color: #6366f1;">¡Lo lograste, ${name}!</h1>
@@ -31,14 +32,14 @@ export const emailService = {
               Has completado exitosamente el curso <strong>${courseTitle}</strong> y has demostrado tu maestría en <strong>${technology}</strong>.
             </p>
             <p style="font-size: 16px; line-height: 1.5; color: #374151;">
-              Tu certificado ya está disponible en tu perfil de LearnStream. ¡Sigue aprendiendo y alcanzando nuevas metas!
+              Tu certificado ya está disponible en tu perfil de ${DEFAULT_BRANDING.name}. ¡Sigue aprendiendo y alcanzando nuevas metas!
             </p>
             <div style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 8px; text-align: center;">
-              <a href="https://learnstream.com/profile" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ver mi Certificado</a>
+              <a href="https://${DEFAULT_BRANDING.domain}/profile" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ver mi Certificado</a>
             </div>
             <hr style="margin-top: 40px; border: 0; border-top: 1px solid #eee;" />
             <p style="font-size: 12px; color: #9ca3af; text-align: center;">
-              Enviado por LearnStream - Plataforma de Aprendizaje con IA
+              Enviado por ${DEFAULT_BRANDING.name} - ${DEFAULT_BRANDING.tagline}
             </p>
           </div>
         `,
@@ -62,20 +63,20 @@ export const emailService = {
   async sendPaymentReminder({ email, name }: { email: string, name: string }) {
     try {
       const response = await brevo.transactionalEmails.sendTransacEmail({
-        subject: "No pierdas tu progreso - Pásate a Premium en LearnStream",
+        subject: `No pierdas tu progreso - Pásate a Premium en ${DEFAULT_BRANDING.name}`,
         htmlContent: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <h2 style="color: #6366f1;">¡Hola ${name}!</h2>
-            <p>Hemos notado que has estado aprendiendo mucho en LearnStream. ¡Felicidades por tu compromiso!</p>
+            <p>Hemos notado que has estado aprendiendo mucho en ${DEFAULT_BRANDING.name}. ¡Felicidades por tu compromiso!</p>
             <p>Para desbloquear todos los retos con IA, obtener certificados verificados y acceso vitalicio a todo el contenido, considera pasarte a nuestro plan <strong>Premium</strong>.</p>
             <p>Es un único pago para siempre. ¡Invierte en tu futuro hoy!</p>
             <div style="margin: 30px 0;">
-              <a href="https://learnstream.com/checkout" style="background-color: #6366f1; color: white; padding: 15px 30px; text-decoration: none; border-radius: 10px; font-weight: bold;">Obtener Acceso Vitalicio</a>
+              <a href="https://${DEFAULT_BRANDING.domain}/checkout" style="background-color: #6366f1; color: white; padding: 15px 30px; text-decoration: none; border-radius: 10px; font-weight: bold;">Obtener Acceso Vitalicio</a>
             </div>
             <p style="font-size: 12px; color: #64748b;">Si tienes alguna duda, responde a este correo y nuestro equipo te ayudará.</p>
           </div>
         `,
-        sender: { name: "LearnStream", email: "ventas@learnstream.com" },
+        sender: { name: DEFAULT_BRANDING.name, email: `ventas@${DEFAULT_BRANDING.domain}` },
         to: [{ email: email, name: name }]
       });
       return { success: true, data: response };

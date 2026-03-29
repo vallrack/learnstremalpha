@@ -17,12 +17,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
+import { useBrand } from '@/lib/branding/BrandingProvider';
 
 export default function LoginPage() {
   const auth = useAuth();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { name, logoUrl } = useBrand();
   
   // Form states
   const [email, setEmail] = useState('');
@@ -238,7 +240,7 @@ export default function LoginPage() {
     );
   }
 
-  const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
+  // Se usa logoUrl de useBrand()
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -249,7 +251,7 @@ export default function LoginPage() {
           
           <div className="hidden lg:flex flex-col justify-center space-y-8 pr-12">
             <div className="relative w-32 h-32">
-              <Image src={logoUrl} alt="LearnStream Logo" fill className="object-contain" />
+              <Image src={logoUrl} alt={`${name} Logo`} fill className="object-contain" />
             </div>
             <div className="space-y-4">
               <h1 className="text-5xl font-headline font-bold leading-tight">Aprende lo que el mercado necesita hoy.</h1>
@@ -490,7 +492,7 @@ export default function LoginPage() {
                 </CardContent>
                 <CardFooter className="pb-8 justify-center bg-slate-50/50 pt-6">
                   <p className="text-[10px] text-muted-foreground text-center px-10 leading-relaxed font-medium">
-                    Al unirte a LearnStream, aceptas nuestros <span className="text-primary cursor-pointer hover:underline">términos de servicio</span> y <span className="text-primary cursor-pointer hover:underline">política de privacidad</span>.
+                    Al unirte a {name}, aceptas nuestros <span className="text-primary cursor-pointer hover:underline">términos de servicio</span> y <span className="text-primary cursor-pointer hover:underline">política de privacidad</span>.
                   </p>
                 </CardFooter>
               </Tabs>

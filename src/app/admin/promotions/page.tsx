@@ -236,7 +236,7 @@ export default function AdminPromotionsPage() {
           </Dialog>
         </header>
 
-        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
+        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-x-auto">
           {isLoading ? (
             <div className="p-20 flex flex-col items-center justify-center gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
