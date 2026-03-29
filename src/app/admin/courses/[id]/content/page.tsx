@@ -242,7 +242,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
 
-  const [type, setType] = useState<'video' | 'challenge' | 'quiz' | 'activity'>('video');
+  const [type, setType] = useState<'video' | 'challenge' | 'quiz'>('video');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
@@ -253,20 +253,15 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
 
   // Quiz state
   const [questions, setQuestions] = useState<any[]>([]);
-  
-  // Activity state
-  const [activityType, setActivityType] = useState<'flashcards' | 'sortable_code'>('flashcards');
-  const [flashcardsData, setFlashcardsData] = useState<{front: string, back: string}[]>([]);
-  const [sortableData, setSortableData] = useState<{id: string, text: string}[]>([]);
 
-  // Cargar desafíos para el selector (solo si coinciden con la tecnología del curso)
+  // Cargar todos los desafíos y actividades H5P
   const challengesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return collection(db, 'coding_challenges');
   }, [db]);
   const { data: allChallenges } = useCollection(challengesQuery);
   
-  const compatibleChallenges = allChallenges?.filter(c => c.technology === course.technology) || [];
+  const compatibleChallenges = allChallenges || [];
 
   const lessonsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -303,10 +298,6 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
       }
     } else if (type === 'quiz') {
       lessonData.questions = questions;
-    } else if (type === 'activity') {
-      lessonData.activityType = activityType;
-      if (activityType === 'flashcards') lessonData.flashcardsData = flashcardsData;
-      if (activityType === 'sortable_code') lessonData.sortableData = sortableData;
     }
 
     // Eliminar campos undefined para evitar error de Firestore (Ej: instructorId faltante o challengeId vacío)
@@ -335,9 +326,6 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
     setOrder('0');
     setIsPremium(false);
     setQuestions([]);
-    setActivityType('flashcards');
-    setFlashcardsData([]);
-    setSortableData([]);
   };
 
   const handleEdit = (lesson: any) => {
@@ -351,9 +339,6 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
     setOrder(lesson.orderIndex?.toString() || '0');
     setIsPremium(lesson.isPremium || false);
     setQuestions(lesson.questions || []);
-    setActivityType(lesson.activityType || 'flashcards');
-    setFlashcardsData(lesson.flashcardsData || []);
-    setSortableData(lesson.sortableData || []);
     setIsDialogOpen(true);
   };
 
@@ -378,26 +363,6 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
     const newQuestions = [...questions];
     newQuestions[qIndex].options[oIndex] = value;
     setQuestions(newQuestions);
-  };
-
-  const addFlashcard = () => {
-    setFlashcardsData([...flashcardsData, { front: '', back: '' }]);
-  };
-
-  const updateFlashcard = (index: number, field: 'front' | 'back', value: string) => {
-    const newData = [...flashcardsData];
-    newData[index][field] = value;
-    setFlashcardsData(newData);
-  };
-
-  const addSortableLine = () => {
-    setSortableData([...sortableData, { id: Date.now().toString() + Math.random().toString(), text: '' }]);
-  };
-
-  const updateSortableLine = (index: number, value: string) => {
-    const newData = [...sortableData];
-    newData[index].text = value;
-    setSortableData(newData);
   };
 
   return (
@@ -430,9 +395,8 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="video">Clase de Video / Texto</SelectItem>
-                      <SelectItem value="challenge">Desafío de Código (Evaluado por IA)</SelectItem>
-                      <SelectItem value="quiz">Cuestionario Teórico</SelectItem>
-                      <SelectItem value="activity">Actividad Interactiva H5P</SelectItem>
+                      <SelectItem value="challenge">Actividad H5P / Desafío de Código / Entrevista</SelectItem>
+                      <SelectItem value="quiz">Cuestionario Teórico Local</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -457,73 +421,24 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
 
                 {type === 'challenge' && (
                   <div className="grid gap-2">
-                    <Label>Seleccionar Desafío compatible ({course.technology || '??'})</Label>
+                    <Label>Vincular Desafío o Actividad Global</Label>
                     <Select value={challengeId} onValueChange={setChallengeId} required>
                       <SelectTrigger className="rounded-xl h-12">
-                        <SelectValue placeholder="Elige un reto..." />
+                        <SelectValue placeholder="Elige un reto o actividad de la biblioteca..." />
                       </SelectTrigger>
                       <SelectContent>
                         {compatibleChallenges.map(c => (
                           <SelectItem key={c.id} value={c.id}>
-                            <div className="flex flex-col items-start">
-                              <span className="font-bold">{c.title}</span>
-                              <span className="text-[10px] opacity-60 uppercase">{c.difficulty}</span>
+                            <div className="flex flex-col items-start gap-1">
+                              <span className="font-bold flex items-center gap-2">
+                                {['swipe', 'flashcard', 'interactive-video', 'dragdrop', 'sortable', 'wordsearch'].includes(c.type) ? '🎮' : '💻'} {c.title}
+                              </span>
+                              <span className="text-[10px] opacity-60 uppercase">{c.technology || 'General'} • {c.difficulty} • {c.type}</span>
                             </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                )}
-
-                {type === 'activity' && (
-                  <div className="space-y-6">
-                    <div className="grid gap-2">
-                      <Label>Tipo de Actividad</Label>
-                      <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
-                        <button type="button" onClick={() => setActivityType('flashcards')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activityType === 'flashcards' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700'}`}>🎴 Flashcards</button>
-                        <button type="button" onClick={() => setActivityType('sortable_code')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activityType === 'sortable_code' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700'}`}>↕️ Código Ordenable</button>
-                      </div>
-                    </div>
-
-                    {activityType === 'flashcards' && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-bold text-slate-500">Tarjetas de Memoria</Label>
-                          <Button type="button" onClick={addFlashcard} variant="outline" size="sm" className="rounded-xl gap-2"><Plus className="h-4 w-4" /> Añadir Tarjeta</Button>
-                        </div>
-                        {flashcardsData.map((card, idx) => (
-                           <Card key={idx} className="rounded-2xl border-slate-200">
-                             <CardContent className="p-4 flex gap-4">
-                               <div className="flex-1 space-y-3">
-                                 <Input placeholder="Frente (Concepto)" value={card.front} onChange={(e) => updateFlashcard(idx, 'front', e.target.value)} required className="font-bold border-slate-200" />
-                                 <Textarea placeholder="Reverso (Explicación)" value={card.back} onChange={(e) => updateFlashcard(idx, 'back', e.target.value)} required className="h-20 border-slate-200 resize-none text-sm" />
-                               </div>
-                               <Button variant="ghost" size="icon" className="text-destructive self-start" onClick={() => setFlashcardsData(flashcardsData.filter((_, i) => i !== idx))}><X className="h-4 w-4" /></Button>
-                             </CardContent>
-                           </Card>
-                        ))}
-                      </div>
-                    )}
-
-                    {activityType === 'sortable_code' && (
-                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-bold text-slate-500">Líneas en Orden Correcto</Label>
-                          <Button type="button" onClick={addSortableLine} variant="outline" size="sm" className="rounded-xl gap-2"><Plus className="h-4 w-4" /> Añadir Línea</Button>
-                        </div>
-                        <div className="bg-slate-900 p-4 rounded-2xl flex flex-col gap-2">
-                          {sortableData.map((line, idx) => (
-                             <div key={line.id} className="flex items-center gap-3">
-                               <span className="text-slate-500 font-mono text-xs w-6 text-right">{idx + 1}</span>
-                               <Input placeholder="Escribe línea de código..." value={line.text} onChange={(e) => updateSortableLine(idx, e.target.value)} required className="bg-slate-800 border-none text-emerald-400 font-mono text-sm shadow-inner" />
-                               <Button variant="ghost" size="icon" className="text-rose-400 hover:text-rose-300 hover:bg-slate-800" onClick={() => setSortableData(sortableData.filter((_, i) => i !== idx))}><X className="h-4 w-4" /></Button>
-                             </div>
-                          ))}
-                          {sortableData.length === 0 && <p className="text-slate-500 text-xs italic text-center py-4">Añade al menos 2 líneas para que sea un reto.</p>}
-                        </div>
-                       </div>
-                    )}
                   </div>
                 )}
 
@@ -610,8 +525,8 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
           <div key={lesson.id} className="bg-slate-50 p-4 rounded-2xl border flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${lesson.type === 'challenge' ? 'bg-primary/10 text-primary' : lesson.type === 'quiz' ? 'bg-amber-100 text-amber-600' : lesson.type === 'activity' ? 'bg-fuchsia-100 text-fuchsia-600' : 'bg-slate-200 text-slate-600'}`}>
-                  {lesson.type === 'challenge' ? <Code2 className="h-5 w-5" /> : lesson.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : lesson.type === 'activity' ? <PlayCircle className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}
+                <div className={`p-2 rounded-xl ${lesson.type === 'challenge' ? 'bg-primary/10 text-primary' : lesson.type === 'quiz' ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-600'}`}>
+                  {lesson.type === 'challenge' ? <Code2 className="h-5 w-5" /> : lesson.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -619,7 +534,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                     {lesson.isPremium && <Badge variant="outline" className="text-[10px] py-0 h-4 bg-amber-50 text-amber-600 border-amber-200">Premium</Badge>}
                   </div>
                   <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                    {lesson.type === 'challenge' ? 'Desafío Evaluado' : lesson.type === 'quiz' ? 'Cuestionario Teórico' : lesson.type === 'activity' ? `Actividad: ${lesson.activityType}` : 'Lección de Contenido'}
+                    {lesson.type === 'challenge' ? 'Actividad / Reto' : lesson.type === 'quiz' ? 'Cuestionario Local' : 'Lección de Contenido'}
                   </p>
                 </div>
               </div>

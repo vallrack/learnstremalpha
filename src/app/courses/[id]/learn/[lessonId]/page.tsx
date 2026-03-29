@@ -6,6 +6,10 @@ import { Navbar } from '@/components/layout/Navbar';
 import { QuizPlayer } from '@/components/challenges/QuizPlayer';
 import { FlipFlashcards } from '@/components/challenges/FlipFlashcards';
 import { SortableCodeBlocks } from '@/components/challenges/SortableCodeBlocks';
+import { WordSearchGame } from '@/components/challenges/WordSearchGame';
+import { InteractiveVideo } from '@/components/challenges/InteractiveVideo';
+import { DragDropSnippets } from '@/components/challenges/DragDropSnippets';
+import { SwipeCards } from '@/components/challenges/SwipeCards';
 import { Button } from '@/components/ui/button';
 import { 
   ChevronLeft, 
@@ -230,46 +234,15 @@ function LessonPlayerContent() {
           <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12">
             <div className="max-w-4xl mx-auto space-y-8">
               {currentLesson.type === 'challenge' ? (
-                <div className="flex flex-col items-center justify-center py-16 px-6 bg-white rounded-[3rem] border shadow-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
-                  <div className="bg-primary/10 p-8 rounded-[2rem] shadow-inner"><Code2 className="h-16 w-16 text-primary" /></div>
-                  <div className="space-y-3 max-w-lg">
-                    <Badge variant="secondary" className="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-primary/5 text-primary">Desafío Técnico</Badge>
-                    <h2 className="text-3xl font-headline font-bold text-slate-900">{currentLesson.title}</h2>
-                    <p className="text-muted-foreground leading-relaxed">Esta lección consiste en un reto práctico. Pon a prueba tus conocimientos y recibe feedback instantáneo de nuestra IA.</p>
-                  </div>
-                  <Link href={`/challenges/${currentLesson.challengeId}`}><Button className="h-16 px-12 rounded-[1.5rem] text-xl font-bold gap-3 shadow-2xl shadow-primary/30 group"><PlayCircle className="h-6 w-6 group-hover:scale-110 transition-transform" /> Aceptar Desafío <ArrowRight className="h-5 w-5 ml-1" /></Button></Link>
-                </div>
+                 <EmbeddedChallenge 
+                    challengeId={currentLesson.challengeId}
+                    onComplete={() => {
+                       toast({ title: '¡Actividad Superada!', description: 'Has demostrado dominio del tema. Avanzando progreso...' });
+                       handleMarkAsCompleted();
+                    }}
+                 />
               ) : currentLesson.type === 'quiz' ? (
                 <div className="max-w-2xl mx-auto"><QuizPlayer questions={currentLesson.questions || []} onComplete={handleMarkAsCompleted} /></div>
-              ) : currentLesson.type === 'activity' ? (
-                <div className="mx-auto w-full">
-                  {currentLesson.activityType === 'flashcards' && (
-                    <FlipFlashcards 
-                      cards={currentLesson.flashcardsData || []} 
-                      onComplete={(score) => {
-                        if (score >= 4) {
-                          handleMarkAsCompleted();
-                        } else {
-                          toast({ variant: 'destructive', title: '¡Casi lo logras!', description: `Puntaje: ${score.toFixed(1)}/5. Inténtalo de nuevo para aprobar.`});
-                        }
-                      }} 
-                    />
-                  )}
-                  {currentLesson.activityType === 'sortable_code' && (
-                    <SortableCodeBlocks 
-                      // Barajamos las líneas al pasarlas al componente (clonamos para evitar mutar originales)
-                      lines={[...(currentLesson.sortableData || [])].sort(() => Math.random() - 0.5)}
-                      correctOrder={(currentLesson.sortableData || []).map((line: any) => line.id)}
-                      onComplete={(score) => {
-                        if (score === 5) {
-                          handleMarkAsCompleted();
-                        } else {
-                          toast({ variant: 'destructive', title: 'Algoritmo Incorrecto', description: `Las instrucciones no configuran la lógica correcta. Reorganiza e intenta nuevamente.`});
-                        }
-                      }}
-                    />
-                  )}
-                </div>
               ) : (
                 <>
                   {videoSource ? (
@@ -635,6 +608,53 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
           ))
         )}
       </div>
+    </div>
+  );
+}
+function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, onComplete: () => void }) {
+  const db = useFirestore();
+  const challengeRef = useMemoFirebase(() => {
+    if (!db || !challengeId) return null;
+    return doc(db, 'coding_challenges', challengeId);
+  }, [db, challengeId]);
+  
+  const { data: challenge, isLoading } = useDoc(challengeRef);
+
+  if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (!challenge) return <div className="p-12 text-center text-slate-500">No se encontró la actividad.</div>;
+
+  const h5pTypes = ['flashcard', 'sortable', 'dragdrop', 'interactive-video', 'swipe', 'wordsearch'];
+
+  if (h5pTypes.includes(challenge.type)) {
+     return (
+       <div className="max-w-4xl mx-auto w-full animate-in zoom-in-95 duration-500">
+         <div className="mb-8 text-center space-y-2">
+            <Badge variant="secondary" className="bg-fuchsia-100 text-fuchsia-700 font-bold border-fuchsia-200">Actividad Interactiva Gamificada</Badge>
+            <h2 className="text-3xl font-headline font-bold text-slate-900">{challenge.title}</h2>
+            {challenge.description && <p className="text-muted-foreground">{challenge.description}</p>}
+         </div>
+         <div className="bg-white rounded-[3rem] p-6 shadow-sm border border-slate-100">
+           {challenge.type === 'flashcard' && <FlipFlashcards cards={challenge.cards || []} onComplete={onComplete} />}
+           {challenge.type === 'sortable' && <SortableCodeBlocks lines={[...(challenge.lines||[])].sort(()=>Math.random()-0.5)} correctOrder={challenge.correctOrder || []} onComplete={(score) => score === 5 ? onComplete() : alert('Algoritmo Incorrecto')} />}
+           {challenge.type === 'dragdrop' && <DragDropSnippets template={challenge.template} snippets={challenge.snippets||[]} correctMapping={challenge.correctMapping||{}} onComplete={(score) => score === 5 ? onComplete() : null} />}
+           {challenge.type === 'interactive-video' && <InteractiveVideo url={challenge.videoUrl} checkpoints={challenge.checkpoints||[]} onComplete={onComplete} />}
+           {challenge.type === 'swipe' && <SwipeCards deck={challenge.deck||[]} onComplete={onComplete}/>}
+           {challenge.type === 'wordsearch' && <WordSearchGame words={challenge.words||[]} onComplete={onComplete}/>}
+         </div>
+       </div>
+     );
+  }
+
+  // Si es 'code' o 'interview', mostramos el boton para ir a la vista de programación a pantalla completa
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-6 bg-white rounded-[3rem] border shadow-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
+      <div className="bg-primary/10 p-8 rounded-[2rem] shadow-inner"><Code2 className="h-16 w-16 text-primary" /></div>
+      <div className="space-y-3 max-w-lg">
+        <Badge variant="secondary" className="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-primary/5 text-primary">Desafío con Editor / Entrevista IA</Badge>
+        <h2 className="text-3xl font-headline font-bold text-slate-900">{challenge.title}</h2>
+        <p className="text-muted-foreground leading-relaxed">Esta lección consiste en un reto de programación o entrevista con IA en vivo.</p>
+      </div>
+      <Link href={`/challenges/${challenge.id}`}><Button className="h-16 px-12 rounded-[1.5rem] text-xl font-bold gap-3 shadow-2xl shadow-primary/30 group"><PlayCircle className="h-6 w-6 group-hover:scale-110 transition-transform" /> Aceptar Desafío <ArrowRight className="h-5 w-5 ml-1" /></Button></Link>
     </div>
   );
 }
