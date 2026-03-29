@@ -42,11 +42,18 @@ export function FloatingAITutor({ lessonTitle, lessonContent }: { lessonTitle: s
         lessonContent: lessonContent
       });
       
-      const aiResponse: Message = { 
-        role: 'assistant', 
-        content: result.answer
-      };
-      setMessages(prev => [...prev, aiResponse]);
+      if (result.success) {
+        const aiResponse: Message = { 
+          role: 'assistant', 
+          content: result.data.answer
+        };
+        setMessages(prev => [...prev, aiResponse]);
+      } else {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: result.error
+        }]);
+      }
     } catch (error) {
        console.error("AI Tutor Error:", error);
        setMessages(prev => [...prev, { role: 'assistant', content: "Lo siento, hubo un error al procesar tu duda." }]);

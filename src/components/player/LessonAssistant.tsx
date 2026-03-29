@@ -24,11 +24,16 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
     setLoading(true);
 
     try {
-      const { answer } = await askLessonQuestions({ 
+      const result = await askLessonQuestions({ 
         question: userMsg, 
         lessonContent 
       });
-      setChat(prev => [...prev, { role: 'ai', text: answer }]);
+
+      if (result.success) {
+        setChat(prev => [...prev, { role: 'ai', text: result.data.answer }]);
+      } else {
+        setChat(prev => [...prev, { role: 'ai', text: result.error }]);
+      }
     } catch (error) {
       setChat(prev => [...prev, { role: 'ai', text: "Lo siento, no pude procesar tu pregunta en este momento." }]);
     } finally {
@@ -39,8 +44,12 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
   async function handleSummarize() {
     setSummarizing(true);
     try {
-      const { summary } = await summarizeLessonContent({ lessonContent });
-      setChat(prev => [...prev, { role: 'ai', text: `**Resumen de la lección:** ${summary}` }]);
+      const result = await summarizeLessonContent({ lessonContent });
+      if (result.success) {
+        setChat(prev => [...prev, { role: 'ai', text: `**Resumen de la lección:** ${result.data.summary}` }]);
+      } else {
+        setChat(prev => [...prev, { role: 'ai', text: result.error }]);
+      }
     } catch (error) {
       setChat(prev => [...prev, { role: 'ai', text: "Lo siento, no pude generar el resumen." }]);
     } finally {

@@ -1,5 +1,6 @@
 
 'use server';
+export const maxDuration = 60;
 /**
  * @fileOverview AI flow to evaluate student coding and language challenges.
  *
@@ -32,8 +33,18 @@ const EvaluateChallengeOutputSchema = z.object({
 });
 export type EvaluateChallengeOutput = z.infer<typeof EvaluateChallengeOutputSchema>;
 
-export async function evaluateChallenge(input: EvaluateChallengeInput): Promise<EvaluateChallengeOutput> {
-  return evaluateChallengeFlow(input);
+export type SafeEvaluateChallengeOutput = 
+  | { success: true; data: EvaluateChallengeOutput }
+  | { success: false; error: string };
+
+export async function evaluateChallenge(input: EvaluateChallengeInput): Promise<SafeEvaluateChallengeOutput> {
+  try {
+    const data = await evaluateChallengeFlow(input);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("Evaluation Error:", error);
+    return { success: false, error: error.message || 'Error al evaluar el desafío.' };
+  }
 }
 
 const prompt = ai.definePrompt({

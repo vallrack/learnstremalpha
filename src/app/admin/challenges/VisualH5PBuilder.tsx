@@ -28,11 +28,16 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
         technology: technology || 'General',
         activityType,
       });
-      setJsonConfig(result.activityConfig);
-      setIsAIOpen(false);
-      setAiLessonContent('');
+      
+      if (result.success && result.data) {
+        setJsonConfig(result.data.activityConfig);
+        setIsAIOpen(false);
+        setAiLessonContent('');
+      } else {
+        setAiError(result.error || 'Error desconocido desde el servidor IA.');
+      }
     } catch (err: any) {
-      setAiError(err?.message || 'Error al generar la actividad con IA.');
+      setAiError(err?.message || 'Error de conexión al generar la actividad con IA.');
     } finally {
       setIsGenerating(false);
     }

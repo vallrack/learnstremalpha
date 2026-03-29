@@ -94,16 +94,29 @@ export default function ChallengeExecutionPage() {
     setIsEvaluating(true);
     setResult(null);
     try {
-      const evaluation = await evaluateChallenge({
+      const result = await evaluateChallenge({
         challengeTitle: challenge.title,
         challengeDescription: challenge.description,
         technology: challenge.technology,
         studentCode: code,
         solutionReference: challenge.solution,
       });
-      processResult(evaluation);
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error de IA", description: "No pudimos evaluar tu actividad en este momento." });
+
+      if (result.success) {
+        processResult(result.data);
+      } else {
+        toast({ 
+          variant: "destructive", 
+          title: "Error de Evaluación", 
+          description: result.error
+        });
+      }
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Error de Conexión", 
+        description: error.message || "No pudimos conectar con el servidor de IA." 
+      });
     } finally {
       setIsEvaluating(false);
     }

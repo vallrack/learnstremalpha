@@ -1,10 +1,9 @@
 'use server';
+
+export const maxDuration = 60;
+
 /**
  * @fileOverview This file defines a Genkit flow for summarizing lesson content.
- *
- * - summarizeLessonContent - A function that requests a concise summary of provided lesson content.
- * - SummarizeLessonContentInput - The input type for the summarizeLessonContent function.
- * - SummarizeLessonContentOutput - The return type for the summarizeLessonContent function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -20,10 +19,20 @@ const SummarizeLessonContentOutputSchema = z.object({
 });
 export type SummarizeLessonContentOutput = z.infer<typeof SummarizeLessonContentOutputSchema>;
 
+export type SafeSummarizeLessonContentOutput = 
+  | { success: true; data: SummarizeLessonContentOutput }
+  | { success: false; error: string };
+
 export async function summarizeLessonContent(
   input: SummarizeLessonContentInput
-): Promise<SummarizeLessonContentOutput> {
-  return summarizeLessonContentFlow(input);
+): Promise<SafeSummarizeLessonContentOutput> {
+  try {
+    const data = await summarizeLessonContentFlow(input);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("Summarization Error:", error);
+    return { success: false, error: error.message || 'Error al generar el resumen.' };
+  }
 }
 
 const summarizeLessonContentPrompt = ai.definePrompt({

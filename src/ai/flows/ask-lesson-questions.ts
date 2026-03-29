@@ -1,4 +1,5 @@
 'use server';
+export const maxDuration = 60;
 /**
  * @fileOverview An AI lesson assistant that answers questions based on provided lesson content using RAG.
  */
@@ -40,8 +41,18 @@ const AskLessonQuestionsOutputSchema = z.object({
 });
 export type AskLessonQuestionsOutput = z.infer<typeof AskLessonQuestionsOutputSchema>;
 
-export async function askLessonQuestions(input: AskLessonQuestionsInput): Promise<AskLessonQuestionsOutput> {
-  return askLessonQuestionsFlow(input);
+export type SafeAskLessonQuestionsOutput = 
+  | { success: true; data: AskLessonQuestionsOutput }
+  | { success: false; error: string };
+
+export async function askLessonQuestions(input: AskLessonQuestionsInput): Promise<SafeAskLessonQuestionsOutput> {
+  try {
+    const data = await askLessonQuestionsFlow(input);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("AI Q&A Error:", error);
+    return { success: false, error: error.message || 'Error al procesar tu pregunta.' };
+  }
 }
 
 

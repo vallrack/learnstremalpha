@@ -1,10 +1,10 @@
 'use server';
 /**
  * @fileOverview AI flow to auto-generate H5P-style activity content from lesson text.
- * 
- * Given a lesson's content, title, and technology, the AI generates ready-to-use
- * JSON configs for activities like flashcards, swipe cards, quizzes, and sortable code blocks.
  */
+
+// Aumentar el límite de tiempo de Vercel (Hobby plan soporta hasta 60s maxDuration en App Router v14+)
+export const maxDuration = 60;
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
@@ -16,6 +16,11 @@ const GenerateActivitiesInputSchema = z.object({
   activityType: z.enum(['flashcard', 'swipe', 'sortable', 'quiz', 'dragdrop', 'interactive-video']).describe('El tipo de actividad H5P a generar.'),
 });
 export type GenerateActivitiesInput = z.infer<typeof GenerateActivitiesInputSchema>;
+
+// Se agregó el manejo de errores seguro para retornar al cliente y evitar enmascaramiento Server Component
+export type SafeGenerateActivitiesOutput = 
+  | { success: true; data: GenerateActivitiesOutput }
+  | { success: false; error: string };
 
 const FlashcardSchema = z.object({
   cards: z.array(z.object({
@@ -73,8 +78,17 @@ const GenerateActivitiesOutputSchema = z.object({
 });
 export type GenerateActivitiesOutput = z.infer<typeof GenerateActivitiesOutputSchema>;
 
-export async function generateActivities(input: GenerateActivitiesInput): Promise<GenerateActivitiesOutput> {
-  return generateActivitiesFlow(input);
+export async function generateActivities(input: GenerateActivitiesInput): Promise<SafeGenerateActivitiesOutput> {
+  try {
+    const data = await generateActivitiesFlow(input);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("AI Generation Error:", error);
+    return {
+      success: false,
+      error: error?.message || 'Error desconocido al generar actividades con IA.',
+    };
+  }
 }
 
 const prompt = ai.definePrompt({

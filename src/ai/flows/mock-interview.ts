@@ -1,4 +1,5 @@
 'use server';
+export const maxDuration = 60;
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
