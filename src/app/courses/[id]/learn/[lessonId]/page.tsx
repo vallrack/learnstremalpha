@@ -4,6 +4,8 @@
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { QuizPlayer } from '@/components/challenges/QuizPlayer';
+import { FlipFlashcards } from '@/components/challenges/FlipFlashcards';
+import { SortableCodeBlocks } from '@/components/challenges/SortableCodeBlocks';
 import { Button } from '@/components/ui/button';
 import { 
   ChevronLeft, 
@@ -239,6 +241,35 @@ function LessonPlayerContent() {
                 </div>
               ) : currentLesson.type === 'quiz' ? (
                 <div className="max-w-2xl mx-auto"><QuizPlayer questions={currentLesson.questions || []} onComplete={handleMarkAsCompleted} /></div>
+              ) : currentLesson.type === 'activity' ? (
+                <div className="mx-auto w-full">
+                  {currentLesson.activityType === 'flashcards' && (
+                    <FlipFlashcards 
+                      cards={currentLesson.flashcardsData || []} 
+                      onComplete={(score) => {
+                        if (score >= 4) {
+                          handleMarkAsCompleted();
+                        } else {
+                          toast({ variant: 'destructive', title: '¡Casi lo logras!', description: `Puntaje: ${score.toFixed(1)}/5. Inténtalo de nuevo para aprobar.`});
+                        }
+                      }} 
+                    />
+                  )}
+                  {currentLesson.activityType === 'sortable_code' && (
+                    <SortableCodeBlocks 
+                      // Barajamos las líneas al pasarlas al componente (clonamos para evitar mutar originales)
+                      lines={[...(currentLesson.sortableData || [])].sort(() => Math.random() - 0.5)}
+                      correctOrder={(currentLesson.sortableData || []).map((line: any) => line.id)}
+                      onComplete={(score) => {
+                        if (score === 5) {
+                          handleMarkAsCompleted();
+                        } else {
+                          toast({ variant: 'destructive', title: 'Algoritmo Incorrecto', description: `Las instrucciones no configuran la lógica correcta. Reorganiza e intenta nuevamente.`});
+                        }
+                      }}
+                    />
+                  )}
+                </div>
               ) : (
                 <>
                   {videoSource ? (
