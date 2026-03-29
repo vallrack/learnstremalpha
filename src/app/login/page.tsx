@@ -513,25 +513,27 @@ function RealTestimonials() {
 
   useEffect(() => {
     if (!db) return;
-    // Cargar reseñas reales con 4-5 estrellas y comentario
-    import('firebase/firestore').then(({ collectionGroup, getDocs, query, where, orderBy, limit }) => {
-      getDocs(query(
-        collectionGroup(db, 'ratings'),
-        where('rating', '>=', 4),
-        orderBy('rating', 'desc'),
-        orderBy('createdAt', 'desc'),
-        limit(6)
-      )).then(snap => {
+
+    // Importación dinámica limpia
+    const loadTestimonials = async () => {
+      try {
+        const { collectionGroup, getDocs, query, where, orderBy, limit } = await import('firebase/firestore');
+        const q = query(
+          collectionGroup(db, 'ratings'),
+          where('rating', '>=', 4),
+          orderBy('rating', 'desc'),
+          limit(10)
+        );
+        
+        const snap = await getDocs(q);
         const data = snap.docs.map(d => d.data()).filter(d => d.comment && d.comment.trim().length > 10);
         setReviews(data.slice(0, 3));
-      }).catch(() => {});
+      } catch (err) {
+        console.warn("RealTestimonials: Error loading reviews", err);
+      }
+    };
 
-      // Contar usuarios reales
-      getDocs(query(collectionGroup(db, 'users' as any), limit(1))).catch(() => {});
-      getDocs(import('firebase/firestore').then(({ collection, getCountFromServer }) =>
-        getCountFromServer(collection(db, 'users'))
-      ) as any).catch(() => {});
-    });
+    loadTestimonials();
   }, [db]);
 
   // Auto-rotar testimonios cada 5s

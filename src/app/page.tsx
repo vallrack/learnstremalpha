@@ -350,18 +350,26 @@ function LandingTestimonials() {
 
   useEffect(() => {
     if (!db) return;
-    import('firebase/firestore').then(({ collectionGroup, getDocs, query, where, orderBy, limit: fsLimit }) => {
-      getDocs(query(
-        collectionGroup(db, 'ratings'),
-        where('rating', '>=', 4),
-        orderBy('rating', 'desc'),
-        orderBy('createdAt', 'desc'),
-        fsLimit(6)
-      )).then(snap => {
+    
+    const loadReviews = async () => {
+      try {
+        const { collectionGroup, getDocs, query, where, orderBy, limit: fsLimit } = await import('firebase/firestore');
+        const snap = await getDocs(query(
+          collectionGroup(db, 'ratings'),
+          where('rating', '>=', 4),
+          orderBy('rating', 'desc'),
+          orderBy('createdAt', 'desc'),
+          fsLimit(6)
+        ));
+        
         const data = snap.docs.map(d => d.data()).filter(d => d.comment?.trim().length > 15);
         setReviews(data.slice(0, 6));
-      }).catch(() => {});
-    });
+      } catch (err) {
+        console.warn("LandingTestimonials: Error loading reviews", err);
+      }
+    };
+
+    loadReviews();
   }, [db]);
 
   if (reviews.length === 0) return null;

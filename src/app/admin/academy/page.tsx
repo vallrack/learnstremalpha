@@ -12,6 +12,8 @@ import { doc } from 'firebase/firestore';
 import { Save, Globe, Palette, Mail, MessageCircle, Link, Loader2, PlayCircle, CreditCard, Calendar } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { SUPPORTED_CURRENCIES } from '@/lib/currency';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AcademySettings() {
   const brand = useBrand();
@@ -46,6 +48,7 @@ export default function AcademySettings() {
         demoExpiration: formData.demoExpiration,
         academyMonthlyPrice: Number(formData.academyMonthlyPrice),
         academyAnnualPrice: Number(formData.academyAnnualPrice),
+        academyCurrency: formData.academyCurrency || 'COP',
       }, { merge: true });
       
       toast({
@@ -232,9 +235,25 @@ export default function AcademySettings() {
                <CardDescription>Define los costos de suscripción para las instituciones interesadas.</CardDescription>
              </CardHeader>
              <CardContent className="p-8 space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="space-y-2">
+                    <Label className="font-bold text-slate-700 ml-1">Moneda de Cobro</Label>
+                    <Select 
+                      value={formData.academyCurrency || 'COP'} 
+                      onValueChange={val => setFormData({...formData, academyCurrency: val})}
+                    >
+                      <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none shadow-none text-lg font-bold">
+                        <SelectValue placeholder="COP" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUPPORTED_CURRENCIES.map(c => (
+                          <SelectItem key={c.code} value={c.code}>{c.code} - {c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                    <div className="space-y-2">
-                     <Label className="font-bold text-slate-700 ml-1">Costo Mensual (COP)</Label>
+                     <Label className="font-bold text-slate-700 ml-1">Costo Mensual</Label>
                      <Input 
                        type="number"
                        value={formData.academyMonthlyPrice || 0} 
@@ -244,7 +263,7 @@ export default function AcademySettings() {
                      />
                    </div>
                    <div className="space-y-2">
-                     <Label className="font-bold text-slate-700 ml-1">Costo Anual (COP)</Label>
+                     <Label className="font-bold text-slate-700 ml-1">Costo Anual</Label>
                      <Input 
                        type="number"
                        value={formData.academyAnnualPrice || 0} 

@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TECH_STACK } from '@/lib/languages';
+import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -49,6 +50,7 @@ export default function AdminCoursesPage() {
   const [closingDate, setClosingDate] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [price, setPrice] = useState<number>(0);
+  const [currency, setCurrency] = useState('COP');
   const [instructorRevenueShare, setInstructorRevenueShare] = useState<number>(70);
 
   const coursesQuery = useMemoFirebase(() => {
@@ -77,6 +79,7 @@ export default function AdminCoursesPage() {
     setClosingDate('');
     setIsActive(true);
     setPrice(0);
+    setCurrency('COP');
     setInstructorRevenueShare(70);
   };
 
@@ -91,6 +94,7 @@ export default function AdminCoursesPage() {
     setIsFree(course.isFree ?? true);
     setIsActive(course.isActive ?? true);
     setPrice(course.price || 0);
+    setCurrency(course.currency || 'COP');
     setInstructorRevenueShare(course.instructorRevenueShare ?? 70);
     
     if (course.closingDate) {
@@ -164,6 +168,7 @@ export default function AdminCoursesPage() {
       technology,
       isFree,
       price: isFree ? 0 : Number(price),
+      currency: isFree ? 'COP' : currency,
       instructorRevenueShare: isAdmin ? Number(instructorRevenueShare) : (editingCourseId ? undefined : 70), // Keep existing or set to 70 if new for non-admins
       isActive,
       previewVideoUrl,
@@ -389,11 +394,26 @@ export default function AdminCoursesPage() {
                           </div>
                           
                           {!isFree && (
-                            <div className="grid gap-2 p-3 bg-white rounded-xl border border-emerald-100 shadow-sm animate-in fade-in slide-in-from-top-2">
-                              <Label className="font-bold text-sm text-emerald-700">Precio Individual (COP)</Label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
-                                <Input type="number" min="0" step="1000" value={price} onChange={(e) => setPrice(Number(e.target.value))} className="rounded-xl h-11 pl-8 font-mono font-bold border-emerald-200 focus-visible:ring-emerald-500" placeholder="Ej: 50000" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-white rounded-xl border border-emerald-100 shadow-sm animate-in fade-in slide-in-from-top-2">
+                              <div className="grid gap-2">
+                                <Label className="font-bold text-sm text-emerald-700">Precio</Label>
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                                  <Input type="number" min="0" step={currency === 'COP' ? 1000 : 0.01} value={price} onChange={(e) => setPrice(Number(e.target.value))} className="rounded-xl h-11 pl-8 font-mono font-bold border-emerald-200 focus-visible:ring-emerald-500" placeholder="0" />
+                                </div>
+                              </div>
+                              <div className="grid gap-2">
+                                <Label className="font-bold text-sm text-emerald-700">Moneda</Label>
+                                <Select value={currency} onValueChange={setCurrency}>
+                                  <SelectTrigger className="rounded-xl h-11 border-emerald-200">
+                                    <SelectValue placeholder="COP" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {SUPPORTED_CURRENCIES.map(c => (
+                                      <SelectItem key={c.code} value={c.code}>{c.code} - {c.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
                           )}
@@ -486,7 +506,7 @@ export default function AdminCoursesPage() {
                           <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg text-[10px]">Gratis</Badge>
                         ) : (
                           <div className="flex flex-col gap-1 items-start">
-                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg text-[10px]">Premium: ${course.price?.toLocaleString() || 0} COP</Badge>
+                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg text-[10px]">Premium: {course.price?.toLocaleString() || 0} {course.currency || 'COP'}</Badge>
                             {isAdmin && <span className="text-[9px] text-slate-500 font-bold bg-slate-100 px-1.5 py-0.5 rounded leading-none">{course.instructorRevenueShare ?? 70}% rev. inst.</span>}
                           </div>
                         )}

@@ -71,42 +71,57 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   useEffect(() => {
     if (!auth) {
-      setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+      setUserAuthState(prev => ({ ...prev, isUserLoading: false, userError: new Error("Auth service not provided.") }));
       return;
     }
-
-    setUserAuthState({ user: null, profile: null, isUserLoading: true, userError: null });
 
     const unsubscribeAuth = onAuthStateChanged(
       auth,
       (firebaseUser) => {
-        if (firebaseUser) {
-           // Si el usuario existe, nos suscribimos a su perfil en Firestore
-           const profileRef = doc(firestore, 'users', firebaseUser.uid);
-           const unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
-             setUserAuthState({ 
-               user: firebaseUser, 
-               profile: docSnap.exists() ? docSnap.data() : null,
-               isUserLoading: false, 
-               userError: null 
-             });
-           }, (err) => {
-             console.error("FirebaseProvider: onSnapshot profile error:", err);
-             setUserAuthState({ user: firebaseUser, profile: null, isUserLoading: false, userError: null });
-           });
-           
-           return () => unsubscribeProfile();
-        } else {
-           setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
-        }
+        setUserAuthState(prev => ({ 
+          ...prev, 
+          user: firebaseUser, 
+          profile: firebaseUser ? prev.profile : null,
+          isUserLoading: !firebaseUser ? false : prev.isUserLoading,
+          userError: null 
+        }));
       },
       (error) => {
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
-        setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: error });
+        setUserAuthState(prev => ({ ...prev, user: null, profile: null, isUserLoading: false, userError: error }));
       }
     );
+
     return () => unsubscribeAuth();
-  }, [auth, firestore]);
+  }, [auth]);
+
+  // Manejo separado de suscripción al perfil
+  useEffect(() => {
+    if (!auth || !firestore || !userAuthState.user) {
+      if (!userAuthState.user) {
+        setUserAuthState(prev => ({ ...prev, profile: null, isUserLoading: false }));
+      }
+      return;
+    }
+
+    const profileRef = doc(firestore, 'users', userAuthState.user.uid);
+    const unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
+      setUserAuthState(prev => ({ 
+        ...prev, 
+        profile: docSnap.exists() ? docSnap.data() : null,
+        isUserLoading: false 
+      }));
+    }, (err) => {
+      if (err.code === 'permission-denied') {
+        console.warn("FirebaseProvider: Permission denied for profile. User might not have a document yet.");
+      } else {
+        console.error("FirebaseProvider: onSnapshot profile error:", err);
+      }
+      setUserAuthState(prev => ({ ...prev, profile: null, isUserLoading: false }));
+    });
+
+    return () => unsubscribeProfile();
+  }, [auth, firestore, userAuthState.user?.uid]);
 
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth && storage);

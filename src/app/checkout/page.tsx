@@ -26,6 +26,7 @@ import { doc, collection, query, where, getDocs, limit } from 'firebase/firestor
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatPrice, getCurrency } from '@/lib/currency';
 import Script from 'next/script';
 import Image from 'next/image';
 
@@ -44,7 +45,7 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const courseId = searchParams.get('courseId');
   const { toast } = useToast();
-  const { name, supportWhatsapp } = useBrand();
+  const { name, supportWhatsapp, academyCurrency, academyMonthlyPrice, academyAnnualPrice } = useBrand();
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState('');
@@ -63,8 +64,9 @@ function CheckoutContent() {
     return doc(db, 'courses', courseId);
   }, [db, courseId]);
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
-
-  const BASE_PRICE = courseId ? (course?.price || 0) : 120000;
+  
+  const currentCurrency = courseId && course ? (course.currency || 'COP') : (academyCurrency || 'COP');
+  const BASE_PRICE = courseId ? (course?.price || 0) : (academyMonthlyPrice || 120000);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -161,11 +163,11 @@ function CheckoutContent() {
         name: courseId && course ? `Curso: ${course.title}` : `${name} Premium`,
         description: courseId && course ? "Acceso de por vida al curso" : "Acceso vitalicio a cursos y desafíos IA",
         invoice: `LS-${Date.now()}-${user.uid.substring(0, 5)}`,
-        currency: "cop",
+        currency: currentCurrency.toLowerCase(),
         amount: finalPrice.toString(),
         tax_base: "0",
         tax: "0",
-        country: "co",
+        country: currentCurrency === 'COP' ? 'co' : 'us', // ePayco expects 'co' for COP and usually 'us' or others for global
         lang: "es",
         external: "false",
         response: `${window.location.origin}/checkout/success`,
@@ -275,9 +277,9 @@ function CheckoutContent() {
                 <span className="text-slate-400">Inversión vitalicia:</span>
                 <div className="text-right">
                   {appliedCoupon && (
-                    <p className="text-xs text-rose-400 line-through font-bold opacity-60">${BASE_PRICE.toLocaleString()} COP</p>
+                    <p className="text-xs text-rose-400 line-through font-bold opacity-60">{formatPrice(BASE_PRICE, currentCurrency)}</p>
                   )}
-                  <span className="text-3xl font-bold">${finalPrice.toLocaleString()}<span className="text-sm font-normal opacity-60"> COP</span></span>
+                  <span className="text-3xl font-bold">{formatPrice(finalPrice, currentCurrency)}</span>
                 </div>
               </div>
               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Un solo pago para siempre</p>
@@ -297,7 +299,7 @@ function CheckoutContent() {
                   <span className="text-slate-600 font-medium whitespace-pre-wrap flex-1 pr-4">
                     {courseId && course ? `Curso: ${course.title}` : 'Plan Premium Vitalicio'}
                   </span>
-                  <span className="font-bold shrink-0">${BASE_PRICE.toLocaleString()}</span>
+                  <span className="font-bold shrink-0">{formatPrice(BASE_PRICE, currentCurrency)}</span>
                 </div>
 
                 <div className="space-y-2">
@@ -336,7 +338,7 @@ function CheckoutContent() {
 
                 <div className="flex justify-between items-center pt-4">
                   <span className="text-xl font-headline font-bold">Total a pagar</span>
-                  <span className="text-3xl font-headline font-bold text-primary">${finalPrice.toLocaleString()}</span>
+                  <span className="text-3xl font-headline font-bold text-primary">{formatPrice(finalPrice, currentCurrency)}</span>
                 </div>
               </div>
 

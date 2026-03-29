@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PlayCircle, BookOpen, User } from 'lucide-react';
+import { formatPrice } from '@/lib/currency';
 
 export function CourseCard({ course }: { course: any }) {
   // Usamos thumbnailDataUrl como fuente principal de la imagen (Base64) o imageUrl (URL externa)
@@ -31,7 +32,9 @@ export function CourseCard({ course }: { course: any }) {
           {course.isFree ? (
             <Badge className="absolute top-3 right-3 bg-emerald-500 hover:bg-emerald-600 border-none shadow-sm">Gratis</Badge>
           ) : (
-            <Badge className="absolute top-3 right-3 bg-amber-500 hover:bg-amber-600 border-none text-white shadow-sm">Premium</Badge>
+            <Badge className="absolute top-3 right-3 bg-white/95 text-slate-900 border-none font-bold shadow-sm backdrop-blur-sm">
+              {formatPrice(course.price || 0, course.currency || 'COP')}
+            </Badge>
           )}
         </div>
       </Link>

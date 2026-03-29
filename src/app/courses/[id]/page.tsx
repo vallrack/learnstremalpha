@@ -11,6 +11,7 @@ import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@
 import { doc, collection, query, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useState, useEffect } from 'react';
+import { formatPrice } from '@/lib/currency';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -196,7 +197,7 @@ export default function CourseDetailPage() {
                   </p>
                   {!isFreeCourse && !hasPurchased && (
                     <p className="inline-block mt-2 font-bold px-3 py-1 bg-white text-rose-800 rounded-lg text-sm border border-rose-200">
-                      Precio Individual: ${course.price?.toLocaleString() || 120000} COP
+                      Precio Individual: {formatPrice(course.price || 120000, course.currency || 'COP')}
                     </p>
                   )}
                 </div>
@@ -441,12 +442,20 @@ function CourseReviews({ courseId }: { courseId: string }) {
 
   useEffect(() => {
     if (!db || !courseId) return;
-    import('firebase/firestore').then(({ collection, getDocs, query, orderBy }) => {
-      getDocs(query(collection(db, 'reviews', courseId, 'ratings'), orderBy('createdAt', 'desc')))
-        .then(snap => setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    });
+    
+    const loadReviews = async () => {
+      try {
+        const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
+        const snap = await getDocs(query(collection(db, 'reviews', courseId, 'ratings'), orderBy('createdAt', 'desc')));
+        setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.warn("CourseReviews: Error loading course reviews", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReviews();
   }, [db, courseId]);
 
   if (loading) return null;
@@ -517,14 +526,21 @@ function HeroCourseRating({ courseId }: { courseId: string }) {
 
   useEffect(() => {
     if (!db || !courseId) return;
-    import('firebase/firestore').then(({ collection, getDocs }) => {
-      getDocs(collection(db, 'reviews', courseId, 'ratings')).then(snap => {
+    
+    const loadHeroRating = async () => {
+      try {
+        const { collection, getDocs } = await import('firebase/firestore');
+        const snap = await getDocs(collection(db, 'reviews', courseId, 'ratings'));
         if (snap.empty) return;
         const ratings = snap.docs.map(d => d.data().rating || 0);
         const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
         setStats({ avg, count: ratings.length });
-      }).catch(() => {});
-    });
+      } catch (err) {
+        // Silencioso, opcional: console.warn(err);
+      }
+    };
+
+    loadHeroRating();
   }, [db, courseId]);
 
   if (stats.count === 0) return null;

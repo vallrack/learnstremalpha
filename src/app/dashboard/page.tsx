@@ -315,24 +315,43 @@ function InstructorAnalytics({ userId, myCourses, profile }: { userId: string; m
 
   useEffect(() => {
     if (!db || !userId) return;
-    import('firebase/firestore').then(({ collection, getDocs, query, where, collectionGroup }) => {
-      // Ventas y estudiantes únicos desde transactions
-      getDocs(query(collection(db, 'transactions'), where('instructorId', '==', userId))).then(snap => {
-        const sales = snap.size;
-        const uniqueStudents = new Set(snap.docs.map(d => d.data().userId)).size;
+    
+    let isMounted = true;
+
+    const loadInstructorData = async () => {
+      try {
+        const { collection, getDocs, query, where } = await import('firebase/firestore');
+        
+        // Ventas y estudiantes únicos desde transactions
+        const transSnap = await getDocs(query(collection(db, 'transactions'), where('instructorId', '==', userId)));
+        if (!isMounted) return;
+
+        const sales = transSnap.size;
+        const uniqueStudents = new Set(transSnap.docs.map(d => d.data().userId)).size;
 
         // Rating promedio desde reviews de los cursos del instructor
         const courseIds = myCourses.map(c => c.id);
-        if (courseIds.length === 0) { setStats(s => ({ ...s, sales, students: uniqueStudents })); return; }
-        Promise.all(courseIds.map(cid =>
+        if (courseIds.length === 0) { 
+          setStats(s => ({ ...s, sales, students: uniqueStudents })); 
+          return; 
+        }
+
+        const ratingSnaps = await Promise.all(courseIds.map(cid =>
           getDocs(collection(db, 'reviews', cid, 'ratings'))
-        )).then(snaps => {
-          const allRatings = snaps.flatMap(s => s.docs.map(d => d.data().rating || 0));
-          const avgRating = allRatings.length ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length : 0;
-          setStats({ sales, students: uniqueStudents, avgRating, totalReviews: allRatings.length });
-        }).catch(() => {});
-      }).catch(() => {});
-    });
+        ));
+        if (!isMounted) return;
+
+        const allRatings = ratingSnaps.flatMap(s => s.docs.map(d => d.data().rating || 0));
+        const avgRating = allRatings.length ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length : 0;
+        
+        setStats({ sales, students: uniqueStudents, avgRating, totalReviews: allRatings.length });
+      } catch (err) {
+        console.warn("InstructorAnalytics: Error loading data", err);
+      }
+    };
+
+    loadInstructorData();
+    return () => { isMounted = false; };
   }, [db, userId, myCourses]);
 
   return (
@@ -397,19 +416,19 @@ function CourseRetentionAnalytics({ courseId }: { courseId: string }) {
 
   useEffect(() => {
     if (!db || !courseId) return;
-    import('firebase/firestore').then(({ collection, getDocs, query, limit }) => {
-      // En un caso real masivo, esto requeriría Cloud Functions para pre-calcular.
-      // Para este scope, consultaremos los progresos cruzados con los estudiantes
-      getDocs(query(collection(db, 'users'), limit(100))).then(usersSnap => {
-        let totalEnrolled = 0;
+    
+    const loadRetention = async () => {
+      try {
+        const { collection, getDocs, query, limit } = await import('firebase/firestore');
+        const usersSnap = await getDocs(query(collection(db, 'users'), limit(100)));
         
+        let totalEnrolled = 0;
         usersSnap.docs.forEach(u => {
           const udata = u.data();
           if (udata.purchasedCourses?.includes(courseId)) totalEnrolled++;
         });
         
-        // Simulación de embudo interactivo basado en inscritos para la UI Inmersiva
-        totalEnrolled = totalEnrolled || 24; // fallback para demo si no hay datos aún
+        totalEnrolled = totalEnrolled || 24;
         
         setData([
           { stage: 'Visitas', count: totalEnrolled * 5 },
@@ -419,8 +438,13 @@ function CourseRetentionAnalytics({ courseId }: { courseId: string }) {
           { stage: 'Graduados', count: Math.floor(totalEnrolled * 0.15) }
         ]);
         setLoading(false);
-      });
-    });
+      } catch (err) {
+        console.warn("CourseRetentionAnalytics: Missing permissions or error", err);
+        setLoading(false);
+      }
+    };
+
+    loadRetention();
   }, [db, courseId]);
 
   if (loading) return null;
@@ -476,24 +500,30 @@ function DailyMissions() {
   useEffect(() => {
     if (!db || !user?.uid) return;
     
-    import('firebase/firestore').then(({ doc, getDoc, setDoc }) => {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const missionsRef = doc(db, 'users', user.uid, 'dailyMissions', 'current');
-      
-      getDoc(missionsRef).then(snap => {
+    const loadMissions = async () => {
+      try {
+        const { doc, getDoc, setDoc } = await import('firebase/firestore');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const missionsRef = doc(db, 'users', user.uid, 'dailyMissions', 'current');
+        
+        const snap = await getDoc(missionsRef);
         if (!snap.exists() || snap.data().date !== todayStr) {
-          // Generar nuevas misiones lazy/on-demand para hoy
           const shuffled = [...MISSION_POOL].sort(() => 0.5 - Math.random());
           const newMissions = shuffled.slice(0, 3).map(m => ({ ...m, completed: false, claimed: false }));
           
-          setDoc(missionsRef, { date: todayStr, missions: newMissions });
+          await setDoc(missionsRef, { date: todayStr, missions: newMissions });
           setMissions(newMissions);
         } else {
           setMissions(snap.data().missions || []);
         }
+      } catch (err) {
+        console.warn("DailyMissions: Error loading/saving missions", err);
+      } finally {
         setLoading(false);
-      });
-    });
+      }
+    };
+
+    loadMissions();
   }, [db, user?.uid]);
 
   const claimReward = async (index: number) => {
@@ -582,22 +612,26 @@ function InstructorPendingDiscussions({ courseIds }: { courseIds: string[] }) {
       return;
     }
 
-    import('firebase/firestore').then(({ collection, getDocs, query, where, orderBy, limit }) => {
-      // Tomamos máx 10 ids por limitación de Firebase 'in'
-      const idsToQuery = courseIds.slice(0, 10);
-      getDocs(query(
-        collection(db, 'lesson_discussions'),
-        where('courseId', 'in', idsToQuery),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      )).then(snap => {
+    const loadDiscussions = async () => {
+      try {
+        const { collection, getDocs, query, where, orderBy, limit } = await import('firebase/firestore');
+        // Tomamos máx 10 ids por limitación de Firebase 'in'
+        const idsToQuery = courseIds.slice(0, 10);
+        const snap = await getDocs(query(
+          collection(db, 'lesson_discussions'),
+          where('courseId', 'in', idsToQuery),
+          orderBy('createdAt', 'desc'),
+          limit(5)
+        ));
         setDiscussions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error("InstructorPendingDiscussions: Error loading discussions", err);
+      } finally {
         setLoading(false);
-      }).catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
-    });
+      }
+    };
+
+    loadDiscussions();
   }, [db, courseIds]);
 
   if (loading || discussions.length === 0) return null;

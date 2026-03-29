@@ -12,6 +12,7 @@ export interface BrandingConfig {
   // Academy Pricing settings
   academyMonthlyPrice?: number;
   academyAnnualPrice?: number;
+  academyCurrency?: string;
 }
 
 export const DEFAULT_BRANDING: BrandingConfig = {
@@ -25,6 +26,7 @@ export const DEFAULT_BRANDING: BrandingConfig = {
   demoExpiration: '',
   academyMonthlyPrice: 299000,
   academyAnnualPrice: 2490000,
+  academyCurrency: 'COP',
 };
 
 // Mapa para multi-tenencia (Opción B)
