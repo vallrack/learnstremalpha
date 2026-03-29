@@ -42,6 +42,7 @@ import { VoiceInterview } from '@/components/ai/VoiceInterview';
 import Link from 'next/link';
 import Editor from '@monaco-editor/react';
 import { XPRewardAnimation } from '@/components/gamification/XPRewardAnimation';
+import { formatPrice } from '@/lib/currency';
 
 export default function ChallengeClient() {
   const params = useParams();
@@ -76,12 +77,13 @@ export default function ChallengeClient() {
   const isPremiumLocked = useMemo(() => {
     if (!challenge || profile?.role === 'admin') return false;
     
-    // Si NO es gratis y NO tienes suscripción, bloqueado.
+    // Si NO es gratis y NO tienes suscripción ni compra individual, bloqueado.
     const isActuallyFree = challenge.isFree === true;
     const isSubscriber = !!profile?.isPremiumSubscriber;
+    const hasPurchased = profile?.purchasedChallenges?.includes(challengeId);
 
-    return !isActuallyFree && !isSubscriber;
-  }, [challenge, profile]);
+    return !isActuallyFree && !isSubscriber && !hasPurchased;
+  }, [challenge, profile, challengeId]);
 
   const handleSubmit = async (quizScore?: number) => {
     if (!challenge || !db || isPremiumLocked) return;
@@ -178,8 +180,25 @@ export default function ChallengeClient() {
             <Lock className="h-10 w-10 text-amber-600" />
           </div>
           <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">Actividad Premium</h1>
-          <p className="text-muted-foreground max-w-md mb-10 text-lg">Este reto requiere una suscripción activa para ser evaluado por IA y obtener XP en tu portfolio.</p>
-          <Link href="/checkout"><Button className="rounded-2xl h-14 px-10 font-bold bg-amber-500 hover:bg-amber-600 shadow-xl shadow-amber-200">Mejorar a Premium Ahora</Button></Link>
+          <p className="text-muted-foreground max-w-md mb-10 text-lg">
+            {challenge?.price && challenge.price > 0 
+              ? `Esta actividad tiene un costo de ${formatPrice(challenge.price, challenge.currency || 'COP')} para acceso permanente, o puedes obtenerla con una suscripción.`
+              : "Este reto requiere una suscripción activa para ser evaluado por IA y obtener XP en tu portfolio."}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            {challenge?.price && challenge.price > 0 && (
+              <Link href={`/checkout?challengeId=${challengeId}`}>
+                <Button className="rounded-2xl h-14 px-10 font-bold bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20">
+                  Comprar ahora por {formatPrice(challenge.price, challenge.currency || 'COP')}
+                </Button>
+              </Link>
+            )}
+            <Link href="/checkout">
+              <Button variant="outline" className="rounded-2xl h-14 px-10 font-bold border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100">
+                Mejorar a Premium (Todo incluido)
+              </Button>
+            </Link>
+          </div>
         </main>
       </div>
     );

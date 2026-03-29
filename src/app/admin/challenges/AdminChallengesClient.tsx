@@ -88,6 +88,8 @@ export default function AdminChallengesClient() {
   const [jsonConfig, setJsonConfig] = useState('{\n\n}');
   const [targetLanguage, setTargetLanguage] = useState<'en' | 'es'>('es');
   const [targetRole, setTargetRole] = useState('');
+  const [price, setPrice] = useState('0');
+  const [currency, setCurrency] = useState('COP');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -124,6 +126,8 @@ export default function AdminChallengesClient() {
     setJsonConfig('{\n\n}');
     setTargetLanguage('es');
     setTargetRole('');
+    setPrice('0');
+    setCurrency('COP');
   };
 
   const handleEditClick = (challenge: any) => {
@@ -141,6 +145,8 @@ export default function AdminChallengesClient() {
     setQuestions(challenge.questions || []);
     setTargetLanguage(challenge.targetLanguage || 'es');
     setTargetRole(challenge.targetRole || '');
+    setPrice(challenge.price?.toString() || '0');
+    setCurrency(challenge.currency || 'COP');
     
     if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challenge.type)) {
        const { id, title, description, difficulty, technology, type, isFree, visibility, updatedAt, instructorId, instructorName, createdAt, ...rest } = challenge;
@@ -163,6 +169,8 @@ export default function AdminChallengesClient() {
       technology,
       type: challengeType,
       isFree,
+      price: !isFree ? parseFloat(price) || 0 : 0,
+      currency,
       visibility,
       updatedAt: serverTimestamp(),
     };
@@ -365,6 +373,27 @@ export default function AdminChallengesClient() {
                         <Switch checked={isFree} onCheckedChange={setIsFree} />
                       </div>
                     </div>
+
+                    {!isFree && (
+                      <div className="grid grid-cols-2 gap-4 p-4 border-2 border-primary/20 rounded-2xl bg-primary/5 animate-in fade-in slide-in-from-top-2">
+                        <div className="grid gap-2">
+                          <Label htmlFor="c-price" className="font-bold">Precio de Venta</Label>
+                          <Input id="c-price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="Ej: 25000" className="bg-white rounded-xl" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="c-currency" className="font-bold">Moneda</Label>
+                          <Select value={currency} onValueChange={setCurrency}>
+                            <SelectTrigger id="c-currency" className="bg-white rounded-xl">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="COP">COP (Pesos Colombianos)</SelectItem>
+                              <SelectItem value="USD">USD (Dólares)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid gap-2">
                       <Label className="font-bold">Instrucciones / Contexto</Label>

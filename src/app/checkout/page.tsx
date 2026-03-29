@@ -46,6 +46,7 @@ function CheckoutContent() {
   const courseId = searchParams.get('courseId');
   const moduleId = searchParams.get('moduleId');
   const lessonId = searchParams.get('lessonId');
+  const challengeId = searchParams.get('challengeId');
   const { toast } = useToast();
   const { name, supportWhatsapp, academyCurrency, academyMonthlyPrice, academyAnnualPrice } = useBrand();
   
@@ -78,14 +79,22 @@ function CheckoutContent() {
     return doc(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId);
   }, [db, courseId, moduleId, lessonId]);
   const { data: lessonData, isLoading: isLessonLoading } = useDoc(lessonRef);
+
+  const standaloneChallengeRef = useMemoFirebase(() => {
+    if (!db || !challengeId) return null;
+    return doc(db, 'coding_challenges', challengeId);
+  }, [db, challengeId]);
+  const { data: challengeData, isLoading: isChallengeLoading } = useDoc(standaloneChallengeRef);
   
   const currentCurrency = 
+    challengeId && challengeData ? (challengeData.currency || 'COP') :
     lessonId && lessonData ? (lessonData.currency || 'COP') : 
     moduleId && moduleData ? (moduleData.currency || 'COP') : 
     courseId && course ? (course.currency || 'COP') : 
     (academyCurrency || 'COP');
 
   const BASE_PRICE = 
+    challengeId && challengeData ? (challengeData.price || 0) :
     lessonId && lessonData ? (lessonData.price || 0) : 
     moduleId && moduleData ? (moduleData.price || 0) : 
     courseId ? (course?.price || 0) : 
@@ -184,14 +193,16 @@ function CheckoutContent() {
         test: false // MODO PRODUCCIÓN ACTIVADO
       });
 
-      const purchaseName = lessonId && lessonData ? `Clase: ${lessonData.title}` : 
+      const purchaseName = challengeId && challengeData ? `Actividad: ${challengeData.title}` :
+                          lessonId && lessonData ? `Clase: ${lessonData.title}` : 
                           moduleId && moduleData ? `Módulo: ${moduleData.title}` :
                           courseId && course ? `Curso: ${course.title}` : 
                           `${name} Premium`;
 
       const data = {
         name: purchaseName,
-        description: lessonId ? "Acceso individual a lección premium" : 
+        description: challengeId ? "Acceso individual a desafío premium" :
+                    lessonId ? "Acceso individual a lección premium" : 
                     moduleId ? "Acceso completo al módulo premium" :
                     courseId ? "Acceso de por vida al curso" : 
                     "Acceso vitalicio a cursos y desafíos IA",
@@ -208,7 +219,7 @@ function CheckoutContent() {
         email_billing: user.email,
         extra1: user.uid, 
         extra2: appliedCoupon?.id || "none",
-        extra3: `${courseId || 'none'}|${moduleId || 'none'}|${lessonId || 'none'}`,
+        extra3: `${courseId || 'none'}|${moduleId || 'none'}|${lessonId || 'none'}|${challengeId || 'none'}`,
       };
 
       handler.open(data);
@@ -220,7 +231,7 @@ function CheckoutContent() {
     }
   };
 
-  if (isUserLoading || isCourseLoading || isModuleLoading || isLessonLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isUserLoading || isCourseLoading || isModuleLoading || isLessonLoading || isChallengeLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const whatsappLink = `https://wa.me/${supportWhatsapp}?text=Hola%20${name},%20tengo%20problemas%20con%20el%20pago%20de%20mi%20suscripci%C3%B3n%20Premium%20y%20me%20gustar%C3%ADa%20recibir%20ayuda.`;
 
@@ -262,13 +273,14 @@ function CheckoutContent() {
           <div className="space-y-8">
             <div>
               <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">
-                {lessonId && lessonData ? `Desbloquea: ${lessonData.title}` :
+                {challengeId && challengeData ? `Desbloquea: ${challengeData.title}` :
+                 lessonId && lessonData ? `Desbloquea: ${lessonData.title}` :
                  moduleId && moduleData ? `Módulo: ${moduleData.title}` :
                  courseId && course ? `Inscríbete en: ${course.title}` : 
                  "Potencia tu carrera hoy"}
               </h1>
               <p className="text-lg text-muted-foreground">
-                {lessonId || moduleId ? "Adquiere acceso permanente a este contenido premium." :
+                {challengeId || lessonId || moduleId ? "Adquiere acceso permanente a este contenido premium." :
                  courseId && course ? "Adquiere acceso de por vida a este programa certificado." : 
                  "Desbloquea herramientas profesionales con medios de pago locales a través de ePayco."}
               </p>
@@ -335,7 +347,8 @@ function CheckoutContent() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-dashed">
                   <span className="text-slate-600 font-medium whitespace-pre-wrap flex-1 pr-4">
-                    {lessonId && lessonData ? `Clase Premium: ${lessonData.title}` :
+                    {challengeId && challengeData ? `Actividad Premium: ${challengeData.title}` :
+                     lessonId && lessonData ? `Clase Premium: ${lessonData.title}` :
                      moduleId && moduleData ? `Módulo Premium: ${moduleData.title}` :
                      courseId && course ? `Curso: ${course.title}` : 
                      'Plan Premium Vitalicio'}

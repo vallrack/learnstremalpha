@@ -28,67 +28,99 @@ export async function verifyEpaycoTransaction(
         const extra3 = result.data.x_extra3;
         
         if (extra3 && extra3 !== 'none' && extra3 !== 'premium') {
-          // Nueva lógica: extra3 puede ser "courseId|moduleId|lessonId"
+          // Nueva lógica: extra3 puede ser "courseId|moduleId|lessonId|challengeId"
           const parts = extra3.split('|');
-          const isComplex = parts.length === 3;
+          const isComplex = parts.length >= 3;
           
           const courseId = isComplex ? parts[0] : extra3;
           const moduleId = isComplex ? parts[1] : 'none';
           const lessonId = isComplex ? parts[2] : 'none';
+          const challengeId = parts.length === 4 ? parts[3] : 'none';
 
           const amount = Number(result.data.x_amount);
           
-          // Obtener datos del curso para transaccion y revenue share
-          const courseDoc = await adminDb.collection('courses').doc(courseId).get();
-          
-          if (courseDoc.exists) {
-            const courseData = courseDoc.data();
-            const instructorId = courseData?.instructorId;
-            const revenueShare = courseData?.instructorRevenueShare ?? 70;
-            
-            const instructorCut = Math.floor(amount * (revenueShare / 100));
-            const adminCut = amount - instructorCut;
+          if (challengeId !== 'none') {
+            // COMPRA DE DESAFÍO INDEPENDIENTE
+            const challengeDoc = await adminDb.collection('coding_challenges').doc(challengeId).get();
+            if (challengeDoc.exists) {
+              const challengeData = challengeDoc.data();
+              const instructorId = challengeData?.instructorId;
+              const revenueShare = 70; // Por defecto para desafíos externos
+              
+              const instructorCut = Math.floor(amount * (revenueShare / 100));
+              const adminCut = amount - instructorCut;
 
-            let itemName = courseData?.title || 'Curso';
-            if (lessonId !== 'none') itemName = `Clase vinculada a: ${itemName}`;
-            else if (moduleId !== 'none') itemName = `Módulo vinculado a: ${itemName}`;
+              await adminDb.collection('transactions').add({
+                userId,
+                userEmail: extraData?.userEmail || result.data.x_customer_email || '',
+                challengeId,
+                courseTitle: `Desafío: ${challengeData?.title || 'Sin título'}`,
+                instructorId,
+                amount,
+                instructorShare: instructorCut,
+                adminShare: adminCut,
+                ref_payco,
+                createdAt: new Date(),
+                status: 'completed'
+              });
 
-            // 1. Guardar la transacción financiera
-            await adminDb.collection('transactions').add({
-              userId,
-              userEmail: extraData?.userEmail || result.data.x_customer_email || '',
-              courseId,
-              moduleId: moduleId !== 'none' ? moduleId : null,
-              lessonId: lessonId !== 'none' ? lessonId : null,
-              courseTitle: itemName,
-              instructorId,
-              amount,
-              instructorShare: instructorCut,
-              adminShare: adminCut,
-              ref_payco,
-              createdAt: new Date(),
-              status: 'completed'
-            });
-
-            // 2. Dar acceso al contenido específico
-            const userSnap = await userRef.get();
-            const userData = userSnap.data();
-            
-            if (lessonId !== 'none') {
-              const currentLessons = userData?.purchasedLessons || [];
-              if (!currentLessons.includes(lessonId)) {
-                updateData.purchasedLessons = [...currentLessons, lessonId];
+              const userSnap = await userRef.get();
+              const userData = userSnap.data();
+              const currentChallenges = userData?.purchasedChallenges || [];
+              if (!currentChallenges.includes(challengeId)) {
+                updateData.purchasedChallenges = [...currentChallenges, challengeId];
               }
-            } else if (moduleId !== 'none') {
-              const currentModules = userData?.purchasedModules || [];
-              if (!currentModules.includes(moduleId)) {
-                updateData.purchasedModules = [...currentModules, moduleId];
-              }
-            } else {
-              // Compra de curso completo
-              const currentPurchased = userData?.purchasedCourses || [];
-              if (!currentPurchased.includes(courseId)) {
-                updateData.purchasedCourses = [...currentPurchased, courseId];
+            }
+          } else {
+            // COMPRA DE CURSO / MÓDULO / LECCIÓN
+            const courseDoc = await adminDb.collection('courses').doc(courseId).get();
+            
+            if (courseDoc.exists) {
+              const courseData = courseDoc.data();
+              const instructorId = courseData?.instructorId;
+              const revenueShare = courseData?.instructorRevenueShare ?? 70;
+              
+              const instructorCut = Math.floor(amount * (revenueShare / 100));
+              const adminCut = amount - instructorCut;
+
+              let itemName = courseData?.title || 'Curso';
+              if (lessonId !== 'none') itemName = `Clase vinculada a: ${itemName}`;
+              else if (moduleId !== 'none') itemName = `Módulo vinculado a: ${itemName}`;
+
+              await adminDb.collection('transactions').add({
+                userId,
+                userEmail: extraData?.userEmail || result.data.x_customer_email || '',
+                courseId,
+                moduleId: moduleId !== 'none' ? moduleId : null,
+                lessonId: lessonId !== 'none' ? lessonId : null,
+                courseTitle: itemName,
+                instructorId,
+                amount,
+                instructorShare: instructorCut,
+                adminShare: adminCut,
+                ref_payco,
+                createdAt: new Date(),
+                status: 'completed'
+              });
+
+              const userSnap = await userRef.get();
+              const userData = userSnap.data();
+              
+              if (lessonId !== 'none') {
+                const currentLessons = userData?.purchasedLessons || [];
+                if (!currentLessons.includes(lessonId)) {
+                  updateData.purchasedLessons = [...currentLessons, lessonId];
+                }
+              } else if (moduleId !== 'none') {
+                const currentModules = userData?.purchasedModules || [];
+                if (!currentModules.includes(moduleId)) {
+                  updateData.purchasedModules = [...currentModules, moduleId];
+                }
+              } else {
+                const currentPurchased = userData?.purchasedCourses || [];
+                if (!currentPurchased.includes(courseId)) {
+                  updateData.purchasedCourses = [...currentPurchased, courseId];
+                }
               }
             }
           }
