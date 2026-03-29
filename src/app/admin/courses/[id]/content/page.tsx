@@ -823,7 +823,7 @@ function ResourceManager({ course, moduleId, lesson, isAuthorized }: { course: a
               {res.type === 'link' ? <LinkIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
               {res.title}
             </span>
-            {isAdmin && (
+            {isAuthorized && (
               <Button 
                 variant="ghost" 
                 size="icon" 

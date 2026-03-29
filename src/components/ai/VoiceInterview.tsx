@@ -358,8 +358,8 @@ export function VoiceInterview({
                    {/* Ring animations */}
                    {(isListening || isSpeaking || isGenerating) && (
                      <div className="absolute transition-all">
-                        <div className={`absolute -inset-20 rounded-full border-2 border-primary/20 animate-ping duration-[3s] ${isGenerating ? 'border-purple-400' : ''}`} />
-                        <div className={`absolute -inset-12 rounded-full border-4 border-primary/30 animate-pulse duration-[2s] ${isGenerating ? 'border-purple-300' : ''}`} />
+                        <div className={`absolute -inset-20 rounded-full border-2 border-primary/20 animate-ping duration-[3000ms] ${isGenerating ? 'border-purple-400' : ''}`} />
+                        <div className={`absolute -inset-12 rounded-full border-4 border-primary/30 animate-pulse duration-[2000ms] ${isGenerating ? 'border-purple-300' : ''}`} />
                         <div className={`absolute -inset-6 rounded-full border-8 border-primary/40 animate-pulse duration-1000 ${isGenerating ? 'border-purple-200' : ''}`} />
                      </div>
                    )}
