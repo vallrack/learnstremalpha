@@ -90,6 +90,12 @@ function LessonPlayerContent() {
     return doc(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId);
   }, [db, courseId, moduleId, lessonId]);
   const { data: currentLesson, isLoading: isLessonLoading } = useDoc(lessonRef);
+  
+  const moduleRef = useMemoFirebase(() => {
+    if (!db || !courseId || !moduleId) return null;
+    return doc(db, 'courses', courseId, 'modules', moduleId);
+  }, [db, courseId, moduleId]);
+  const { data: currentModule, isLoading: isModuleLoading } = useDoc(moduleRef);
 
   const modulesQuery = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -166,7 +172,7 @@ function LessonPlayerContent() {
     }
   };
 
-  if (isCourseLoading || isLessonLoading || isModulesLoading) {
+  if (isCourseLoading || isLessonLoading || isModulesLoading || isModuleLoading) {
     return <div className="h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-muted-foreground animate-pulse font-medium">Cargando lección...</p></div>;
   }
 
@@ -177,11 +183,19 @@ function LessonPlayerContent() {
   const hasPurchased = profile?.purchasedCourses?.includes(courseId);
   const isFreeCourse = course.isFree === true;
   const isLessonPremium = !!currentLesson.isPremium;
+  const isModulePremium = !!currentModule?.isPremium;
+  const isGuest = !user || user.isAnonymous;
 
-  // Acceso permitido si: Eres Admin/Autor, compraste el curso, tienes sub Premium, o es lección gratis en curso gratis
-  const hasValidAccess = isPremium || isAuthor || hasPurchased || (isFreeCourse && !isLessonPremium);
+  // Acceso permitido si:
+  // 1. Eres Administrador o el Autor del curso.
+  // 2. Tienes una suscripción Premium activa o ya compraste este curso específico.
+  // 3. Es un curso Gratis Y la lección/módulo NO es Premium.
+  const hasValidAccess = isPremium || isAuthor || hasPurchased || (isFreeCourse && !isLessonPremium && !isModulePremium);
 
-  if (!hasValidAccess) {
+  // Bloqueo total si es Premium (lección o módulo) y no tienes acceso especial
+  const finalizedAccess = (isLessonPremium || isModulePremium) ? (isPremium || isAuthor || hasPurchased) : hasValidAccess;
+
+  if (!finalizedAccess) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
         <Navbar />
@@ -191,14 +205,21 @@ function LessonPlayerContent() {
           </div>
           <h1 className="text-4xl font-headline font-bold mb-4">Acceso Restringido</h1>
           <p className="text-muted-foreground max-w-md mb-8 text-lg">
-            Debes adquirir este curso o tener una suscripción Premium para acceder a esta lección.
+            {isModulePremium ? 'Este módulo es Premium. ' : isLessonPremium ? 'Esta lección es Premium. ' : 'Este curso requiere acceso. '}
+            Debes adquirir este curso o tener una suscripción activa para continuar aprendiendo.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button variant="outline" onClick={() => router.push(`/courses/${courseId}`)} className="rounded-2xl h-14 px-8 text-lg font-bold">
-              Ver Detalles del Curso
-            </Button>
+            {!user ? (
+              <Button onClick={() => router.push('/login')} className="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 font-bold shadow-xl shadow-primary/10">
+                Iniciar Sesión Gratis
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => router.push(`/courses/${courseId}`)} className="rounded-2xl h-14 px-8 text-lg font-bold">
+                Ver Otros Cursos
+              </Button>
+            )}
             <Button onClick={() => router.push(`/checkout?courseId=${courseId}`)} className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200">
-              Obtener Acceso
+              {isFreeCourse ? 'Suscripción Premium' : 'Obtener Acceso'} 
             </Button>
           </div>
         </main>

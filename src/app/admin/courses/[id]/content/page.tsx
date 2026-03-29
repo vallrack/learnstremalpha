@@ -66,19 +66,23 @@ export default function CourseContentAdminPage() {
   const [editingModule, setEditingModule] = useState<any>(null);
   const [moduleTitle, setModuleTitle] = useState('');
   const [moduleOrder, setModuleOrder] = useState('0');
-
-  const profileRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
-  const { data: profile } = useDoc(profileRef);
-  const isAdmin = profile?.role === 'admin';
+  const [moduleIsPremium, setModuleIsPremium] = useState(false);
 
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
     return doc(db, 'courses', courseId);
   }, [db, courseId]);
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
+
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+  
+  const isAdmin = profile?.role === 'admin';
+  const isInstructor = user?.uid === course?.instructorId;
+  const isAuthorized = isAdmin || isInstructor;
 
   const modulesQuery = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -93,6 +97,7 @@ export default function CourseContentAdminPage() {
     const moduleData = {
       title: moduleTitle,
       orderIndex: parseInt(moduleOrder),
+      isPremium: moduleIsPremium,
       courseId: courseId,
       instructorId: course.instructorId,
       courseIsFree: course.isFree ?? true,
@@ -115,10 +120,11 @@ export default function CourseContentAdminPage() {
     setEditingModule(null);
     setModuleTitle('');
     setModuleOrder('0');
+    setModuleIsPremium(false);
   };
 
   const handleDeleteModule = (moduleId: string) => {
-    if (!db || !isAdmin) return;
+    if (!db || !isAuthorized) return;
     if (confirm('¿Estás seguro de eliminar este módulo y todo su contenido?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', courseId, 'modules', moduleId));
     }
@@ -177,6 +183,16 @@ export default function CourseContentAdminPage() {
                       <Label htmlFor="m-order">Orden (Index)</Label>
                       <Input id="m-order" type="number" value={moduleOrder} onChange={(e) => setModuleOrder(e.target.value)} required />
                     </div>
+                    <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl mt-2">
+                      <input 
+                        type="checkbox" 
+                        id="m-prem" 
+                        checked={moduleIsPremium} 
+                        onChange={(e) => setModuleIsPremium(e.target.checked)} 
+                        className="h-4 w-4 rounded border-gray-300 text-primary" 
+                      />
+                      <Label htmlFor="m-prem" className="text-xs font-bold">Módulo Premium (Bloquea todas las lecciones internas)</Label>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button type="submit" className="w-full rounded-xl h-11">Guardar Módulo</Button>
@@ -210,11 +226,12 @@ export default function CourseContentAdminPage() {
                         setEditingModule(module);
                         setModuleTitle(module.title);
                         setModuleOrder(module.orderIndex?.toString() || '0');
+                        setModuleIsPremium(module.isPremium || false);
                         setIsModuleDialogOpen(true);
                       }}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {isAdmin && (
+                      {isAuthorized && (
                         <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteModule(module.id);
@@ -225,7 +242,7 @@ export default function CourseContentAdminPage() {
                     </div>
                   </div>
                   <AccordionContent className="pb-6 border-t pt-4">
-                    <LessonManager course={course} moduleId={module.id} isAdmin={isAdmin} />
+                    <LessonManager course={course} moduleId={module.id} isAuthorized={isAuthorized} />
                   </AccordionContent>
                 </AccordionItem>
               ))}
@@ -237,7 +254,7 @@ export default function CourseContentAdminPage() {
   );
 }
 
-function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: string, isAdmin: boolean }) {
+function LessonManager({ course, moduleId, isAuthorized }: { course: any, moduleId: string, isAuthorized: boolean }) {
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
@@ -343,7 +360,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
   };
 
   const handleDelete = (lessonId: string) => {
-    if (!db || !isAdmin) return;
+    if (!db || !isAuthorized) return;
     if (confirm('¿Eliminar lección?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lessonId));
     }
@@ -584,13 +601,13 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
               </div>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(lesson)}><Edit className="h-4 w-4" /></Button>
-                {isAdmin && (
+                {isAuthorized && (
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-4 w-4" /></Button>
                 )}
               </div>
             </div>
             {lesson.type === 'video' && (
-              <ResourceManager course={course} moduleId={moduleId} lesson={lesson} isAdmin={isAdmin} />
+              <ResourceManager course={course} moduleId={moduleId} lesson={lesson} isAuthorized={isAuthorized} />
             )}
           </div>
         ))}
@@ -604,7 +621,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
   );
 }
 
-function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, moduleId: string, lesson: any, isAdmin: boolean }) {
+function ResourceManager({ course, moduleId, lesson, isAuthorized }: { course: any, moduleId: string, lesson: any, isAuthorized: boolean }) {
   const db = useFirestore();
   const storage = useStorage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -697,7 +714,7 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
   };
 
   const handleDeleteResource = (resourceId: string) => {
-    if (!db || !isAdmin) return;
+    if (!db || !isAuthorized) return;
     if (confirm('¿Eliminar recurso?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lesson.id, 'resources', resourceId));
     }

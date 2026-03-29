@@ -247,7 +247,7 @@ export default function CourseDetailPage() {
 
                 <section>
                   <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Contenido del Curso</h2>
-                  <CourseCurriculum courseId={id} />
+                  <CourseCurriculum courseId={id} hasValidAccess={hasValidAccess} isFreeCourse={isFreeCourse} />
                 </section>
 
                 <section>
@@ -337,7 +337,7 @@ export default function CourseDetailPage() {
   );
 }
 
-function CourseCurriculum({ courseId }: { courseId: string }) {
+function CourseCurriculum({ courseId, hasValidAccess, isFreeCourse }: { courseId: string, hasValidAccess: boolean, isFreeCourse: boolean }) {
   const db = useFirestore();
   const modulesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -355,12 +355,19 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
           <AccordionItem key={module.id} value={module.id} className="bg-white border rounded-2xl overflow-hidden px-4 shadow-sm">
             <AccordionTrigger className="hover:no-underline py-6">
               <div className="flex flex-col items-start text-left gap-1">
-                <span className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {index + 1}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {index + 1}</span>
+                  {module.isPremium ? (
+                    <Badge variant="outline" className="text-[10px] h-4 py-0 bg-amber-50 text-amber-600 border-amber-200">Premium</Badge>
+                  ) : isFreeCourse ? (
+                    <Badge variant="outline" className="text-[10px] h-4 py-0 bg-emerald-50 text-emerald-600 border-emerald-200">Acceso Libre</Badge>
+                  ) : null}
+                </div>
                 <span className="text-lg font-bold text-foreground">{module.title}</span>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-6">
-              <ModuleLessons courseId={courseId} moduleId={module.id} />
+              <ModuleLessons courseId={courseId} moduleId={module.id} hasValidAccess={hasValidAccess} isFreeCourse={isFreeCourse} moduleIsPremium={!!module.isPremium} />
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -369,7 +376,7 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
   );
 }
 
-function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: string }) {
+function ModuleLessons({ courseId, moduleId, hasValidAccess, isFreeCourse, moduleIsPremium }: { courseId: string, moduleId: string, hasValidAccess: boolean, isFreeCourse: boolean, moduleIsPremium: boolean }) {
   const db = useFirestore();
   const lessonsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -398,16 +405,27 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
               </p>
               <div className="flex items-center gap-3 mt-1">
                 <span className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> {lesson.durationInMinutes || 10} min</span>
-                {lesson.isPremium && <Badge variant="outline" className="text-[10px] h-4 py-0 bg-amber-50 text-amber-600">Premium</Badge>}
+                {lesson.isPremium ? (
+                  <Badge variant="outline" className="text-[10px] h-4 py-0 bg-amber-50 text-amber-600">Premium</Badge>
+                ) : isFreeCourse ? (
+                   <Badge variant="outline" className="text-[10px] h-4 py-0 bg-emerald-50 text-emerald-600 border-emerald-100 italic">Gratis</Badge>
+                ) : null}
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className={`rounded-lg h-9 gap-1 font-bold ${lesson.type === 'challenge' ? 'text-primary bg-primary/5 hover:bg-primary/10' : ''}`} asChild>
-             <Link href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${moduleId}`}>
-               {lesson.type === 'challenge' ? 'Ir al Desafío' : 'Ver Clase'} 
-               <ChevronRight className="h-4 w-4" />
-             </Link>
-          </Button>
+          {(!hasValidAccess && (lesson.isPremium || moduleIsPremium || !isFreeCourse)) ? (
+            <div className="flex items-center gap-2 text-muted-foreground px-4 py-2 bg-slate-50 rounded-lg">
+              <Lock className="h-4 w-4" />
+              <span className="text-xs font-bold uppercase tracking-widest">{!hasValidAccess && !isFreeCourse ? 'Contenido Privado' : 'Premium'}</span>
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" className={`rounded-lg h-9 gap-1 font-bold ${lesson.type === 'challenge' ? 'text-primary bg-primary/5 hover:bg-primary/10' : ''}`} asChild>
+               <Link href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${moduleId}`}>
+                 {lesson.type === 'challenge' ? 'Ir al Desafío' : 'Ver Clase'} 
+                 <ChevronRight className="h-4 w-4" />
+               </Link>
+            </Button>
+          )}
         </div>
       ))}
     </div>

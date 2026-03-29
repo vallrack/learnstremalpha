@@ -75,7 +75,12 @@ export default function ChallengeClient() {
 
   const isPremiumLocked = useMemo(() => {
     if (!challenge || profile?.role === 'admin') return false;
-    return !challenge.isFree && !profile?.isPremiumSubscriber;
+    
+    // Si NO es gratis y NO tienes suscripción, bloqueado.
+    const isActuallyFree = challenge.isFree === true;
+    const isSubscriber = !!profile?.isPremiumSubscriber;
+
+    return !isActuallyFree && !isSubscriber;
   }, [challenge, profile]);
 
   const handleSubmit = async (quizScore?: number) => {
