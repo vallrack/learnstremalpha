@@ -105,6 +105,19 @@ function LessonPlayerContent() {
       updatedAt: serverTimestamp(),
     }, { merge: true });
 
+    // Crear Certificado Verificable Oficial
+    const certRef = doc(db, 'certificates', `${user.uid}_${courseId}`);
+    setDocumentNonBlocking(certRef, {
+      userId: user.uid,
+      courseId,
+      studentName: profile?.displayName || user.email?.split('@')[0] || 'Estudiante',
+      courseTitle: course?.title || 'Curso',
+      technology: course?.technology || 'General',
+      instructorName: course?.instructorName || 'Instructor',
+      issuedAt: serverTimestamp(),
+      isValid: true,
+    }, { merge: true });
+
     // Enviar certificado por correo
     const { sendCertificateAction } = await import('@/app/actions/email');
     sendCertificateAction(user.uid, courseId);

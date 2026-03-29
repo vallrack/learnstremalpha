@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Crown, ShieldCheck, Award, Calendar, User } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface CourseCertificateProps {
   studentName: string;
@@ -13,6 +14,7 @@ interface CourseCertificateProps {
   completionDate: string;
   modulesCount: number;
   instructorName?: string;
+  certificateId?: string;
 }
 
 export function CourseCertificate({
@@ -23,10 +25,15 @@ export function CourseCertificate({
   completionDate,
   modulesCount,
   instructorName = "Experto LearnStream",
+  certificateId = "PREVIEW-ID",
 }: CourseCertificateProps) {
   const logoUrl = "https://dprogramadores.com.co/img/logoD.png";
   const signatureUrl = "https://drive.google.com/uc?export=view&id=1w2nzR-tylvAKiHe02fzdTKpRD7icoJua";
   const platformLogoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
+
+  const verifyUrl = typeof window !== 'undefined' 
+    ? `${window.location.origin}/verify/${certificateId}`
+    : `https://learnstream.app/verify/${certificateId}`;
 
   return (
     <div className="relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl">
@@ -85,18 +92,18 @@ export function CourseCertificate({
               {courseTitle}
             </h3>
             <div className="flex items-center justify-center gap-2">
-              <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-bold px-2 py-0 h-5 text-[10px]">
-                Tecnología: {technology}
-              </Badge>
-              {isPremium ? (
-                <Badge className="bg-amber-100 text-amber-700 border-amber-200 font-bold px-2 py-0 h-5 text-[10px] gap-1">
-                  <Crown className="h-3 w-3" /> Nivel Profesional Premium
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="border-slate-200 text-slate-500 font-bold px-2 py-0 h-5 text-[10px]">
-                  Nivel Fundamental
-                </Badge>
-              )}
+               <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-bold px-2 py-0 h-5 text-[10px]">
+                 Tecnología: {technology}
+               </Badge>
+               {isPremium ? (
+                 <Badge className="bg-amber-100 text-amber-700 border-amber-200 font-bold px-2 py-0 h-5 text-[10px] gap-1">
+                   <Crown className="h-3 w-3" /> Nivel Profesional Premium
+                 </Badge>
+               ) : (
+                 <Badge variant="outline" className="border-slate-200 text-slate-500 font-bold px-2 py-0 h-5 text-[10px]">
+                   Nivel Fundamental
+                 </Badge>
+               )}
             </div>
           </div>
         </div>
@@ -123,32 +130,32 @@ export function CourseCertificate({
           </div>
           <div className="flex items-center gap-1.5 text-[8px] font-bold text-slate-400 uppercase">
             <Award className="h-2.5 w-2.5" />
-            ID: LS-{Math.random().toString(36).substring(7).toUpperCase()}
+            ID: {certificateId}
           </div>
         </div>
 
         <div className="flex flex-col items-center gap-1 border-t border-slate-200 pt-2">
-          <div className="relative w-32 h-10">
-            <Image 
-              src={signatureUrl} 
-              alt="Firma Director" 
-              fill 
-              className="object-contain" 
-            />
-          </div>
-          <div className="text-center">
-            <p className="text-xs font-bold text-slate-900">Daniel Morales</p>
-            <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wide">Director Académico</p>
-          </div>
+           <div className="relative w-32 h-10">
+             <Image 
+               src={signatureUrl} 
+               alt="Firma Director" 
+               fill 
+               className="object-contain" 
+             />
+           </div>
+           <div className="text-center">
+             <p className="text-xs font-bold text-slate-900">Daniel Morales</p>
+             <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wide">Director Académico</p>
+           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-1">
-          <div className="bg-slate-900 p-2 rounded-lg text-white flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-400" />
-            <div className="text-left">
-              <p className="text-[7px] font-bold opacity-70 uppercase leading-none">LearnStream</p>
-              <p className="text-[9px] font-bold whitespace-nowrap leading-none">Verificado</p>
-            </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="bg-white p-1 rounded-sm border shadow-sm">
+            <QRCodeSVG value={verifyUrl} size={64} level="Q" />
+          </div>
+          <div className="bg-slate-900 px-2 py-1 rounded w-[72px] text-center text-white flex flex-col items-center justify-center">
+            <ShieldCheck className="h-3 w-3 text-emerald-400 mb-0.5" />
+            <p className="text-[5px] font-bold uppercase leading-none">Escanear para verificar</p>
           </div>
         </div>
       </footer>

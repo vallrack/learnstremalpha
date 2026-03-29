@@ -131,6 +131,7 @@ function CertificateContent() {
                 completionDate={completionDate}
                 modulesCount={modules?.length || 0}
                 instructorName={course?.instructorName}
+                certificateId={isPreview ? "PREVIEW-ID" : `${user?.uid}_${courseId}`}
               />
             </div>
           </div>

@@ -152,10 +152,7 @@ export default function CourseDetailPage() {
                 <Clock className="h-3 w-3" /> Curso Finalizado
               </Badge>
             )}
-            <div className="flex items-center gap-1 text-sm text-white/80">
-              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              <span className="font-bold text-white">4.8 (2.5k reseñas)</span>
-            </div>
+            <HeroCourseRating courseId={id} />
           </div>
           <h1 className="text-3xl md:text-5xl font-headline font-bold mb-6 max-w-3xl leading-tight text-white">
             {course.title}
@@ -488,6 +485,32 @@ function CourseReviews({ courseId }: { courseId: string }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function HeroCourseRating({ courseId }: { courseId: string }) {
+  const db = useFirestore();
+  const [stats, setStats] = useState({ avg: 0, count: 0 });
+
+  useEffect(() => {
+    if (!db || !courseId) return;
+    import('firebase/firestore').then(({ collection, getDocs }) => {
+      getDocs(collection(db, 'reviews', courseId, 'ratings')).then(snap => {
+        if (snap.empty) return;
+        const ratings = snap.docs.map(d => d.data().rating || 0);
+        const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+        setStats({ avg, count: ratings.length });
+      }).catch(() => {});
+    });
+  }, [db, courseId]);
+
+  if (stats.count === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 text-sm text-white/90 font-medium">
+      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+      <span>{stats.avg.toFixed(1)} ({stats.count} reseña{stats.count !== 1 ? 's' : ''})</span>
     </div>
   );
 }
