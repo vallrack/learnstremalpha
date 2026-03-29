@@ -120,11 +120,13 @@ export default function CourseDetailPage() {
   const hasPurchased = profile?.purchasedCourses?.includes(id);
   const isFreeCourse = course.isFree === true;
   
-  // Acceso permitido si: Es gratis, es Admin, es el autor, compró el curso, o tiene subscripción Premium global
-  const hasValidAccess = isFreeCourse || isPremium || isAuthor || hasPurchased;
+  // Acceso permitido si: Eres Admin, es el autor, compraste el curso, o tiene subscripción Premium global
+  const hasValidAccess = isPremium || isAuthor || hasPurchased;
   
-  // Acceso denegado si no tiene acceso válido, o si está expirado y no eres del equipo/premium
-  const accessDenied = !hasValidAccess || (isExpired && !isPremium && !isAuthor);
+  // Acceso denegado si no tiene acceso básico y el curso no es gratis,
+  // O si el curso ha expirado y no eres personal autorizado.
+  const isExpiredAndNoAccess = !!(isExpired && !isPremium && !isAuthor);
+  const accessDenied = (!hasValidAccess && !isFreeCourse) || isExpiredAndNoAccess;
 
   const formatVideoUrl = (url: string) => {
     if (!url) return '';

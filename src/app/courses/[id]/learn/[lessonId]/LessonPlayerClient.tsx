@@ -176,7 +176,10 @@ function LessonPlayerContent() {
   const isAuthor = user?.uid === course.instructorId;
   const hasPurchased = profile?.purchasedCourses?.includes(courseId);
   const isFreeCourse = course.isFree === true;
-  const hasValidAccess = isFreeCourse || isPremium || isAuthor || hasPurchased;
+  const isLessonPremium = !!currentLesson.isPremium;
+
+  // Acceso permitido si: Eres Admin/Autor, compraste el curso, tienes sub Premium, o es lección gratis en curso gratis
+  const hasValidAccess = isPremium || isAuthor || hasPurchased || (isFreeCourse && !isLessonPremium);
 
   if (!hasValidAccess) {
     return (
