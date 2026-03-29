@@ -67,6 +67,8 @@ export default function CourseContentAdminPage() {
   const [moduleTitle, setModuleTitle] = useState('');
   const [moduleOrder, setModuleOrder] = useState('0');
   const [moduleIsPremium, setModuleIsPremium] = useState(false);
+  const [modulePrice, setModulePrice] = useState('0');
+  const [moduleCurrency, setModuleCurrency] = useState('COP');
 
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -101,6 +103,8 @@ export default function CourseContentAdminPage() {
       courseId: courseId,
       instructorId: course.instructorId,
       courseIsFree: course.isFree ?? true,
+      price: moduleIsPremium ? parseFloat(modulePrice) || 0 : 0,
+      currency: moduleCurrency,
       updatedAt: serverTimestamp(),
     };
 
@@ -121,6 +125,8 @@ export default function CourseContentAdminPage() {
     setModuleTitle('');
     setModuleOrder('0');
     setModuleIsPremium(false);
+    setModulePrice('0');
+    setModuleCurrency('COP');
   };
 
   const handleDeleteModule = (moduleId: string) => {
@@ -193,6 +199,27 @@ export default function CourseContentAdminPage() {
                       />
                       <Label htmlFor="m-prem" className="text-xs font-bold">Módulo Premium (Bloquea todas las lecciones internas)</Label>
                     </div>
+
+                    {moduleIsPremium && (
+                      <div className="grid grid-cols-2 gap-4 p-4 border-2 border-primary/20 rounded-2xl bg-primary/5 animate-in fade-in slide-in-from-top-2">
+                        <div className="grid gap-2">
+                          <Label htmlFor="m-price">Precio de Desbloqueo</Label>
+                          <Input id="m-price" type="number" value={modulePrice} onChange={(e) => setModulePrice(e.target.value)} required placeholder="Ej: 50000" className="bg-white" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="m-currency">Moneda</Label>
+                          <Select value={moduleCurrency} onValueChange={setModuleCurrency}>
+                            <SelectTrigger id="m-currency" className="bg-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="COP">COP (Pesos Colombianos)</SelectItem>
+                              <SelectItem value="USD">USD (Dólares)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button type="submit" className="w-full rounded-xl h-11">Guardar Módulo</Button>
@@ -227,6 +254,8 @@ export default function CourseContentAdminPage() {
                         setModuleTitle(module.title);
                         setModuleOrder(module.orderIndex?.toString() || '0');
                         setModuleIsPremium(module.isPremium || false);
+                        setModulePrice(module.price?.toString() || '0');
+                        setModuleCurrency(module.currency || 'COP');
                         setIsModuleDialogOpen(true);
                       }}>
                         <Edit className="h-4 w-4" />
@@ -267,6 +296,8 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
   const [duration, setDuration] = useState('10');
   const [order, setOrder] = useState('0');
   const [isPremium, setIsPremium] = useState(false);
+  const [price, setPrice] = useState('0');
+  const [currency, setCurrency] = useState('COP');
 
   // Quiz state
   const [questions, setQuestions] = useState<any[]>([]);
@@ -301,6 +332,8 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
       moduleId,
       instructorId: course.instructorId,
       courseIsFree: course.isFree ?? true,
+      price: isPremium ? parseFloat(price) || 0 : 0,
+      currency: currency,
       updatedAt: serverTimestamp(),
     };
 
@@ -342,6 +375,8 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     setDuration('10');
     setOrder('0');
     setIsPremium(false);
+    setPrice('0');
+    setCurrency('COP');
     setQuestions([]);
   };
 
@@ -355,6 +390,8 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     setDuration(lesson.durationInMinutes?.toString() || '10');
     setOrder(lesson.orderIndex?.toString() || '0');
     setIsPremium(lesson.isPremium || false);
+    setPrice(lesson.price?.toString() || '0');
+    setCurrency(lesson.currency || 'COP');
     setQuestions(lesson.questions || []);
     setIsDialogOpen(true);
   };
@@ -571,6 +608,27 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
                   <input type="checkbox" id="prem" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary" />
                   <Label htmlFor="prem" className="text-xs">Lección Premium (Solo suscriptores)</Label>
                 </div>
+
+                {isPremium && (
+                  <div className="grid grid-cols-2 gap-4 p-4 border-2 border-primary/20 rounded-2xl bg-primary/5 animate-in fade-in slide-in-from-top-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="l-price">Precio de Desbloqueo</Label>
+                      <Input id="l-price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="Ej: 15000" className="bg-white" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="l-currency">Moneda</Label>
+                      <Select value={currency} onValueChange={setCurrency}>
+                        <SelectTrigger id="l-currency" className="bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="COP">COP (Pesos Colombianos)</SelectItem>
+                          <SelectItem value="USD">USD (Dólares)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button type="submit" className="w-full rounded-xl h-11" disabled={(type === 'challenge' && !challengeId) || (type === 'quiz' && questions.length === 0)}>

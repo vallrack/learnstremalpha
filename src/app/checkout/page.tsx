@@ -44,6 +44,8 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const courseId = searchParams.get('courseId');
+  const moduleId = searchParams.get('moduleId');
+  const lessonId = searchParams.get('lessonId');
   const { toast } = useToast();
   const { name, supportWhatsapp, academyCurrency, academyMonthlyPrice, academyAnnualPrice } = useBrand();
   
@@ -64,9 +66,30 @@ function CheckoutContent() {
     return doc(db, 'courses', courseId);
   }, [db, courseId]);
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
+
+  const moduleRef = useMemoFirebase(() => {
+    if (!db || !courseId || !moduleId) return null;
+    return doc(db, 'courses', courseId, 'modules', moduleId);
+  }, [db, courseId, moduleId]);
+  const { data: moduleData, isLoading: isModuleLoading } = useDoc(moduleRef);
+
+  const lessonRef = useMemoFirebase(() => {
+    if (!db || !courseId || !moduleId || !lessonId) return null;
+    return doc(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId);
+  }, [db, courseId, moduleId, lessonId]);
+  const { data: lessonData, isLoading: isLessonLoading } = useDoc(lessonRef);
   
-  const currentCurrency = courseId && course ? (course.currency || 'COP') : (academyCurrency || 'COP');
-  const BASE_PRICE = courseId ? (course?.price || 0) : (academyMonthlyPrice || 120000);
+  const currentCurrency = 
+    lessonId && lessonData ? (lessonData.currency || 'COP') : 
+    moduleId && moduleData ? (moduleData.currency || 'COP') : 
+    courseId && course ? (course.currency || 'COP') : 
+    (academyCurrency || 'COP');
+
+  const BASE_PRICE = 
+    lessonId && lessonData ? (lessonData.price || 0) : 
+    moduleId && moduleData ? (moduleData.price || 0) : 
+    courseId ? (course?.price || 0) : 
+    (academyMonthlyPrice || 120000);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -132,13 +155,14 @@ function CheckoutContent() {
     }
     
     const publicKey = process.env.NEXT_PUBLIC_EPAYCO_PUBLIC_KEY;
-    
+
     if (!publicKey) {
       toast({
         variant: "destructive",
         title: "Configuración incompleta",
         description: "Falta la llave pública de ePayco (NEXT_PUBLIC_EPAYCO_PUBLIC_KEY).",
       });
+      console.error("ePayco key missing"); // Adding log for debugging
       return;
     }
 
@@ -146,8 +170,9 @@ function CheckoutContent() {
       toast({
         variant: "destructive",
         title: "Pasarela no cargada",
-        description: "El script de ePayco no se cargó. Verifica tu conexión.",
+        description: "El script de ePayco no se cargó. Intenta recargar la página.",
       });
+      console.error("ePayco script not found on window"); // Adding log for debugging
       return;
     }
 
@@ -159,15 +184,23 @@ function CheckoutContent() {
         test: false // MODO PRODUCCIÓN ACTIVADO
       });
 
+      const purchaseName = lessonId && lessonData ? `Clase: ${lessonData.title}` : 
+                          moduleId && moduleData ? `Módulo: ${moduleData.title}` :
+                          courseId && course ? `Curso: ${course.title}` : 
+                          `${name} Premium`;
+
       const data = {
-        name: courseId && course ? `Curso: ${course.title}` : `${name} Premium`,
-        description: courseId && course ? "Acceso de por vida al curso" : "Acceso vitalicio a cursos y desafíos IA",
+        name: purchaseName,
+        description: lessonId ? "Acceso individual a lección premium" : 
+                    moduleId ? "Acceso completo al módulo premium" :
+                    courseId ? "Acceso de por vida al curso" : 
+                    "Acceso vitalicio a cursos y desafíos IA",
         invoice: `LS-${Date.now()}-${user.uid.substring(0, 5)}`,
         currency: currentCurrency.toLowerCase(),
         amount: finalPrice.toString(),
         tax_base: "0",
         tax: "0",
-        country: currentCurrency === 'COP' ? 'co' : 'us', // ePayco expects 'co' for COP and usually 'us' or others for global
+        country: currentCurrency === 'COP' ? 'co' : 'us', 
         lang: "es",
         external: "false",
         response: `${window.location.origin}/checkout/success`,
@@ -175,7 +208,7 @@ function CheckoutContent() {
         email_billing: user.email,
         extra1: user.uid, 
         extra2: appliedCoupon?.id || "none",
-        extra3: courseId || "premium",
+        extra3: `${courseId || 'none'}|${moduleId || 'none'}|${lessonId || 'none'}`,
       };
 
       handler.open(data);
@@ -187,7 +220,7 @@ function CheckoutContent() {
     }
   };
 
-  if (isUserLoading || isCourseLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isUserLoading || isCourseLoading || isModuleLoading || isLessonLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const whatsappLink = `https://wa.me/${supportWhatsapp}?text=Hola%20${name},%20tengo%20problemas%20con%20el%20pago%20de%20mi%20suscripci%C3%B3n%20Premium%20y%20me%20gustar%C3%ADa%20recibir%20ayuda.`;
 
@@ -229,10 +262,15 @@ function CheckoutContent() {
           <div className="space-y-8">
             <div>
               <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">
-                {courseId && course ? `Inscríbete en: ${course.title}` : "Potencia tu carrera hoy"}
+                {lessonId && lessonData ? `Desbloquea: ${lessonData.title}` :
+                 moduleId && moduleData ? `Módulo: ${moduleData.title}` :
+                 courseId && course ? `Inscríbete en: ${course.title}` : 
+                 "Potencia tu carrera hoy"}
               </h1>
               <p className="text-lg text-muted-foreground">
-                {courseId && course ? "Adquiere acceso de por vida a este programa certificado." : "Desbloquea herramientas profesionales con medios de pago locales a través de ePayco."}
+                {lessonId || moduleId ? "Adquiere acceso permanente a este contenido premium." :
+                 courseId && course ? "Adquiere acceso de por vida a este programa certificado." : 
+                 "Desbloquea herramientas profesionales con medios de pago locales a través de ePayco."}
               </p>
             </div>
 
@@ -297,7 +335,10 @@ function CheckoutContent() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-dashed">
                   <span className="text-slate-600 font-medium whitespace-pre-wrap flex-1 pr-4">
-                    {courseId && course ? `Curso: ${course.title}` : 'Plan Premium Vitalicio'}
+                    {lessonId && lessonData ? `Clase Premium: ${lessonData.title}` :
+                     moduleId && moduleData ? `Módulo Premium: ${moduleData.title}` :
+                     courseId && course ? `Curso: ${course.title}` : 
+                     'Plan Premium Vitalicio'}
                   </span>
                   <span className="font-bold shrink-0">{formatPrice(BASE_PRICE, currentCurrency)}</span>
                 </div>

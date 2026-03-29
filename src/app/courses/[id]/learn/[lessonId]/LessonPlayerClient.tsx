@@ -41,6 +41,7 @@ import { doc, collection, query, orderBy, serverTimestamp, setDoc, where } from 
 import { useState, Suspense } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { formatPrice } from '@/lib/currency';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -182,7 +183,11 @@ function LessonPlayerContent() {
   const isAcademyActive = isAcademy && profile?.subscription?.status === 'active';
   const isPremium = profile?.role === 'admin' || !!profile?.isPremiumSubscriber || isAcademyActive;
   const isAuthor = user?.uid === course.instructorId;
-  const hasPurchased = profile?.purchasedCourses?.includes(courseId);
+  const hasPurchasedCourse = profile?.purchasedCourses?.includes(courseId);
+  const hasPurchasedModule = profile?.purchasedModules?.includes(moduleId || '');
+  const hasPurchasedLesson = profile?.purchasedLessons?.includes(lessonId);
+  
+  const hasPurchased = hasPurchasedCourse || hasPurchasedModule || hasPurchasedLesson;
   const isFreeCourse = course.isFree === true;
   const isLessonPremium = !!currentLesson.isPremium;
   const isModulePremium = !!currentModule?.isPremium;
@@ -208,8 +213,21 @@ function LessonPlayerContent() {
           <h1 className="text-4xl font-headline font-bold mb-4">Acceso Restringido</h1>
           <p className="text-muted-foreground max-w-md mb-8 text-lg">
             {isModulePremium ? 'Este módulo es Premium. ' : isLessonPremium ? 'Esta lección es Premium. ' : 'Este curso requiere acceso. '}
-            Debes adquirir este curso o tener una suscripción activa para continuar aprendiendo.
+            Debes adquirir este contenido o tener una suscripción activa para continuar aprendiendo.
           </p>
+
+          {(isModulePremium || isLessonPremium) && isFreeCourse && (
+            <div className="mb-8 p-6 bg-amber-50 border-2 border-amber-200 rounded-[2.5rem] max-w-sm w-full shadow-lg shadow-amber-500/5">
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-2">Desbloqueo Individual</p>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm font-bold text-slate-700">Inversión vitalicia:</span>
+                <span className="text-2xl font-black text-amber-600">
+                  {isLessonPremium ? formatPrice(currentLesson.price || 0, currentLesson.currency || 'COP') : formatPrice(currentModule?.price || 0, currentModule?.currency || 'COP')}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-4">
             {!user ? (
               <Button onClick={() => router.push('/login')} className="rounded-2xl h-14 px-8 bg-primary hover:bg-primary/90 font-bold shadow-xl shadow-primary/10">
@@ -221,12 +239,20 @@ function LessonPlayerContent() {
               </Button>
             ) : (
               <Button variant="outline" onClick={() => router.push(`/courses/${courseId}`)} className="rounded-2xl h-14 px-8 text-lg font-bold">
-                Ver Otros Cursos
+                Ver Contenido Libre
               </Button>
             )}
             {!isAcademy && (
-              <Button onClick={() => router.push(`/checkout?courseId=${courseId}`)} className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200">
-                {isFreeCourse ? 'Suscripción Premium' : 'Obtener Acceso'} 
+              <Button 
+                onClick={() => {
+                  let url = `/checkout?courseId=${courseId}`;
+                  if (isLessonPremium && isFreeCourse) url += `&moduleId=${moduleId}&lessonId=${lessonId}`;
+                  else if (isModulePremium && isFreeCourse) url += `&moduleId=${moduleId}`;
+                  router.push(url);
+                }} 
+                className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200"
+              >
+                {isFreeCourse ? (isModulePremium || isLessonPremium ? 'Desbloquear Contenido' : 'Suscripción Premium') : 'Obtener Acceso'} 
               </Button>
             )}
           </div>
