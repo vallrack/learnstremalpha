@@ -26,5 +26,11 @@ export const TENANTS_MAP: Record<string, Partial<BrandingConfig>> = {
     name: 'Academia Demo',
     tagline: 'Tu centro de formación especializado',
     logoUrl: 'https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i', // Cambiar por el logo del cliente
+  },
+  'dprogramadores.com.co': {
+    name: 'DProgramadores Academy',
+    tagline: 'La vida en un código',
+    logoUrl: 'https://dprogramadores.com.co/img/logoD.png',
+    primaryColor: '210 100% 50%',
   }
 };
