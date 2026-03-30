@@ -36,7 +36,8 @@ export default function AcademySettings() {
     setIsSaving(true);
     try {
       const settingsRef = doc(db, 'settings', 'branding');
-      await setDoc(settingsRef, {
+      
+      const dataToSave: any = {
         name: formData.name,
         tagline: formData.tagline,
         logoUrl: formData.logoUrl,
@@ -46,10 +47,20 @@ export default function AcademySettings() {
         domain: formData.domain,
         isDemoEnabled: formData.isDemoEnabled,
         demoExpiration: formData.demoExpiration,
-        academyMonthlyPrice: Number(formData.academyMonthlyPrice),
-        academyAnnualPrice: Number(formData.academyAnnualPrice),
-        academyCurrency: formData.academyCurrency || 'COP',
-      }, { merge: true });
+        academyCurrency: formData.academyCurrency,
+      };
+
+      if (formData.academyMonthlyPrice !== undefined) dataToSave.academyMonthlyPrice = Number(formData.academyMonthlyPrice);
+      if (formData.academyAnnualPrice !== undefined) dataToSave.academyAnnualPrice = Number(formData.academyAnnualPrice);
+
+      // Clean undefined keys
+      Object.keys(dataToSave).forEach(key => {
+        if (dataToSave[key] === undefined) {
+          delete dataToSave[key];
+        }
+      });
+
+      await setDoc(settingsRef, dataToSave, { merge: true });
       
       toast({
         title: "¡Cambios guardados!",
