@@ -158,54 +158,77 @@ export default function AdminCoursesPage() {
     setImageUrl(finalUrl);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !user || (!profile && !isDemoAccount)) return;
-
-    const courseData: any = {
-      title,
-      description,
-      category,
-      technology,
-      isFree,
-      price: isFree ? 0 : Number(price),
-      currency: isFree ? 'COP' : currency,
-      instructorRevenueShare: isAdmin ? Number(instructorRevenueShare) : (editingCourseId ? undefined : 70), // Keep existing or set to 70 if new for non-admins
-      isActive,
-      previewVideoUrl,
-      updatedAt: serverTimestamp(),
-      instructorName: profile?.displayName || user.displayName || user.email || 'Demo Instructor'
-    };
-
-    if (closingDate) {
-      courseData.closingDate = Timestamp.fromDate(new Date(closingDate));
-    } else {
-      courseData.closingDate = null;
-    }
-
-    if (imageUrl) {
-      if (imageUrl.startsWith('data:')) {
-        courseData.thumbnailDataUrl = imageUrl;
-        courseData.imageUrl = null;
-      } else {
-        courseData.imageUrl = imageUrl;
-        courseData.thumbnailDataUrl = null;
-      }
-    }
-
-    if (editingCourseId) {
-      updateDocumentNonBlocking(doc(db, 'courses', editingCourseId), courseData);
-    } else {
-      courseData.instructorId = user.uid;
-      courseData.createdAt = serverTimestamp();
-      if (!courseData.imageUrl && !courseData.thumbnailDataUrl) {
-        courseData.imageUrl = `https://picsum.photos/seed/${Math.random()}/800/450`;
-      }
-      addDocumentNonBlocking(collection(db, 'courses'), courseData);
-    }
+    console.log("DEBUG: handleFormSubmit triggered");
     
-    setIsDialogOpen(false);
-    resetForm();
+    if (!db || !user || (!profile && !isDemoAccount)) {
+      console.log("DEBUG: Early exit - missing dependencies", { db: !!db, user: !!user, profile: !!profile, isDemoAccount });
+      return;
+    }
+
+    try {
+      const courseData: any = {
+        title,
+        description,
+        category,
+        technology,
+        isFree,
+        price: isFree ? 0 : Number(price),
+        currency: isFree ? 'COP' : currency,
+        instructorRevenueShare: isAdmin ? Number(instructorRevenueShare) : (editingCourseId ? undefined : 70),
+        isActive,
+        previewVideoUrl,
+        updatedAt: serverTimestamp(),
+        instructorName: profile?.displayName || user.displayName || user.email || 'Demo Instructor'
+      };
+
+      if (closingDate) {
+        try {
+          courseData.closingDate = Timestamp.fromDate(new Date(closingDate));
+        } catch (dateErr) {
+          console.error("DEBUG: Invalid closing date format", closingDate);
+          courseData.closingDate = null;
+        }
+      } else {
+        courseData.closingDate = null;
+      }
+
+      if (imageUrl) {
+        if (imageUrl.startsWith('data:')) {
+          courseData.thumbnailDataUrl = imageUrl;
+          courseData.imageUrl = null;
+        } else {
+          courseData.imageUrl = imageUrl;
+          courseData.thumbnailDataUrl = null;
+        }
+      }
+
+      console.log("DEBUG: Submitting course data", courseData);
+
+      if (editingCourseId) {
+        await updateDocumentNonBlocking(doc(db, 'courses', editingCourseId), courseData);
+        toast({ title: "Curso actualizado", description: "Los cambios se guardaron correctamente." });
+      } else {
+        courseData.instructorId = user.uid;
+        courseData.createdAt = serverTimestamp();
+        if (!courseData.imageUrl && !courseData.thumbnailDataUrl) {
+          courseData.imageUrl = `https://picsum.photos/seed/${Math.random()}/800/450`;
+        }
+        await addDocumentNonBlocking(collection(db, 'courses'), courseData);
+        toast({ title: "¡Curso creado!", description: "El nuevo programa ya está disponible en el catálogo." });
+      }
+      
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error: any) {
+      console.error("DEBUG: Error in handleFormSubmit", error);
+      toast({
+        variant: "destructive",
+        title: "Error al publicar",
+        description: error.message || "Ocurrió un error inesperado al guardar el curso.",
+      });
+    }
   };
 
   const handleDeleteCourse = (courseId: string) => {
