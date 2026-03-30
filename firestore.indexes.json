@@ -9,14 +9,6 @@
       ]
     },
     {
-      "collectionGroup": "ratings",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "rating", "order": "DESCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "paths",
       "queryScope": "COLLECTION",
       "fields": [
