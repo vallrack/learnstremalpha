@@ -100,6 +100,10 @@ function CheckoutContent() {
     courseId ? (course?.price || 0) : 
     (academyMonthlyPrice || 120000);
 
+  // CRITICAL FIX: Ensure currency is always a string and price is always a number
+  const finalizedCurrency = currentCurrency || 'COP';
+  const finalizedBasePrice = Number(BASE_PRICE) || 0;
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
@@ -111,11 +115,18 @@ function CheckoutContent() {
     }
   }, [user, isUserLoading, router, profile, courseId]);
 
+  // Safety check to avoid ePayco script stuck loading
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).ePayco) {
+      setIsScriptLoaded(true);
+    }
+  }, []);
+
   const finalPrice = useMemo(() => {
-    if (!appliedCoupon) return BASE_PRICE;
-    const discount = (BASE_PRICE * appliedCoupon.discountPercentage) / 100;
-    return Math.max(0, BASE_PRICE - discount);
-  }, [appliedCoupon]);
+    if (!appliedCoupon) return finalizedBasePrice;
+    const discount = (finalizedBasePrice * appliedCoupon.discountPercentage) / 100;
+    return Math.max(0, finalizedBasePrice - discount);
+  }, [appliedCoupon, finalizedBasePrice]);
 
   const handleValidateCoupon = async () => {
     if (!couponCode.trim() || !db) return;
@@ -207,7 +218,7 @@ function CheckoutContent() {
                     courseId ? "Acceso de por vida al curso" : 
                     "Acceso vitalicio a cursos y desafíos IA",
         invoice: `LS-${Date.now()}-${user.uid.substring(0, 5)}`,
-        currency: currentCurrency.toLowerCase(),
+        currency: finalizedCurrency.toLowerCase(),
         amount: finalPrice.toString(),
         tax_base: "0",
         tax: "0",
@@ -327,9 +338,9 @@ function CheckoutContent() {
                 <span className="text-slate-400">Inversión vitalicia:</span>
                 <div className="text-right">
                   {appliedCoupon && (
-                    <p className="text-xs text-rose-400 line-through font-bold opacity-60">{formatPrice(BASE_PRICE, currentCurrency)}</p>
+                    <p className="text-xs text-rose-400 line-through font-bold opacity-60">{formatPrice(finalizedBasePrice, finalizedCurrency)}</p>
                   )}
-                  <span className="text-3xl font-bold">{formatPrice(finalPrice, currentCurrency)}</span>
+                  <span className="text-3xl font-bold">{formatPrice(finalPrice, finalizedCurrency)}</span>
                 </div>
               </div>
               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Un solo pago para siempre</p>
@@ -353,7 +364,7 @@ function CheckoutContent() {
                      courseId && course ? `Curso: ${course.title}` : 
                      'Plan Premium Vitalicio'}
                   </span>
-                  <span className="font-bold shrink-0">{formatPrice(BASE_PRICE, currentCurrency)}</span>
+                  <span className="font-bold shrink-0">{formatPrice(finalizedBasePrice, finalizedCurrency)}</span>
                 </div>
 
                 <div className="space-y-2">
@@ -392,7 +403,7 @@ function CheckoutContent() {
 
                 <div className="flex justify-between items-center pt-4">
                   <span className="text-xl font-headline font-bold">Total a pagar</span>
-                  <span className="text-3xl font-headline font-bold text-primary">{formatPrice(finalPrice, currentCurrency)}</span>
+                  <span className="text-3xl font-headline font-bold text-primary">{formatPrice(finalPrice, finalizedCurrency)}</span>
                 </div>
               </div>
 
