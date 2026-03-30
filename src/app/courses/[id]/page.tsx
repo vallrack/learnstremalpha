@@ -415,10 +415,12 @@ function ModuleLessons({ courseId, moduleId, hasValidAccess, isFreeCourse, modul
             </div>
           </div>
           {(!hasValidAccess && (lesson.isPremium || moduleIsPremium || !isFreeCourse)) ? (
-            <Link href={`/checkout?courseId=${courseId}`}>
-              <Button variant="ghost" size="sm" className="rounded-lg h-9 gap-2 text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 font-bold border-rose-100 border">
+            <Link href={`/checkout?courseId=${courseId}${lesson.isPremium ? `&moduleId=${moduleId}&lessonId=${lesson.id}` : moduleIsPremium ? `&moduleId=${moduleId}` : ''}`}>
+              <Button variant="ghost" size="sm" className="rounded-xl h-10 gap-2 text-amber-600 bg-amber-50 hover:bg-amber-100 hover:text-amber-700 font-bold border-amber-100 border transition-all hover:scale-105 px-4 shadow-sm shadow-amber-500/5">
                 <Lock className="h-3.5 w-3.5" />
-                <span className="text-[10px] uppercase tracking-widest hidden sm:inline">Desbloquear</span>
+                <span className="text-[11px] font-black uppercase tracking-wider">
+                  {lesson.isPremium && lesson.price > 0 ? formatPrice(lesson.price, lesson.currency || 'COP') : 'Desbloquear'}
+                </span>
               </Button>
             </Link>
           ) : (

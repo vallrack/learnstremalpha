@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -317,6 +317,20 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
   }, [db, course.id, moduleId]);
 
   const { data: lessons } = useCollection(lessonsQuery);
+  
+  // Sincronizar precio cuando se selecciona un desafío
+  useEffect(() => {
+    if (type === 'challenge' && challengeId && allChallenges) {
+      const challenge = allChallenges.find(c => c.id === challengeId);
+      if (challenge && challenge.price !== undefined) {
+        setPrice(challenge.price.toString());
+        setCurrency(challenge.currency || 'COP');
+        if (challenge.price > 0) {
+          setIsPremium(true);
+        }
+      }
+    }
+  }, [challengeId, type, allChallenges]);
 
   const handleSaveLesson = (e: React.FormEvent) => {
     e.preventDefault();
