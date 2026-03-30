@@ -62,6 +62,10 @@ export default function Home() {
 
       // 3. Asegurar que el perfil existe en Firestore con rol admin
       const { getDoc, setDoc, doc: fsDoc, serverTimestamp: fsServerTimestamp } = await import('firebase/firestore');
+      
+      // Pequeña espera para asegurar que la sesión de Auth se propague
+      await new Promise(resolve => setTimeout(resolve, 800));
+
       if (auth.currentUser) {
         const userDocRef = fsDoc(db, 'users', auth.currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
