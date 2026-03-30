@@ -19,11 +19,13 @@ import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
 export default function AdminCoursesPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
