@@ -7,7 +7,7 @@ import { WaitingHall } from '@/components/instructor/WaitingHall';
 import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock, Users, Eye, Upload, Image as ImageIcon, X, Link as LinkIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useUser, useAuth, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc, Timestamp, query, where } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -23,8 +23,9 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
 export default function AdminCoursesPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
@@ -164,8 +165,17 @@ export default function AdminCoursesPage() {
     e.preventDefault();
     console.log("DEBUG: handleFormSubmit triggered");
     
-    if (!db || !user || (!profile && !isDemoAccount)) {
-      console.log("DEBUG: Early exit - missing dependencies", { db: !!db, user: !!user, profile: !!profile, isDemoAccount });
+    const activeUser = user || auth.currentUser;
+    const isDemo = activeUser?.email === 'demo@learnstream.ai';
+    
+    if (!db || !activeUser || (isUserLoading && !isDemo) || (!profile && !isDemo)) {
+      console.log("DEBUG: Early exit - missing dependencies", { 
+        db: !!db, 
+        user: !!activeUser, 
+        profile: !!profile, 
+        isUserLoading,
+        isDemo 
+      });
       return;
     }
 
@@ -182,7 +192,7 @@ export default function AdminCoursesPage() {
         isActive,
         previewVideoUrl,
         updatedAt: serverTimestamp(),
-        instructorName: profile?.displayName || user.displayName || user.email || 'Demo Instructor'
+        instructorName: profile?.displayName || activeUser.displayName || activeUser.email || 'Demo Instructor'
       };
 
       if (closingDate) {
@@ -212,7 +222,7 @@ export default function AdminCoursesPage() {
         await updateDocumentNonBlocking(doc(db, 'courses', editingCourseId), courseData);
         toast({ title: "Curso actualizado", description: "Los cambios se guardaron correctamente." });
       } else {
-        courseData.instructorId = user.uid;
+        courseData.instructorId = activeUser.uid;
         courseData.createdAt = serverTimestamp();
         if (!courseData.imageUrl && !courseData.thumbnailDataUrl) {
           courseData.imageUrl = `https://picsum.photos/seed/${Math.random()}/800/450`;

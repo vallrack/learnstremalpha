@@ -59,6 +59,24 @@ export default function Home() {
           throw authError; // Re-lanzar si es otro tipo de error (ej: red)
         }
       }
+
+      // 3. Asegurar que el perfil existe en Firestore con rol admin
+      const { getDoc, setDoc, doc: fsDoc, serverTimestamp: fsServerTimestamp } = await import('firebase/firestore');
+      if (auth.currentUser) {
+        const userDocRef = fsDoc(db, 'users', auth.currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (!userDocSnap.exists()) {
+          console.log("DEBUG: Creating demo profile document");
+          await setDoc(userDocRef, {
+            displayName: 'Demo Instructor',
+            email: demoEmail,
+            role: 'admin',
+            createdAt: fsServerTimestamp(),
+            isDemo: true
+          });
+        }
+      }
       
       toast({
         title: "Modo Demo Activo",
@@ -71,7 +89,7 @@ export default function Home() {
       toast({
         variant: "destructive",
         title: "Error al acceder al Demo",
-        description: "Asegúrate de que la autenticación está habilitada en el panel de Firebase.",
+        description: "Asegúrate de que la autenticación está habilitada en el panel de Firebase. Detalle: " + error.message,
       });
       setIsDemoLoading(false);
     }
