@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useBrand } from '@/lib/branding/BrandingProvider';
-import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { Save, Globe, Palette, Mail, MessageCircle, Link, Loader2, PlayCircle, CreditCard, Calendar } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +35,7 @@ export default function AcademySettings() {
     setIsSaving(true);
     try {
       const settingsRef = doc(db, 'settings', 'branding');
-      await setDocumentNonBlocking(settingsRef, {
+      await setDoc(settingsRef, {
         name: formData.name,
         tagline: formData.tagline,
         logoUrl: formData.logoUrl,
@@ -56,6 +55,7 @@ export default function AcademySettings() {
         description: "La identidad de tu academia ha sido actualizada globalmente.",
       });
     } catch (error) {
+      console.error("DEBUG: Error saving academy settings", error);
        toast({
         variant: "destructive",
         title: "Error al guardar",
