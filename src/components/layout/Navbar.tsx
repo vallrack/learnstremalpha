@@ -62,7 +62,7 @@ export function Navbar() {
   const isDemoAccount = user?.email === 'demo@learnstream.ai';
 
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || isDemoAccount;
   const isInstructor = profile?.role === 'instructor';
   const isPendingInstructor = profile?.instructorStatus === 'pending';
   const hasManagementAccess = isAdmin || isInstructor || isPendingInstructor;
@@ -96,7 +96,8 @@ export function Navbar() {
     { href: '/admin/academy', label: 'Configuración Academia', icon: Settings, roles: ['admin'] },
   ];
 
-  const visibleAdminLinks = adminLinks.filter(link => link.roles.includes(profile?.role || ''));
+  const effectiveRole = isDemoAccount ? 'admin' : (profile?.role || '');
+  const visibleAdminLinks = adminLinks.filter(link => link.roles.includes(effectiveRole));
 
   return (
     <>

@@ -13,6 +13,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
+        request.auth.token.email == 'demo@learnstream.ai' || 
         request.auth.uid == 'dvoJg4wCr2e2DZABWjlXITbtVCE3' || 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );

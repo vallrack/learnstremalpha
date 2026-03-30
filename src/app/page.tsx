@@ -36,7 +36,7 @@ export default function Home() {
     return doc(db, 'users', user.uid);
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
-  const hasManagementAccess = profile?.role === 'admin' || profile?.role === 'instructor';
+  const hasManagementAccess = profile?.role === 'admin' || profile?.role === 'instructor' || user?.email === 'demo@learnstream.ai';
 
   const isDemoAvailable = isDemoEnabled && (!demoExpiration || new Date(demoExpiration) >= new Date());
 
