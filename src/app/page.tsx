@@ -16,7 +16,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 export default function Home() {
   const { t } = useTranslation();
@@ -40,31 +40,38 @@ export default function Home() {
 
   const isDemoAvailable = isDemoEnabled && (!demoExpiration || new Date(demoExpiration) >= new Date());
 
-  const handleDemoLogin = () => {
+  const handleDemoLogin = async () => {
     if (!isDemoAvailable) return;
     
     setIsDemoLoading(true);
+    const demoEmail = 'demo@learnstream.ai';
+    const demoPass = 'DemoStream2026!';
+
     try {
-      // Iniciamos login no bloqueante
-      initiateEmailSignIn(auth, 'demo@learnstream.ai', 'DemoStream2026!');
+      // 1. Intentar iniciar sesión
+      try {
+        await signInWithEmailAndPassword(auth, demoEmail, demoPass);
+      } catch (authError: any) {
+        // 2. Si el usuario no existe, intentar crearlo (Solo para el demo)
+        if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
+          await createUserWithEmailAndPassword(auth, demoEmail, demoPass);
+        } else {
+          throw authError; // Re-lanzar si es otro tipo de error (ej: red)
+        }
+      }
       
       toast({
-        title: "Iniciando Modo Demo...",
-        description: "Serás redirigido al panel de instructor en un momento.",
+        title: "Modo Demo Activo",
+        description: "Accediendo al panel de instructor...",
       });
       
-      // El redireccionamiento lo manejará el efecto de autenticación global en el layout
-      // o podemos forzarlo aquí después de un breve delay si el estado no cambia rápido.
-      setTimeout(() => {
-        router.push('/admin/courses');
-      }, 1500);
-      
+      router.push('/admin/courses');
     } catch (error: any) {
       console.error("Demo login error:", error);
       toast({
         variant: "destructive",
         title: "Error al acceder al Demo",
-        description: "El servicio demo no está disponible en este momento. Inténtalo más tarde.",
+        description: "Asegúrate de que la autenticación está habilitada en el panel de Firebase.",
       });
       setIsDemoLoading(false);
     }

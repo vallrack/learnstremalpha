@@ -200,7 +200,7 @@ export function Navbar() {
             </div>
             <div className="p-6 border-t bg-muted/5 mt-auto">
               {!user ? (
-                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button className="w-full h-12 rounded-2xl font-bold gap-2">
                     <LogIn className="h-4 w-4" />
                     {t.common.startFree}
@@ -356,7 +356,7 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Link href="/login">
+          <Link href="/register">
             <Button size="sm" className="rounded-full px-4 md:px-6 h-9 font-bold text-xs">
               {t.common.startFree}
             </Button>

@@ -29,16 +29,21 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
         const finalBrand = {
           ...activeBrand,
           ...data
-        };
+        } as BrandingConfig;
         setBrand(finalBrand);
 
-        // 3. Dynamic Styles
+        // 3. Dynamic Styles & Metadata
+        if (finalBrand.name) {
+          document.title = `${finalBrand.name} - ${finalBrand.tagline || 'Academia de Cursos e IA'}`;
+        }
+        
         if (finalBrand.primaryColor) {
            document.documentElement.style.setProperty('--primary', finalBrand.primaryColor);
            document.documentElement.style.setProperty('--ring', finalBrand.primaryColor);
         }
       } else {
         setBrand(activeBrand);
+        document.title = `${activeBrand.name} - ${activeBrand.tagline || 'Academia de Cursos e IA'}`;
       }
     });
 
