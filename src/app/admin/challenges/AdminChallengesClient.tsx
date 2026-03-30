@@ -96,18 +96,19 @@ export default function AdminChallengesClient() {
     return doc(db, 'users', user.uid);
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
-  const isAdmin = profile?.role === 'admin';
+  const isDemoAccount = user?.email === 'demo@learnstream.ai';
+  const isAdmin = profile?.role === 'admin' || isDemoAccount;
 
   const challengesQuery = useMemoFirebase(() => {
-    if (!db || !profile) return null;
-    if (profile.role === 'admin') {
+    if (!db || (!profile && !isDemoAccount)) return null;
+    if (isAdmin) {
       return collection(db, 'coding_challenges');
     }
-    if (profile.role === 'instructor' && user?.uid) {
+    if (profile?.role === 'instructor' && user?.uid) {
       return query(collection(db, 'coding_challenges'), where('instructorId', '==', user.uid));
     }
     return null;
-  }, [db, profile, user?.uid]);
+  }, [db, profile, user?.uid, isAdmin, isDemoAccount]);
   const { data: challenges, isLoading: isChallengesLoading } = useCollection(challengesQuery);
 
   const resetForm = () => {
@@ -200,7 +201,7 @@ export default function AdminChallengesClient() {
       updateDocumentNonBlocking(doc(db, 'coding_challenges', editingId), challengeData);
     } else {
       challengeData.instructorId = user.uid;
-      challengeData.instructorName = profile?.displayName || user.displayName || user.email;
+      challengeData.instructorName = profile?.displayName || user.displayName || user.email || 'Demo Instructor';
       challengeData.createdAt = serverTimestamp();
       addDocumentNonBlocking(collection(db, 'coding_challenges'), challengeData);
     }

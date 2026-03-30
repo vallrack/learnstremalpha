@@ -37,7 +37,8 @@ export default function AdminCoursesPage() {
     return doc(db, 'users', user.uid);
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
-  const isAdmin = profile?.role === 'admin';
+  const isDemoAccount = user?.email === 'demo@learnstream.ai';
+  const isAdmin = profile?.role === 'admin' || isDemoAccount;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -54,15 +55,15 @@ export default function AdminCoursesPage() {
   const [instructorRevenueShare, setInstructorRevenueShare] = useState<number>(70);
 
   const coursesQuery = useMemoFirebase(() => {
-    if (!db || !profile) return null;
-    if (profile.role === 'admin') {
+    if (!db || (!profile && !isDemoAccount)) return null;
+    if (isAdmin) {
       return collection(db, 'courses');
     }
-    if (profile.role === 'instructor' && user?.uid) {
+    if (profile?.role === 'instructor' && user?.uid) {
       return query(collection(db, 'courses'), where('instructorId', '==', user.uid));
     }
     return null;
-  }, [db, profile, user?.uid]);
+  }, [db, profile, user?.uid, isAdmin, isDemoAccount]);
 
   const { data: courses, isLoading } = useCollection(coursesQuery);
 
@@ -159,7 +160,7 @@ export default function AdminCoursesPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !user || !profile) return;
+    if (!db || !user || (!profile && !isDemoAccount)) return;
 
     const courseData: any = {
       title,
@@ -173,7 +174,7 @@ export default function AdminCoursesPage() {
       isActive,
       previewVideoUrl,
       updatedAt: serverTimestamp(),
-      instructorName: profile.displayName || user.displayName || user.email 
+      instructorName: profile?.displayName || user.displayName || user.email || 'Demo Instructor'
     };
 
     if (closingDate) {
