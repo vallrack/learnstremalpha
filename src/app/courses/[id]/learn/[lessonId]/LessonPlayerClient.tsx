@@ -541,7 +541,7 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
     );
   }, [db, courseId, lessonId]);
   
-  const { data: discussions, isLoading } = useCollection(discussionsQuery);
+  const { data: discussions, isLoading, error } = useCollection(discussionsQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
