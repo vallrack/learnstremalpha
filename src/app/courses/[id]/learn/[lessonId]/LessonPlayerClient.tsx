@@ -1,20 +1,13 @@
 'use client';
 
-import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { Navbar } from '@/components/layout/Navbar';
-import { QuizPlayer } from '@/components/challenges/QuizPlayer';
-import { FlipFlashcards } from '@/components/challenges/FlipFlashcards';
-import { SortableCodeBlocks } from '@/components/challenges/SortableCodeBlocks';
-import { WordSearchGame } from '@/components/challenges/WordSearchGame';
-import { InteractiveVideo } from '@/components/challenges/InteractiveVideo';
-import { DragDropSnippets } from '@/components/challenges/DragDropSnippets';
-import { SwipeCards } from '@/components/challenges/SwipeCards';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { 
+  Loader2, 
   ChevronLeft, 
+  ChevronRight, 
   CheckCircle, 
   Menu, 
-  Loader2, 
   PlayCircle,
   Paperclip,
   FileDown,
@@ -31,31 +24,25 @@ import {
   Star,
   Send,
   Download, 
-  ExternalLink, 
-  Eye, 
-  Paperclip, 
-  FileDown, 
-  Presentation, 
-  FileText, 
-  Link as LinkIcon, 
   MessageSquare, 
   ThumbsUp, 
   MessageCircleMore, 
   Trash2, 
   History, 
-  Send, 
   UserCircle2, 
-  Map as MapIcon 
+  Map as MapIcon,
+  ShieldAlert,
+  ExternalLink as ExternalLinkIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, orderBy, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import { useState, Suspense, useEffect } from 'react';
+import { doc, collection, query, orderBy, serverTimestamp, setDoc, where, updateDoc, arrayUnion, getDoc, getDocs, addDoc, increment, deleteDoc } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { formatPrice } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -70,8 +57,16 @@ import {
   SheetTitle, 
   SheetTrigger 
 } from "@/components/ui/sheet";
-import { useToast } from '@/hooks/use-toast';
 import { FloatingAITutor } from '@/components/ai/FloatingAITutor';
+
+import { Navbar } from '@/components/layout/Navbar';
+import { QuizPlayer } from '@/components/challenges/QuizPlayer';
+import { FlipFlashcards } from '@/components/challenges/FlipFlashcards';
+import { SortableCodeBlocks } from '@/components/challenges/SortableCodeBlocks';
+import { WordSearchGame } from '@/components/challenges/WordSearchGame';
+import { InteractiveVideo } from '@/components/challenges/InteractiveVideo';
+import { DragDropSnippets } from '@/components/challenges/DragDropSnippets';
+import { SwipeCards } from '@/components/challenges/SwipeCards';
 
 export default function LessonPlayerClient() {
   return (
@@ -141,7 +136,7 @@ function LessonPlayerContent() {
   useEffect(() => {
     if (!db || !courseId || !modules) return;
     const fetchCounts = async () => {
-      const { getDocs, collection } = await import('firebase/firestore');
+      if (!db) return;
       let count = 0;
       for (const mod of modules) {
         const q = query(collection(db, 'courses', courseId, 'modules', mod.id, 'lessons'));
@@ -154,9 +149,10 @@ function LessonPlayerContent() {
   }, [db, courseId, modules]);
 
   const handleMarkAsCompleted = async () => {
-    if (!db || !user || user.isAnonymous || !courseId || !lessonId) return;
-    
-    const { setDoc, arrayUnion, serverTimestamp } = await import('firebase/firestore');
+    if (!db || !user || user.isAnonymous || !courseId || !lessonId) {
+      if (user?.isAnonymous) toast({ variant: "destructive", title: "Inicia sesión", description: "Debes estar registrado para guardar tu progreso." });
+      return;
+    }
     
     const currentCompleted = progress?.completedLessons || [];
     const isAlreadyCompleted = currentCompleted.includes(lessonId);
@@ -176,18 +172,18 @@ function LessonPlayerContent() {
 
   // Función de certificación (Separada)
   const handleFinalizeCourse = async () => {
-      const { updateDoc, serverTimestamp } = await import('firebase/firestore');
+      if (!db || !user || !progressRef) return;
       
-      await setDoc(progressRef!, {
+      await updateDoc(progressRef, {
         status: 'completed',
         completedAt: serverTimestamp(),
         progressPercentage: 100
-      }, { merge: true });
+      });
 
       // Crear Certificado Verificable Oficial
-      const certRef = doc(db, 'certificates', `${user!.uid}_${courseId}`);
+      const certRef = doc(db, 'certificates', `${user.uid}_${courseId}`);
       await setDoc(certRef, {
-        userId: user!.uid,
+        userId: user.uid,
         courseId,
         studentName: profile?.displayName || user.email?.split('@')[0] || 'Estudiante',
         courseTitle: course?.title || 'Curso',
@@ -208,14 +204,14 @@ function LessonPlayerContent() {
     if (!db || !user || surveyRating === 0) return;
     setSurveySubmitting(true);
     try {
-      const profile = (await import('firebase/firestore').then(m => m.getDoc(doc(db, 'users', user.uid)))).data();
+      const userProfileData = (await getDoc(doc(db, 'users', user.uid))).data();
       await setDoc(doc(db, 'reviews', courseId, 'ratings', user.uid), {
         userId: user.uid,
         courseId,
         rating: surveyRating,
         comment: surveyComment.trim(),
-        displayName: profile?.displayName || user.email?.split('@')[0] || 'Estudiante',
-        profileImageUrl: profile?.profileImageUrl || profile?.photoURL || null,
+        displayName: userProfileData?.displayName || user.email?.split('@')[0] || 'Estudiante',
+        profileImageUrl: userProfileData?.profileImageUrl || userProfileData?.photoURL || null,
         createdAt: serverTimestamp(),
       });
       toast({ title: '¡Gracias por tu reseña!', description: 'Tu opinión ayuda a mejorar la calidad del curso.' });
@@ -235,13 +231,13 @@ function LessonPlayerContent() {
 
   if (!course || !currentLesson) return <div className="h-screen flex items-center justify-center">No encontrado</div>;
 
-  const isAcademy = profile?.role === 'academy';
-  const isAcademyActive = isAcademy && profile?.subscription?.status === 'active';
-  const isPremium = profile?.role === 'admin' || !!profile?.isPremiumSubscriber || isAcademyActive;
-  const isAuthor = user?.uid === course.instructorId;
-  const hasPurchasedCourse = profile?.purchasedCourses?.includes(courseId);
-  const hasPurchasedModule = profile?.purchasedModules?.includes(moduleId || '');
-  const hasPurchasedLesson = profile?.purchasedLessons?.includes(lessonId);
+  const isAcademy = profile?.role === 'academy' || false;
+  const isAcademyActive = (isAcademy && profile?.subscription?.status === 'active') || false;
+  const isPremium = profile?.role === 'admin' || !!profile?.isPremiumSubscriber || isAcademyActive || false;
+  const isAuthor = (user && course && user.uid === course.instructorId) || false;
+  const hasPurchasedCourse = (profile?.purchasedCourses?.includes(courseId)) || false;
+  const hasPurchasedModule = (moduleId && profile?.purchasedModules?.includes(moduleId)) || false;
+  const hasPurchasedLesson = (profile?.purchasedLessons?.includes(lessonId)) || false;
   
   const hasPurchased = hasPurchasedCourse || hasPurchasedModule || hasPurchasedLesson;
   const isFreeCourse = course.isFree === true;
@@ -700,7 +696,6 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
     }
     setIsSubmitting(true);
     try {
-      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
       const userName = profile?.displayName || user.displayName || user.email?.split('@')[0] || "Estudiante";
       const userPhotoUrl = profile?.profileImageUrl || profile?.photoURL || user.photoURL || null;
       await addDoc(collection(db, 'lesson_discussions'), {
@@ -721,7 +716,6 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
     if (!db || !user || !replyText.trim()) return;
     setIsSubmitting(true);
     try {
-      const { updateDoc, doc, arrayUnion } = await import('firebase/firestore');
       const userName = profile?.displayName || user.displayName || user.email?.split('@')[0] || "Estudiante";
       const userPhotoUrl = profile?.profileImageUrl || profile?.photoURL || user.photoURL || null;
       await updateDoc(doc(db, 'lesson_discussions', discussionId), {
@@ -742,13 +736,13 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
   };
 
   const handleDelete = async (discussionId: string) => {
-    if (!db || !window.confirm("¿Seguro?")) return;
+    if (!db || !window.confirm("¿Estás seguro de eliminar este mensaje?")) return;
     try {
-      const { deleteDoc, doc } = await import('firebase/firestore');
       await deleteDoc(doc(db, 'lesson_discussions', discussionId));
-      toast({ title: "Eliminado" });
+      toast({ title: "Mensaje eliminado correctamente." });
     } catch (err) {
-      toast({ variant: "destructive", title: "Error" });
+      console.error("Error deleting discussion:", err);
+      toast({ variant: "destructive", title: "Error al eliminar" });
     }
   };
 
@@ -797,7 +791,7 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
               </div>
               
               <div className="flex gap-4 pl-14">
-                <button onClick={async () => { if(!db||!user||user.isAnonymous) return; const {updateDoc,doc,increment}=await import('firebase/firestore'); await updateDoc(doc(db,'lesson_discussions',d.id),{upvotes:increment(1)}); }} className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-primary"><ThumbsUp className="h-3.5 w-3.5" />{d.upvotes||0}</button>
+                <button onClick={async () => { if(!db||!user||user.isAnonymous) return; await updateDoc(doc(db,'lesson_discussions',d.id),{upvotes:increment(1)}); }} className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-primary"><ThumbsUp className="h-3.5 w-3.5" />{d.upvotes||0}</button>
                 <button onClick={() => setReplyingToId(replyingToId === d.id ? null : d.id)} className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-primary"><MessageCircleMore className="h-3.5 w-3.5" /> Responder</button>
               </div>
 
