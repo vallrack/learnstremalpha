@@ -1,25 +1,33 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Let's try both keys one after another
-async function testAllKeys() {
-  const keys = [
-    'AIzaSyDWPMrsqtbkmVD1Ck1Rduk44-TgPZY28Z', // GOOGLE_GENAI_API_KEY
-    'AIzaSyA9ko66iF-YXFBToaD7n0z7YGoqXIByAa4'  // GEMINI_API_KEY
-  ];
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
 
-  for (const key of keys) {
-    console.log(`Testing key: ${key.substring(0, 10)}...`);
-    const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+dotenv.config({ path: ".env.local" });
 
-    try {
-      const result = await model.generateContent('Hello');
-      const text = result.response.text();
-      console.log(`✅ Key ${key.substring(0, 10)} works! Response: ${text.substring(0, 20)}...`);
-    } catch (error: any) {
-      console.error(`❌ Key ${key.substring(0, 10)} failed: ${error.message}`);
-    }
+const keys = [
+  process.env.BACKUP_AI_KEY,
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  process.env.GEMINI_API_KEY
+];
+
+async function testKey(key: string, name: string) {
+  if (!key) {
+    console.log(`${name}: MISSING`);
+    return;
+  }
+  const genAI = new GoogleGenerativeAI(key);
+  try {
+    const list = await genAI.getModel("models/gemini-1.5-flash");
+    console.log(`${name}: SUCCESS - Model found`);
+  } catch (e: any) {
+    console.log(`${name}: ERROR - ${e.message}`);
   }
 }
 
-testAllKeys();
+async function run() {
+  await testKey(process.env.BACKUP_AI_KEY!, "BACKUP_AI_KEY");
+  await testKey(process.env.GOOGLE_GENERATIVE_AI_API_KEY!, "GOOGLE_GENERATIVE_AI_API_KEY");
+  await testKey(process.env.GEMINI_API_KEY!, "GEMINI_API_KEY");
+}
+
+run();

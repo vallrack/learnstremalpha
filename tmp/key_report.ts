@@ -1,6 +1,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import fs from "fs";
 
 dotenv.config({ path: ".env.local" });
 
@@ -11,25 +12,25 @@ const keys = [
 ];
 
 async function testKey(key: string, name: string) {
-  if (!key) {
-    console.log(`${name}: MISSING`);
-    return;
-  }
+  if (!key) return `${name}: MISSING`;
   const genAI = new GoogleGenerativeAI(key);
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent("Hola");
-    const response = await result.response;
-    console.log(`${name}: SUCCESS - Response: ${response.text().substring(0, 20)}...`);
+    const result = await model.generateContent("Test");
+    await result.response;
+    return `${name}: SUCCESS`;
   } catch (e: any) {
-    console.log(`${name}: ERROR - ${e.message}`);
+    return `${name}: FAILED - ${e.message.substring(0, 100)}`;
   }
 }
 
 async function run() {
+  const results = [];
   for (const k of keys) {
-    await testKey(k.val!, k.name);
+    results.push(await testKey(k.val!, k.name));
   }
+  fs.writeFileSync("tmp/key_report.txt", results.join("\n"));
+  console.log(results.join("\n"));
 }
 
 run();
