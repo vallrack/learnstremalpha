@@ -41,7 +41,14 @@ export async function evaluateChallenge(input: EvaluateChallengeInput): Promise<
     return { success: true, data };
   } catch (error: any) {
     console.error("Evaluation Error:", error);
-    return { success: false, error: error.message || 'Error al evaluar el desafío.' };
+    // Si es un error de cuota, API key o modelo no encontrado, devolvemos un código para el fallback.
+    const errorMessage = error.message || "";
+    const isSystemError = errorMessage.includes("403") || errorMessage.includes("404") || errorMessage.includes("limit") || errorMessage.includes("not found");
+    
+    return { 
+      success: false, 
+      error: isSystemError ? `AI_SYSTEM_ERROR: ${errorMessage}` : (errorMessage || 'Error al evaluar el desafío.') 
+    };
   }
 }
 

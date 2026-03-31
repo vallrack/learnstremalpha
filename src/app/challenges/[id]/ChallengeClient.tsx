@@ -85,6 +85,41 @@ export default function ChallengeClient() {
     return !isActuallyFree && !isSubscriber && !hasPurchased;
   }, [challenge, profile, challengeId]);
 
+  const handleClaudeFallback = async () => {
+    const puter = (window as any).puter;
+    if (!puter) throw new Error("Motor de respaldo (Puter) no disponible.");
+
+    const prompt = `Eres un evaluador técnico senior. Evalúa críticamente esta entrega de estudiante.
+    RETO: ${challenge?.title}
+    DESCRIPCIÓN: ${challenge?.description}
+    TECNOLOGÍA: ${challenge?.technology}
+    SOLUCIÓN REFERENCIA: ${challenge?.solution || ""}
+    
+    ENTREGA DEL ESTUDIANTE:
+    ${code}
+    
+    REGLA DE ORO:
+    - Responde UNICAMENTE con un objeto JSON válido.
+    - Calificación 0.0 a 5.0 (Pasa si >= 3.0).
+    - Feedback DEBE SER EN ESPAÑOL.
+    
+    ESTRUCTURA JSON:
+    {
+      "score": 0.0,
+      "passed": true/false,
+      "feedback": "español",
+      "awardedBadge": { "title": "...", "description": "...", "iconType": "logic/style/data/architecture/speed/communication" } 
+    }`;
+
+    const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet' });
+    const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
+    
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Claude no pudo generar un formato de evaluación válido.");
+    
+    return JSON.parse(jsonMatch[0]) as EvaluateChallengeOutput;
+  };
+
   const handleSubmit = async (quizScore?: number) => {
     if (!challenge || !db || isPremiumLocked) return;
     
@@ -101,7 +136,7 @@ export default function ChallengeClient() {
     setIsEvaluating(true);
     setResult(null);
     try {
-      const result = await evaluateChallenge({
+      const res = await evaluateChallenge({
         challengeTitle: challenge.title,
         challengeDescription: challenge.description,
         technology: challenge.technology,
@@ -109,21 +144,39 @@ export default function ChallengeClient() {
         solutionReference: challenge.solution,
       });
 
-      if (result.success) {
-        processResult(result.data);
+      if (res.success) {
+        processResult(res.data);
       } else {
-        toast({ 
-          variant: "destructive", 
-          title: "Error de Evaluación", 
-          description: result.error
-        });
+        // DETECTANDO ERROR DE INFRAESTRUCTURA PARA FALLBACK
+        if (res.error.includes("AI_SYSTEM_ERROR") || res.error.includes("403") || res.error.includes("404")) {
+          toast({ 
+            title: "Recuperación de IA", 
+            description: "Gemini se encuentra saturado. Activando motor de respaldo (Claude)...",
+          });
+          
+          const fallbackResult = await handleClaudeFallback();
+          processResult(fallbackResult);
+        } else {
+          toast({ 
+            variant: "destructive", 
+            title: "Error de Evaluación", 
+            description: res.error
+          });
+        }
       }
     } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Error de Conexión", 
-        description: error.message || "No pudimos conectar con el servidor de IA." 
-      });
+      console.error("Evaluation Error catching:", error);
+      // Intento de rescate si el servidor de plano falló
+      try {
+        const fallbackResult = await handleClaudeFallback();
+        processResult(fallbackResult);
+      } catch (fallbackError) {
+        toast({ 
+          variant: "destructive", 
+          title: "Error Crítico", 
+          description: "Ningún motor de IA respondió correctamente." 
+        });
+      }
     } finally {
       setIsEvaluating(false);
     }
