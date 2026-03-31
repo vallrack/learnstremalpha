@@ -131,6 +131,20 @@ export default function AdminChallengesClient() {
     setCurrency('COP');
   };
 
+  const activityCategories = {
+    all: { label: 'Todas', types: [] },
+    ia: { label: 'Experiencias IA', types: ['interview', 'swipe', 'flashcard'], icon: '✨' },
+    tech: { label: 'Desafíos Técnicos', types: ['code', 'dragdrop', 'sortable'], icon: '💻' },
+    fun: { label: 'Evaluación & Juegos', types: ['quiz', 'wordsearch', 'interactive-video'], icon: '🎮' }
+  };
+
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  const filteredChallenges = (challenges || []).filter(c => {
+    if (activeCategory === 'all') return true;
+    return activityCategories[activeCategory as keyof typeof activityCategories].types.includes(c.type);
+  });
+
   const handleEditClick = (challenge: any) => {
     setEditingId(challenge.id);
     setTitle(challenge.title || '');
@@ -592,59 +606,110 @@ export default function AdminChallengesClient() {
           </Dialog>
         </header>
 
-        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-x-auto">
-          <Table>
-            <TableHeader><TableRow className="bg-slate-50 border-none"><TableHead className="pl-8 h-14">Actividad</TableHead><TableHead>Tipo</TableHead><TableHead>Ubicación</TableHead><TableHead>Acceso</TableHead><TableHead className="text-right pr-8">Acciones</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {isChallengesLoading ? (
-                <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-              ) : challenges?.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground italic">No hay actividades creadas aún.</TableCell></TableRow>
-              ) : challenges?.map(c => (
-                <TableRow key={c.id} className="border-slate-100">
-                  <TableCell className="pl-8 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-slate-100 p-2 rounded-xl text-slate-500">
-                        {['swipe', 'flashcard', 'interactive-video', 'dragdrop', 'sortable'].includes(c.type) ? <Sparkles className="h-5 w-5" /> : c.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : c.type === 'interview' ? <MessageSquare className="h-5 w-5" /> : c.type === 'wordsearch' ? <Gamepad2 className="h-5 w-5" /> : <Terminal className="h-5 w-5" />}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-900">{c.title}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase font-bold">{c.technology}</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="rounded-lg font-bold">
-                       {c.type === 'quiz' ? 'Trivia' : c.type === 'interview' ? 'Entrevista' : c.type === 'wordsearch' ? 'Sopa Letras' : c.type === 'sortable' ? 'Ordenamiento' : c.type === 'dragdrop' ? 'Rompecabezas' : c.type === 'swipe' ? 'Cartas Swing' : c.type === 'flashcard' ? 'Flashcards 3D' : c.type === 'interactive-video' ? 'Video Interactivo' : 'Código'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {c.visibility === 'private' ? (
-                      <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 gap-1 rounded-lg">
-                        <Lock className="h-3 w-3" /> Privado
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 gap-1 rounded-lg">
-                        <Layers className="h-3 w-3" /> Catálogo
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {c.isFree ? <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">Libre</Badge> : <Badge className="bg-amber-100 text-amber-700 border-amber-200">Premium</Badge>}
-                  </TableCell>
-                  <TableCell className="text-right pr-8">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => handleEditClick(c)}><Edit className="h-4 w-4" /></Button>
-                      {(isAdmin || profile?.role === 'instructor') && (
-                        <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => { if(confirm('¿Eliminar actividad?')) deleteDocumentNonBlocking(doc(db, 'coding_challenges', c.id)) }}><Trash2 className="h-4 w-4" /></Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
+        <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory} className="w-full">
+           <TabsList className="bg-white/50 p-1.5 h-14 rounded-2xl border mb-8 flex justify-start gap-2 overflow-x-auto">
+              {Object.entries(activityCategories).map(([key, cat]) => (
+                <TabsTrigger 
+                  key={key} 
+                  value={key} 
+                  className="rounded-xl px-5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all gap-2"
+                >
+                  <span className="text-sm">{cat.label}</span>
+                  <Badge variant="secondary" className="h-5 px-1.5 rounded-md text-[10px] bg-slate-100 text-slate-500 font-bold border-none group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white">
+                    {(challenges || []).filter(c => key === 'all' ? true : cat.types.includes(c.type)).length}
+                  </Badge>
+                </TabsTrigger>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+           </TabsList>
+
+           <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
+             <Table>
+               <TableHeader><TableRow className="bg-slate-50 border-none"><TableHead className="pl-8 h-14 font-bold text-slate-900">Actividad</TableHead><TableHead className="font-bold text-slate-900">Tipo</TableHead><TableHead className="font-bold text-slate-900">Ubicación</TableHead><TableHead className="font-bold text-slate-900">Acceso</TableHead><TableHead className="text-right pr-8 font-bold text-slate-900">Acciones</TableHead></TableRow></TableHeader>
+               <TableBody>
+                 {isChallengesLoading ? (
+                   <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                 ) : filteredChallenges.length === 0 ? (
+                   <TableRow><TableCell colSpan={5} className="h-60 text-center flex flex-col items-center justify-center gap-4">
+                      <div className="bg-slate-100 p-6 rounded-full text-slate-400">
+                        <Search className="h-10 w-10" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-600">No hay actividades de este tipo</p>
+                        <p className="text-sm text-slate-400 italic">Crea una nueva {activeCategory !== 'all' ? activityCategories[activeCategory as keyof typeof activityCategories].label.toLowerCase() : 'actividad'} para comenzar.</p>
+                      </div>
+                   </TableCell></TableRow>
+                 ) : filteredChallenges.map(c => (
+                   <TableRow key={c.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
+                     <TableCell className="pl-8 py-4">
+                       <div className="flex items-center gap-4">
+                         <div className={`p-3 rounded-[1.25rem] shadow-sm border ${
+                            activityCategories.ia.types.includes(c.type) ? 'bg-purple-50 border-purple-100 text-purple-600' :
+                            activityCategories.tech.types.includes(c.type) ? 'bg-indigo-50 border-indigo-100 text-indigo-600' :
+                            'bg-slate-50 border-slate-100 text-slate-500'
+                         }`}>
+                           {['swipe', 'flashcard', 'interactive-video', 'dragdrop', 'sortable'].includes(c.type) ? <Sparkles className="h-5 w-5" /> : c.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : c.type === 'interview' ? <MessageSquare className="h-5 w-5" /> : c.type === 'wordsearch' ? <Gamepad2 className="h-5 w-5" /> : <Terminal className="h-5 w-5" />}
+                         </div>
+                         <div className="flex flex-col">
+                           <span className="font-bold text-slate-900 text-sm leading-tight mb-1">{c.title}</span>
+                           <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[10px] uppercase font-bold border-none bg-slate-100 text-slate-500 py-0 h-4 px-1.5 rounded-sm">{c.technology}</Badge>
+                              <span className="text-[10px] text-slate-400">•</span>
+                              <span className="text-[10px] text-slate-400 font-medium">{c.difficulty}</span>
+                           </div>
+                         </div>
+                       </div>
+                     </TableCell>
+                     <TableCell>
+                       <Badge variant="secondary" className={`rounded-lg font-bold text-[11px] px-3 py-1 border-none ${
+                          activityCategories.ia.types.includes(c.type) ? 'bg-purple-100/50 text-purple-700' :
+                          activityCategories.tech.types.includes(c.type) ? 'bg-indigo-100/50 text-indigo-700' :
+                          'bg-slate-100 text-slate-600'
+                       }`}>
+                          {c.type === 'quiz' ? 'Trivia' : c.type === 'interview' ? 'Simulación IA' : c.type === 'wordsearch' ? 'Sopa Letras' : c.type === 'sortable' ? 'Ordenamiento' : c.type === 'dragdrop' ? 'Rompecabezas' : c.type === 'swipe' ? 'Cartas Tinder' : c.type === 'flashcard' ? 'Flashcards 3D' : c.type === 'interactive-video' ? 'Video Interactivo' : 'Código Técnico'}
+                       </Badge>
+                     </TableCell>
+                     <TableCell>
+                       {c.visibility === 'private' ? (
+                         <Badge variant="outline" className="bg-slate-100/50 text-slate-600 border-slate-200 gap-1.5 rounded-lg font-bold text-[10px] px-2.5 h-6">
+                           <Lock className="h-3 w-3" /> Privado
+                         </Badge>
+                       ) : (
+                         <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 gap-1.5 rounded-lg font-bold text-[10px] px-2.5 h-6">
+                           <Eye className="h-3 w-3" /> En Catálogo
+                         </Badge>
+                       )}
+                     </TableCell>
+                     <TableCell>
+                       {c.isFree ? (
+                          <div className="flex items-center gap-2">
+                             <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" />
+                             <span className="text-[11px] font-bold text-emerald-700">Abierto / Libre</span>
+                          </div>
+                       ) : (
+                          <div className="flex items-center gap-2">
+                             <div className="h-2 w-2 rounded-full bg-amber-500 shadow-sm shadow-amber-200" />
+                             <span className="text-[11px] font-bold text-amber-700">Premium (${c.price})</span>
+                          </div>
+                       )}
+                     </TableCell>
+                     <TableCell className="text-right pr-12">
+                       <div className="flex justify-end gap-2">
+                         <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-slate-200 hover:border-primary hover:text-primary transition-all bg-white shadow-sm" onClick={() => handleEditClick(c)}>
+                            <Edit className="h-4 w-4" />
+                         </Button>
+                         {(isAdmin || profile?.role === 'instructor') && (
+                           <Button variant="ghost" size="icon" className="h-9 w-9 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-all" onClick={() => { if(confirm('¿Eliminar esta actividad permanentemente?')) deleteDocumentNonBlocking(doc(db, 'coding_challenges', c.id)) }}>
+                              <Trash2 className="h-4 w-4" />
+                           </Button>
+                         )}
+                       </div>
+                     </TableCell>
+                   </TableRow>
+                 ))}
+               </TableBody>
+             </Table>
+           </div>
+        </Tabs>
       </main>
     </div>
   );
