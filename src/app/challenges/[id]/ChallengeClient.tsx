@@ -111,6 +111,9 @@ export default function ChallengeClient() {
       "awardedBadge": { "title": "...", "description": "...", "iconType": "logic/style/data/architecture/speed/communication" } 
     }`;
 
+    // Asegurarse que Puter esté inicializado
+    if (puter.init) await puter.init();
+
     const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet' });
     const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
     
