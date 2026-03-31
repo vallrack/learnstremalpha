@@ -24,7 +24,8 @@ import {
   Sparkles,
   Terminal,
   Cpu,
-  Layers
+  Layers,
+  Wand2
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -65,6 +66,7 @@ import { TECH_STACK } from '@/lib/languages';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { VisualH5PBuilder } from './VisualH5PBuilder';
+import { generateActivities } from '@/ai/flows/generate-activities';
 
 export default function AdminChallengesClient() {
   const { user } = useUser();
@@ -90,6 +92,12 @@ export default function AdminChallengesClient() {
   const [targetRole, setTargetRole] = useState('');
   const [price, setPrice] = useState('0');
   const [currency, setCurrency] = useState('COP');
+
+  // AI Generation state
+  const [isAIOpen, setIsAIOpen] = useState(false);
+  const [aiLessonContent, setAiLessonContent] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -131,7 +139,7 @@ export default function AdminChallengesClient() {
     setCurrency('COP');
   };
 
-  const activityCategories = {
+  const activityCategories: Record<string, { label: string; types: string[]; icon?: string }> = {
     all: { label: 'Todas', types: [] },
     ia: { label: 'Experiencias IA', types: ['interview', 'swipe', 'flashcard'], icon: '✨' },
     tech: { label: 'Desafíos Técnicos', types: ['code', 'dragdrop', 'sortable'], icon: '💻' },
@@ -139,6 +147,44 @@ export default function AdminChallengesClient() {
   };
 
   const [activeCategory, setActiveCategory] = useState('all');
+
+  const handleAIGenerate = async (type: any) => {
+    if (!aiLessonContent.trim() || !db) return;
+    setIsGenerating(true);
+    setAiError('');
+    try {
+      const result = await generateActivities({
+        lessonTitle: title || 'Desafío Nuevo',
+        lessonContent: aiLessonContent,
+        technology: technology || 'General',
+        activityType: type,
+      });
+      
+      if (result.success) {
+        if (type === 'code') {
+          const config = JSON.parse(result.data.activityConfig);
+          setInitialCode(config.initialCode || '');
+          setSolution(config.solution || '');
+        } else if (type === 'interview') {
+          const config = JSON.parse(result.data.activityConfig);
+          setTargetRole(config.targetRole || '');
+          setTargetLanguage(config.targetLanguage || 'es');
+          setSolution(config.solution || '');
+        }
+        if (result.data.activityTitle) setTitle(result.data.activityTitle);
+        if (result.data.activityDescription) setDescription(result.data.activityDescription);
+        
+        setIsAIOpen(false);
+        setAiLessonContent('');
+      } else {
+        setAiError(result.error);
+      }
+    } catch (err: any) {
+      setAiError(err?.message || 'Error de conexión.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const filteredChallenges = (challenges || []).filter(c => {
     if (activeCategory === 'all') return true;
@@ -482,8 +528,37 @@ export default function AdminChallengesClient() {
                             </div>
                           </div>
                         )}
+
+                        {/* AI Wizard for Code/Interview */}
+                        <div className="mb-6">
+                           {!isAIOpen ? (
+                             <Button type="button" onClick={() => setIsAIOpen(true)} variant="outline" className="w-full h-11 rounded-xl border-orange-200 bg-orange-50/50 text-orange-700 font-bold hover:bg-orange-100 hover:border-orange-300 transition-all gap-2">
+                               <Sparkles className="h-4 w-4" />
+                               Despertar Genio IA para este Reto
+                             </Button>
+                           ) : (
+                             <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5 space-y-3">
+                                <Label className="text-orange-800 font-bold text-xs">Instrucciones de la Lección</Label>
+                                <Textarea 
+                                  value={aiLessonContent} 
+                                  onChange={(e) => setAiLessonContent(e.target.value)}
+                                  placeholder="Pega el contenido base para generar el reto..."
+                                  className="min-h-[100px] text-xs bg-white border-orange-100"
+                                />
+                                {aiError && <p className="text-[10px] text-rose-500 font-bold">{aiError}</p>}
+                                <div className="flex gap-2">
+                                   <Button type="button" onClick={() => handleAIGenerate(challengeType)} disabled={isGenerating} className="flex-1 bg-orange-600 hover:bg-orange-700 h-9 text-xs">
+                                      {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                                      Generar Estructura y Solución
+                                   </Button>
+                                   <Button type="button" variant="ghost" size="sm" onClick={() => {setIsAIOpen(false); setAiError('')}} className="text-orange-600 hover:bg-orange-100 h-9">Cancelar</Button>
+                                </div>
+                             </div>
+                           )}
+                        </div>
+
                         <div className="grid gap-3">
-                          <Label className="font-bold">{challengeType === 'code' ? 'Código Inicial' : 'Puntos Clave a Mencionar'}</Label>
+                          <Label className="font-bold">{challengeType === 'code' ? 'Código Inicial (Estructura Base)' : 'Puntos Clave a Mencionar'}</Label>
                           <Textarea 
                             value={initialCode} 
                             onChange={(e) => setInitialCode(e.target.value)} 
@@ -492,7 +567,7 @@ export default function AdminChallengesClient() {
                           />
                         </div>
                         <div className="grid gap-3 mt-4">
-                          <Label className="font-bold text-emerald-600">Instrucciones IA (Contexto para el entrevistador)</Label>
+                          <Label className="font-bold text-emerald-600">{challengeType === 'code' ? 'Solución Esperada' : 'Guía IA (Contexto Interno)'}</Label>
                           <Textarea 
                             value={solution} 
                             onChange={(e) => setSolution(e.target.value)} 

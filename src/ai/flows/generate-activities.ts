@@ -10,7 +10,7 @@ const GenerateActivitiesInputSchema = z.object({
   lessonTitle: z.string().describe('Título de la lección.'),
   lessonContent: z.string().describe('El texto completo de la lección de la cual se generarán actividades.'),
   technology: z.string().describe('Tecnología principal de la lección, ej: JavaScript, Python, React.'),
-  activityType: z.enum(['flashcard', 'swipe', 'sortable', 'quiz', 'dragdrop', 'interactive-video']).describe('El tipo de actividad H5P a generar.'),
+  activityType: z.enum(['flashcard', 'swipe', 'sortable', 'quiz', 'dragdrop', 'interactive-video', 'code', 'interview']).describe('El tipo de actividad a generar.'),
 });
 export type GenerateActivitiesInput = z.infer<typeof GenerateActivitiesInputSchema>;
 
@@ -138,6 +138,17 @@ REGLAS POR TIPO:
    - Analiza la lección y propón 3-5 puntos de pausa lógicos (en segundos progresivos, ej: 10, 45, 120).
    - Genera una pregunta desafiante para cada punto.
    - Usa un videoUrl de YouTube genérico de la tecnología si no se provee uno (ej: de un canal oficial).
+
+7. SI activityType = "code":
+   - Genera un ejercicio de programación desafiante basado en la lección.
+   - Proporciona una descripción clara del reto.
+   - IMPORTANTE: "initialCode" debe ser el "esquema base" o scaffolding (ej: definición de función vacía, comentarios de ayuda, o estructura de tabla SQL) para que el estudiante sepa dónde escribir.
+   - "solution" debe ser el código completo y funcional.
+   - El JSON debe tener la forma: { "initialCode": "...", "solution": "..." }
+
+8. SI activityType = "interview":
+   - Define un rol de entrevistador y un tema (ej: "Senior React Dev").
+   - El JSON debe tener la forma: { "targetRole": "...", "targetLanguage": "es/en", "solution": "Instrucciones para la IA sobre en qué profundizar..." }
 
 IMPORTANTE:
 - El campo "activityConfig" DEBE ser un STRING de JSON válido (usa JSON.stringify mentally).  
