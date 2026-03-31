@@ -86,10 +86,16 @@ CRITERIOS DE EVALUACIÓN SEGÚN EL CASO:
    - Analiza la fluidez y la coherencia de la respuesta frente a lo que buscaría una empresa tech en EE.UU.
    - Propón formas más "nativas" o profesionales de expresar conceptos técnicos complejos.
 
+3. SI EL ESTUDIANTE ENTREGA UN "REPORTE DE DESEMPEÑO INTERACTIVO":
+   - No pidas código. El estudiante ya demostró su conocimiento a través de una actividad lúdica (Swipe, Drag&Drop, Video).
+   - Usa el puntaje proporcionado en el reporte para validar su éxito.
+   - Genera un feedback basado en la materia/tecnología del reto, felicitando por los aciertos y reforzando la importancia de los conceptos evaluados.
+
 OBLIGATORIO:
 - Calificación: 0.0 a 5.0. (Menos de 3.0 es reprobado).
 - Sé específico: No digas "Buen trabajo", di "Excelente uso de async/await y manejo de errores...".
-- Si la calidad es superior (4.5+), otorga una insignia de maestría técnica que sea muy motivadora.`,
+- Si la calidad es superior (4.5+), otorga una insignia de maestría técnica que sea muy motivadora.
+- IMPORTANTE: Si es un reporte de desempeño interactivo, asigna el puntaje indicado en el reporte (ej: si dice 5.0/5.0, pon score: 5.0).`,
 });
 
 const evaluateChallengeFlow = ai.defineFlow(

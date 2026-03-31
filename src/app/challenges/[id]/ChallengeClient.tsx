@@ -85,7 +85,7 @@ export default function ChallengeClient() {
     return !isActuallyFree && !isSubscriber && !hasPurchased;
   }, [challenge, profile, challengeId]);
 
-  const handleClaudeFallback = async () => {
+  const handleClaudeFallback = async (submissionCode: string) => {
     const puter = (window as any).puter;
     if (!puter) throw new Error("Motor de respaldo (Puter) no disponible.");
 
@@ -95,13 +95,14 @@ export default function ChallengeClient() {
     TECNOLOGÍA: ${challenge?.technology}
     SOLUCIÓN REFERENCIA: ${challenge?.solution || ""}
     
-    ENTREGA DEL ESTUDIANTE:
-    ${code}
+    ENTREGA DEL ESTUDIANTE O REPORTE DE DESEMPEÑO:
+    ${submissionCode}
     
     REGLA DE ORO:
     - Responde UNICAMENTE con un objeto JSON válido.
-    - Calificación 0.0 a 5.0 (Pasa si >= 3.0).
-    - Feedback DEBE SER EN ESPAÑOL.
+    - Si recibes un [REPORTE DE DESEMPEÑO INTERACTIVO], usa el puntaje indicado en él (score).
+    - No pidas código si el reporte indica que fue un desafío interactivo.
+    - El feedback DEBE SER EN ESPAÑOL y motivador.
     
     ESTRUCTURA JSON:
     {
@@ -141,7 +142,11 @@ export default function ChallengeClient() {
     try {
       // Para retos interactivos que no usan el editor de código, enviamos el reporte de puntos a la IA
       const submissionCode = quizScore !== undefined && !code.trim()
-        ? `EL ESTUDIANTE HA COMPLETADO UN DESAFÍO INTERACTIVO. PUNTUACIÓN: ${quizScore.toFixed(1)}/5.0.`
+        ? `[REPORTE DE DESEMPEÑO INTERACTIVO]
+           Reto: ${challenge.title}
+           Materia: ${challenge.technology}
+           Puntaje Alcanzado: ${quizScore.toFixed(1)}/5.0. 
+           El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`
         : code;
 
       const res = await evaluateChallenge({
@@ -162,7 +167,7 @@ export default function ChallengeClient() {
             description: "Gemini se encuentra saturado. Activando motor de respaldo (Claude)...",
           });
           
-          const fallbackResult = await handleClaudeFallback();
+          const fallbackResult = await handleClaudeFallback(submissionCode);
           processResult(fallbackResult);
         } else {
           toast({ 
@@ -176,7 +181,15 @@ export default function ChallengeClient() {
       console.error("Evaluation Error catching:", error);
       // Intento de rescate si el servidor de plano falló
       try {
-        const fallbackResult = await handleClaudeFallback();
+        const submissionCode = quizScore !== undefined && !code.trim()
+          ? `[REPORTE DE DESEMPEÑO INTERACTIVO]
+             Reto: ${challenge.title}
+             Materia: ${challenge.technology}
+             Puntaje Alcanzado: ${quizScore.toFixed(1)}/5.0. 
+             El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`
+          : code;
+
+        const fallbackResult = await handleClaudeFallback(submissionCode);
         processResult(fallbackResult);
       } catch (fallbackError) {
         toast({ 
