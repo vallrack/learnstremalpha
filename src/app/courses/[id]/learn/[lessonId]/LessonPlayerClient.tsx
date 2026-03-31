@@ -556,12 +556,16 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
     try {
       const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
       
+      // Fallbacks para datos del usuario para evitar comentarios "vacíos" o anónimos
+      const userName = profile?.displayName || user.displayName || user.email?.split('@')[0] || "Estudiante";
+      const userPhotoUrl = profile?.profileImageUrl || profile?.photoURL || user.photoURL || null;
+
       await addDoc(collection(db, 'lesson_discussions'), {
         courseId,
         lessonId,
         userId: user.uid,
-        userName: profile?.displayName || user.email?.split('@')[0] || "Estudiante",
-        userPhotoUrl: profile?.profileImageUrl || profile?.photoURL || null,
+        userName,
+        userPhotoUrl,
         isInstructor: profile?.role === 'instructor' || profile?.role === 'admin',
         content: newComment.trim(),
         upvotes: 0,
@@ -584,6 +588,23 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
       <div className="bg-card p-8 rounded-3xl border shadow-sm animate-pulse flex flex-col items-center justify-center min-h-[200px]">
         <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
         <p className="text-muted-foreground text-sm font-medium">Cargando comunidad...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-rose-50 border-2 border-rose-200 p-8 rounded-3xl shadow-sm text-center space-y-4">
+        <div className="bg-rose-100 h-12 w-12 rounded-2xl flex items-center justify-center mx-auto text-rose-600">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-rose-900">Error de Conexión</h3>
+          <p className="text-sm text-rose-600 max-w-sm mx-auto">
+            No se pudieron cargar las dudas. Esto suele ocurrir por falta de <b>Índices en Firestore</b>. 
+            Por favor, revisa la consola del navegador para activar el índice necesario.
+          </p>
+        </div>
       </div>
     );
   }
