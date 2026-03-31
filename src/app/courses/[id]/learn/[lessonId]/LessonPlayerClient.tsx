@@ -33,7 +33,8 @@ import {
   Send,
   MessageSquare,
   ThumbsUp,
-  UserCircle2
+  UserCircle2,
+  ShieldAlert
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
