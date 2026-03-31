@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
@@ -31,18 +30,31 @@ import {
   Lock,
   Star,
   Send,
-  MessageSquare,
-  ThumbsUp,
-  UserCircle2,
-  ShieldAlert
+  Download, 
+  ExternalLink, 
+  Eye, 
+  Paperclip, 
+  FileDown, 
+  Presentation, 
+  FileText, 
+  Link as LinkIcon, 
+  MessageSquare, 
+  ThumbsUp, 
+  MessageCircleMore, 
+  Trash2, 
+  History, 
+  Send, 
+  UserCircle2, 
+  Map as MapIcon 
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, orderBy, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { formatPrice } from '@/lib/currency';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -51,6 +63,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetTrigger 
+} from "@/components/ui/sheet";
 import { useToast } from '@/hooks/use-toast';
 import { FloatingAITutor } from '@/components/ai/FloatingAITutor';
 
@@ -111,42 +130,78 @@ function LessonPlayerContent() {
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
 
+  const progressRef = useMemoFirebase(() => {
+    if (!db || !user?.uid || !courseId) return null;
+    return doc(db, 'users', user.uid, 'courseProgress', courseId);
+  }, [db, user?.uid, courseId]);
+  const { data: progress } = useDoc(progressRef);
+  const [totalLessons, setTotalLessons] = useState(0);
+
+  // Calcular total de lecciones del curso para la barra de progreso
+  useEffect(() => {
+    if (!db || !courseId || !modules) return;
+    const fetchCounts = async () => {
+      const { getDocs, collection } = await import('firebase/firestore');
+      let count = 0;
+      for (const mod of modules) {
+        const q = query(collection(db, 'courses', courseId, 'modules', mod.id, 'lessons'));
+        const snap = await getDocs(q);
+        count += snap.size;
+      }
+      setTotalLessons(count);
+    };
+    fetchCounts();
+  }, [db, courseId, modules]);
+
   const handleMarkAsCompleted = async () => {
-    if (!db || !user || user.isAnonymous || !courseId) return;
-    const progressRef = doc(db, 'users', user.uid, 'courseProgress', courseId);
-    setDocumentNonBlocking(progressRef, {
-      courseId,
-      status: 'completed',
-      completedAt: serverTimestamp(),
-      progressPercentage: 100,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    if (!db || !user || user.isAnonymous || !courseId || !lessonId) return;
+    
+    const { setDoc, arrayUnion, serverTimestamp } = await import('firebase/firestore');
+    
+    const currentCompleted = progress?.completedLessons || [];
+    const isAlreadyCompleted = currentCompleted.includes(lessonId);
 
-    // Crear Certificado Verificable Oficial
-    const certRef = doc(db, 'certificates', `${user.uid}_${courseId}`);
-    setDocumentNonBlocking(certRef, {
-      userId: user.uid,
-      courseId,
-      studentName: profile?.displayName || user.email?.split('@')[0] || 'Estudiante',
-      courseTitle: course?.title || 'Curso',
-      technology: course?.technology || 'General',
-      instructorName: course?.instructorName || 'Instructor',
-      issuedAt: serverTimestamp(),
-      isValid: true,
-    }, { merge: true });
+    if (!isAlreadyCompleted) {
+      await setDoc(progressRef!, {
+        courseId,
+        completedLessons: arrayUnion(lessonId),
+        lastLessonId: lessonId,
+        updatedAt: serverTimestamp(),
+        status: 'in-progress'
+      }, { merge: true });
+      
+      toast({ title: "¡Lección completada!", description: "Tu progreso se ha guardado." });
+    }
+  };
 
-    // Enviar certificado por correo
-    const { sendCertificateAction } = await import('@/app/actions/email');
-    sendCertificateAction(user.uid, courseId);
+  // Función de certificación (Separada)
+  const handleFinalizeCourse = async () => {
+      const { updateDoc, serverTimestamp } = await import('firebase/firestore');
+      
+      await setDoc(progressRef!, {
+        status: 'completed',
+        completedAt: serverTimestamp(),
+        progressPercentage: 100
+      }, { merge: true });
 
-    toast({
-      title: "¡Lección completada!",
-      description: "Tu progreso ha sido guardado.",
-      action: <Button size="sm" className="gap-2" onClick={() => router.push(`/courses/${courseId}/certificate`)}><Award className="h-4 w-4" /> Certificado</Button>,
-    });
+      // Crear Certificado Verificable Oficial
+      const certRef = doc(db, 'certificates', `${user!.uid}_${courseId}`);
+      await setDoc(certRef, {
+        userId: user!.uid,
+        courseId,
+        studentName: profile?.displayName || user.email?.split('@')[0] || 'Estudiante',
+        courseTitle: course?.title || 'Curso',
+        technology: course?.technology || 'General',
+        instructorName: course?.instructorName || 'Instructor',
+        issuedAt: serverTimestamp(),
+        isValid: true,
+      }, { merge: true });
 
-    // Abrir encuesta de satisfacción
-    setShowSurvey(true);
+      const { sendCertificateAction } = await import('@/app/actions/email');
+      sendCertificateAction(user!.uid, courseId);
+
+      setShowSurvey(true);
+      toast({ title: "¡Felicidades!", description: "Has finalizado el curso. Revisa tu correo para el diploma." });
   };
 
   const handleSubmitSurvey = async () => {
@@ -275,17 +330,69 @@ function LessonPlayerContent() {
     <div className="h-screen flex flex-col bg-background overflow-hidden relative">
       <Navbar />
       <div className="flex-1 flex overflow-hidden">
-        <aside className="hidden lg:flex w-80 border-r bg-card flex-col overflow-hidden shrink-0">
-          <div className="p-4 border-b flex items-center justify-between bg-muted/20">
-            <h2 className="font-headline font-bold text-sm truncate">{course.title}</h2>
-            <Button variant="ghost" size="icon" className="h-8 w-8"><Menu className="h-4 w-4" /></Button>
+        <aside className="hidden lg:flex w-80 bg-white border-r flex-col shrink-0 overflow-hidden shadow-sm">
+          <div className="p-6 border-b bg-slate-50/30 space-y-4">
+            <div className="flex items-center justify-between mb-1">
+                <h3 className="font-headline font-bold text-slate-800 text-sm italic">Tu progreso</h3>
+                <span className="text-primary font-black text-xs bg-primary/10 px-2 py-1 rounded-lg">
+                    {totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%
+                </span>
+            </div>
+            <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                <div 
+                    className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]" 
+                    style={{ width: `${totalLessons > 0 ? Math.min(100, Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100)) : 0}%` }}
+                />
+            </div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
+                {progress?.completedLessons?.length || 0} de {totalLessons} lecciones completadas
+            </p>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             {modules?.map((module, i) => (
-              <ModuleInSidebar key={module.id} module={module} courseId={courseId} activeLessonId={lessonId} index={i} />
+              <ModuleInSidebar key={module.id} module={module} courseId={courseId} activeLessonId={lessonId} index={i} completedLessons={progress?.completedLessons || []} />
             ))}
           </div>
         </aside>
+
+        {/* Floating Mobile Progress & Navigation */}
+        {!isGuest && (
+            <div className="lg:hidden fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+                <Sheet>
+                    <SheetTrigger asChild>
+                        <Button className="rounded-full h-14 w-14 shadow-2xl shadow-primary/40 flex flex-col gap-0 p-0 overflow-hidden group">
+                            <div className="absolute inset-0 bg-primary/10 group-hover:bg-primary/20 transition-colors" />
+                            <MapIcon className="h-5 w-5 mb-0.5 relative z-10" />
+                            <span className="text-[8px] font-black uppercase relative z-10">Mapa</span>
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-[85vw] p-0 flex flex-col bg-white border-l shadow-2xl">
+                        <SheetHeader className="p-6 border-b bg-slate-50/50">
+                            <div className="flex items-center justify-between mb-4">
+                                <SheetTitle className="font-headline font-bold text-slate-800 text-lg">Progreso del Curso</SheetTitle>
+                                <span className="text-primary font-black text-xs bg-primary/10 px-2 py-1 rounded-lg">
+                                    {totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%
+                                </span>
+                            </div>
+                            <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden shadow-inner mb-2">
+                                <div 
+                                    className="h-full bg-primary transition-all duration-700" 
+                                    style={{ width: `${totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%` }}
+                                />
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                {progress?.completedLessons?.length || 0} de {totalLessons} lecciones completadas
+                            </p>
+                        </SheetHeader>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            {modules?.map((module, i) => (
+                                <ModuleInSidebar key={module.id} module={module} courseId={courseId} activeLessonId={lessonId} index={i} completedLessons={progress?.completedLessons || []} />
+                            ))}
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            </div>
+        )}
 
         <main className="flex-1 flex flex-col min-w-0 bg-[#F1F0F4]/30">
           <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12">
@@ -324,9 +431,33 @@ function LessonPlayerContent() {
 
               <div className="flex items-center justify-between pt-8 pb-20 border-t">
                 <Link href={`/courses/${courseId}`}><Button variant="outline" className="gap-2 h-12 rounded-xl"><ChevronLeft className="h-5 w-5" /> Volver al curso</Button></Link>
-                {currentLesson.type !== 'challenge' && currentLesson.type !== 'quiz' && (
-                  <Button className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 gap-2 font-bold shadow-lg shadow-emerald-100" onClick={handleMarkAsCompleted}><CheckCircle className="h-5 w-5" /> Marcar como completada</Button>
-                )}
+                <div className="flex items-center gap-4">
+                  <div className="hidden md:flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-md">
+                    <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+                    <span className="text-[10px] font-black tracking-widest uppercase">Premium</span>
+                  </div>
+                  {!isGuest && (
+                    <>
+                      {totalLessons > 0 && (progress?.completedLessons?.length || 0) >= totalLessons ? (
+                        <Button 
+                          onClick={handleFinalizeCourse}
+                          disabled={progress?.status === 'completed'}
+                          className="rounded-xl h-12 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-xl shadow-amber-200 gap-2 border-2 border-white/20 animate-bounce"
+                        >
+                          <Award className="h-5 w-5" /> 
+                          {progress?.status === 'completed' ? 'Curso Finalizado' : 'Obtener Diploma'}
+                        </Button>
+                      ) : (
+                        <Button 
+                          onClick={handleMarkAsCompleted}
+                          className={`rounded-xl h-10 px-6 font-bold shadow-lg transition-all ${progress?.completedLessons?.includes(lessonId) ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' : 'bg-primary hover:bg-primary/90 shadow-primary/20'}`}
+                        >
+                          {progress?.completedLessons?.includes(lessonId) ? <><CheckCircle className="h-4 w-4 mr-2" /> Completada</> : "Marcar lección"}
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -491,7 +622,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
   );
 }
 
-function ModuleInSidebar({ module, courseId, activeLessonId, index }: { module: any, courseId: string, activeLessonId: string, index: number }) {
+function ModuleInSidebar({ module, courseId, activeLessonId, index, completedLessons }: { module: any, courseId: string, activeLessonId: string, index: number, completedLessons: string[] }) {
   const db = useFirestore();
   const lessonsQuery = useMemoFirebase(() => {
     if (!db || !courseId || !module.id) return null;
@@ -500,16 +631,28 @@ function ModuleInSidebar({ module, courseId, activeLessonId, index }: { module: 
   const { data: lessons } = useCollection(lessonsQuery);
 
   return (
-    <div className="border-b last:border-0">
-      <div className="bg-muted/10 px-4 py-3 font-semibold text-xs text-muted-foreground uppercase tracking-wider">Módulo {index + 1}: {module.title}</div>
-      <div className="divide-y divide-border/50">
+    <div className="border-b last:border-0 border-slate-100">
+      <div className="bg-slate-50/50 px-5 py-4 font-bold text-[10px] text-slate-400 uppercase tracking-widest flex items-center justify-between">
+        <span>Módulo {index + 1}: {module.title}</span>
+      </div>
+      <div className="divide-y divide-slate-50">
         {lessons?.map(lesson => {
           const isActive = lesson.id === activeLessonId;
+          const isCompleted = completedLessons?.includes(lesson.id);
+          
           return (
-            <Link key={lesson.id} href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${module.id}`} className={`block px-4 py-3 text-sm transition-colors hover:bg-muted/20 ${isActive ? 'bg-primary/5 text-primary border-l-2 border-primary font-medium' : ''}`}>
-              <div className="flex items-center gap-3">
-                {lesson.type === 'challenge' ? <Code2 className="h-4 w-4" /> : lesson.type === 'quiz' ? <HelpCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-                <span className="truncate">{lesson.title}</span>
+            <Link key={lesson.id} href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${module.id}`} 
+              className={`block px-5 py-4 text-sm transition-all relative ${isActive ? 'bg-primary/5 text-primary' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${isCompleted ? 'bg-emerald-100 text-emerald-600' : isActive ? 'bg-primary/20 text-primary' : 'bg-slate-100 text-slate-400'}`}>
+                    {isCompleted ? <CheckCircle className="h-4 w-4" /> : lesson.type === 'challenge' ? <Code2 className="h-3.5 w-3.5" /> : lesson.type === 'quiz' ? <HelpCircle className="h-3.5 w-3.5" /> : <PlayCircle className="h-3.5 w-3.5" />}
+                  </div>
+                  <span className={`truncate ${isActive ? 'font-bold' : 'font-medium'}`}>{lesson.title}</span>
+                </div>
+                {isCompleted && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm" />}
               </div>
             </Link>
           );
@@ -525,6 +668,10 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
   const { toast } = useToast();
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -547,150 +694,140 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db || !user || !newComment.trim()) return;
-
     if (user.isAnonymous) {
-      toast({ variant: "destructive", title: "Acceso denegado", description: "Inicia sesión para participar en las discusiones." });
+      toast({ variant: "destructive", title: "Acceso denegado", description: "Inicia sesión para participar." });
       return;
     }
-
     setIsSubmitting(true);
     try {
       const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
-      
-      // Fallbacks para datos del usuario para evitar comentarios "vacíos" o anónimos
       const userName = profile?.displayName || user.displayName || user.email?.split('@')[0] || "Estudiante";
       const userPhotoUrl = profile?.profileImageUrl || profile?.photoURL || user.photoURL || null;
-
       await addDoc(collection(db, 'lesson_discussions'), {
-        courseId,
-        lessonId,
-        userId: user.uid,
-        userName,
-        userPhotoUrl,
+        courseId, lessonId, userId: user.uid, userName, userPhotoUrl,
         isInstructor: profile?.role === 'instructor' || profile?.role === 'admin',
-        content: newComment.trim(),
-        upvotes: 0,
-        replies: [],
-        createdAt: serverTimestamp()
+        content: newComment.trim(), upvotes: 0, replies: [], createdAt: serverTimestamp()
       });
-      
       setNewComment("");
-      toast({ title: "Comentario publicado", description: "Tu pregunta o aporte ya es visible para toda la comunidad." });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudo publicar el comentario." });
-      console.error(error);
+      toast({ title: "Publicado" });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-card p-8 rounded-3xl border shadow-sm animate-pulse flex flex-col items-center justify-center min-h-[200px]">
-        <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
-        <p className="text-muted-foreground text-sm font-medium">Cargando comunidad...</p>
-      </div>
-    );
-  }
+  const handleReply = async (discussionId: string) => {
+    if (!db || !user || !replyText.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const { updateDoc, doc, arrayUnion } = await import('firebase/firestore');
+      const userName = profile?.displayName || user.displayName || user.email?.split('@')[0] || "Estudiante";
+      const userPhotoUrl = profile?.profileImageUrl || profile?.photoURL || user.photoURL || null;
+      await updateDoc(doc(db, 'lesson_discussions', discussionId), {
+        replies: arrayUnion({
+          content: replyText.trim(), userName, userPhotoUrl, userId: user.uid,
+          isInstructor: profile?.role === 'instructor' || profile?.role === 'admin',
+          createdAt: new Date().toISOString()
+        })
+      });
+      setReplyText("");
+      setReplyingToId(null);
+      toast({ title: "Respuesta publicada" });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  if (error) {
-    return (
-      <div className="bg-rose-50 border-2 border-rose-200 p-8 rounded-3xl shadow-sm text-center space-y-4">
-        <div className="bg-rose-100 h-12 w-12 rounded-2xl flex items-center justify-center mx-auto text-rose-600">
-          <ShieldAlert className="h-6 w-6" />
-        </div>
-        <div>
-          <h3 className="text-lg font-bold text-rose-900">Error de Conexión</h3>
-          <p className="text-sm text-rose-600 max-w-sm mx-auto">
-            No se pudieron cargar las dudas. Esto suele ocurrir por falta de <b>Índices en Firestore</b>. 
-            Por favor, revisa la consola del navegador para activar el índice necesario.
-          </p>
-        </div>
+  const handleDelete = async (discussionId: string) => {
+    if (!db || !window.confirm("¿Seguro?")) return;
+    try {
+      const { deleteDoc, doc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'lesson_discussions', discussionId));
+      toast({ title: "Eliminado" });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error" });
+    }
+  };
+
+  const visibleDiscussions = showAllHistory ? discussions : discussions?.slice(0, 5);
+
+  if (isLoading) return <div className="p-8 text-center animate-pulse"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>;
+
+  if (error) return (
+      <div className="bg-rose-50 p-8 rounded-3xl border-2 border-rose-100 text-center space-y-4">
+        <ShieldAlert className="h-10 w-10 text-rose-500 mx-auto" />
+        <h3 className="font-bold text-rose-900">Error de Conexión</h3>
+        <p className="text-sm text-rose-600">Revisa los índices de Firestore en la consola.</p>
       </div>
-    );
-  }
+  );
 
   return (
-    <div className="bg-card p-8 md:p-10 rounded-3xl border shadow-sm">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-          <MessageSquare className="h-6 w-6" />
-        </div>
+    <div className="bg-card p-8 md:p-10 rounded-3xl border shadow-sm space-y-8">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary"><MessageSquare className="h-6 w-6" /></div>
         <div>
           <h2 className="text-2xl font-headline font-bold">Comunidad y Dudas</h2>
-          <p className="text-sm text-muted-foreground">{discussions?.length || 0} contribuciones en esta clase</p>
+          <p className="text-sm text-muted-foreground">{discussions?.length || 0} mensajes</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="mb-10 relative">
-        <Textarea 
-          placeholder="¿Tienes alguna duda con el código o quieres aportar un consejo?..." 
-          className="resize-none min-h-[120px] rounded-2xl p-4 text-base border-slate-200 focus-visible:ring-primary/20 bg-slate-50/50"
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          maxLength={1000}
-        />
-        <div className="flex justify-between items-center mt-3">
-          <p className="text-xs text-slate-400 font-medium">Soporta formato Markdown (``para código``)</p>
-          <Button 
-            type="submit" 
-            disabled={!newComment.trim() || isSubmitting} 
-            className="rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
-          >
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Publicar"}
-          </Button>
-        </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Textarea placeholder="¿Dudas con el código? Pregunta aquí..." className="rounded-2xl bg-slate-50/50" value={newComment} onChange={(e) => setNewComment(e.target.value)} />
+        <div className="flex justify-end"><Button type="submit" disabled={!newComment.trim() || isSubmitting} className="rounded-xl font-bold">{isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Publicar duda"}</Button></div>
       </form>
 
-      <div className="space-y-6">
+      <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
         {discussions?.length === 0 ? (
-          <div className="text-center py-12 px-4 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
-            <MessageSquare className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-slate-700 mb-1">Sé el primero en comentar</h3>
-            <p className="text-sm text-slate-500 max-w-sm mx-auto">Rompe el hielo. Inicia un debate, comparte un tip o hazle una pregunta al instructor.</p>
-          </div>
+          <div className="text-center py-12 border-2 border-dashed rounded-3xl"><p className="text-slate-400">Sin comentarios aún.</p></div>
         ) : (
-          discussions?.map((d: any) => (
-            <div key={d.id} className="flex gap-4 p-5 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
-              {d.userPhotoUrl ? (
-                <img src={d.userPhotoUrl} alt={d.userName} className="w-12 h-12 rounded-full object-cover shrink-0 border border-slate-100" />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200">
-                  <UserCircle2 className="h-7 w-7 text-slate-400" />
+          visibleDiscussions?.map((d: any) => (
+            <div key={d.id} className="p-6 bg-white border border-slate-100 rounded-[2rem] shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-2">
+              <div className="flex justify-between items-start">
+                <div className="flex gap-4">
+                  {d.userPhotoUrl ? <img src={d.userPhotoUrl} className="w-10 h-10 rounded-full border" /> : <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center"><UserCircle2 className="h-6 w-6 text-slate-400" /></div>}
+                  <div>
+                    <div className="flex items-center gap-2"><span className="font-bold text-sm text-slate-900">{d.userName}</span>{d.isInstructor && <Badge className="text-[8px] px-1 h-4">Instructor</Badge>}</div>
+                    <p className="text-slate-600 text-sm mt-1">{d.content}</p>
+                  </div>
+                </div>
+                {(user?.uid === d.userId || profile?.role === 'admin') && <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-rose-500" onClick={() => handleDelete(d.id)}><Trash2 className="h-4 w-4" /></Button>}
+              </div>
+              
+              <div className="flex gap-4 pl-14">
+                <button onClick={async () => { if(!db||!user||user.isAnonymous) return; const {updateDoc,doc,increment}=await import('firebase/firestore'); await updateDoc(doc(db,'lesson_discussions',d.id),{upvotes:increment(1)}); }} className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-primary"><ThumbsUp className="h-3.5 w-3.5" />{d.upvotes||0}</button>
+                <button onClick={() => setReplyingToId(replyingToId === d.id ? null : d.id)} className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-primary"><MessageCircleMore className="h-3.5 w-3.5" /> Responder</button>
+              </div>
+
+              {(d.replies?.length > 0 || replyingToId === d.id) && (
+                <div className="pl-14 space-y-3 pt-2">
+                  {d.replies?.map((r: any, idx: number) => (
+                    <div key={idx} className="flex gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 animate-in slide-in-from-left-2">
+                      {r.userPhotoUrl ? <img src={r.userPhotoUrl} className="w-6 h-6 rounded-full border" /> : <UserCircle2 className="h-6 w-6 text-slate-300" />}
+                      <div><div className="flex items-center gap-1.5"><span className="text-[11px] font-bold">{r.userName}</span>{r.isInstructor && <Badge className="h-3 text-[7px] px-1 bg-emerald-500">Instructor</Badge>}</div><p className="text-[11px] text-slate-600 mt-0.5">{r.content}</p></div>
+                    </div>
+                  ))}
+                  {replyingToId === d.id && (
+                    <div className="space-y-2 pt-2">
+                      <Textarea placeholder="Responder..." className="min-h-[60px] text-xs p-3 rounded-xl border-primary/20" value={replyText} onChange={(e) => setReplyText(e.target.value)} />
+                      <div className="flex justify-end gap-2"><Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={() => setReplyingToId(null)}>Cancelar</Button><Button size="sm" className="h-7 text-[10px] px-3 font-bold" disabled={!replyText.trim() || isSubmitting} onClick={() => handleReply(d.id)}>{isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Responder"}</Button></div>
+                    </div>
+                  )}
                 </div>
               )}
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="font-bold text-slate-900">{d.userName}</span>
-                  {d.isInstructor && (
-                    <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 text-[10px] uppercase font-black tracking-widest px-2 py-0 h-5">Instructor Oficial</Badge>
-                  )}
-                  <span className="text-xs text-slate-400">
-                    {d.createdAt ? new Date(d.createdAt.toDate()).toLocaleDateString() : 'Justo ahora'}
-                  </span>
-                </div>
-                
-                <p className="text-slate-600 text-sm md:text-base leading-relaxed whitespace-pre-wrap break-words">
-                  {d.content}
-                </p>
-                
-                <div className="flex items-center gap-4 mt-4">
-                  <button className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-primary transition-colors">
-                    <ThumbsUp className="h-4 w-4" /> {d.upvotes || 0}
-                  </button>
-                  <button className="text-xs font-semibold text-slate-400 hover:text-primary transition-colors">
-                    Responder
-                  </button>
-                </div>
-              </div>
             </div>
           ))
         )}
       </div>
+      {discussions && discussions.length > 5 && (
+        <div className="text-center pt-4"><Button variant="outline" size="sm" onClick={() => setShowAllHistory(!showAllHistory)} className="rounded-xl font-bold gap-2"><History className="h-3.5 w-3.5" /> {showAllHistory ? "Ver menos" : `Ver anteriores (${discussions.length-5})`}</Button></div>
+      )}
     </div>
   );
 }
+
 function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, onComplete: () => void }) {
   const db = useFirestore();
   const challengeRef = useMemoFirebase(() => {
