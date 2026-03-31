@@ -139,11 +139,16 @@ export default function ChallengeClient() {
     setIsEvaluating(true);
     setResult(null);
     try {
+      // Para retos interactivos que no usan el editor de código, enviamos el reporte de puntos a la IA
+      const submissionCode = quizScore !== undefined && !code.trim()
+        ? `EL ESTUDIANTE HA COMPLETADO UN DESAFÍO INTERACTIVO. PUNTUACIÓN: ${quizScore.toFixed(1)}/5.0.`
+        : code;
+
       const res = await evaluateChallenge({
         challengeTitle: challenge.title,
         challengeDescription: challenge.description,
         technology: challenge.technology,
-        studentCode: code,
+        studentCode: submissionCode,
         solutionReference: challenge.solution,
       });
 
