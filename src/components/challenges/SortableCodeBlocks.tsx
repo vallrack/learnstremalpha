@@ -22,13 +22,27 @@ export function SortableItem({ id, content }: { id: string; content: string }) {
 }
 
 export function SortableCodeBlocks({ lines, correctOrder, onComplete }: { lines: {id: string, text: string}[], correctOrder: string[], onComplete: (score: number) => void }) {
-  const [items, setItems] = useState(() => lines);
+  const [items, setItems] = useState(lines);
 
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  // Sync state if props change (e.g. navigation)
+  React.useEffect(() => {
+    setItems(lines);
+  }, [lines]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Avoid accidental drags
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   function handleDragEnd(event: any) {
     const { active, over } = event;
-    if (active.id !== over.id) {
+    if (over && active.id !== over.id) {
       setItems((items) => {
         const oldIndex = items.findIndex(i => i.id === active.id);
         const newIndex = items.findIndex(i => i.id === over.id);
@@ -42,7 +56,6 @@ export function SortableCodeBlocks({ lines, correctOrder, onComplete }: { lines:
     items.forEach((item, idx) => {
       if (item.id === correctOrder[idx]) correct++;
     });
-    // Puntos parciales basados en % de aciertos
     const score = (correct / items.length) * 5;
     onComplete(score);
   };

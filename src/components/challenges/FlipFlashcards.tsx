@@ -7,11 +7,18 @@ export function FlipFlashcards({ cards, onComplete }: { cards: {front: string, b
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
+  const [shake, setShake] = useState(false);
   
   const currentCard = cards[currentIndex];
 
   const handleNext = (correct: boolean) => {
-    if (correct) setCorrectCount(c => c + 1);
+    if (correct) {
+      setCorrectCount(c => c + 1);
+    } else {
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+    }
+    
     setIsFlipped(false);
     
     // Suavizamos la transición a la siguiente carta
@@ -21,7 +28,7 @@ export function FlipFlashcards({ cards, onComplete }: { cards: {front: string, b
         } else {
           onComplete(((correctCount + (correct ? 1 : 0)) / cards.length) * 5);
         }
-    }, 250);
+    }, correct ? 250 : 600);
   };
 
   if(!currentCard) return null;
@@ -36,8 +43,14 @@ export function FlipFlashcards({ cards, onComplete }: { cards: {front: string, b
         <div className="relative w-full aspect-[3/4] cursor-pointer group" onClick={() => setIsFlipped(!isFlipped)}>
            <motion.div
               initial={false}
-              animate={{ rotateY: isFlipped ? 180 : 0 }}
-              transition={{ duration: 0.7, type: 'spring', stiffness: 200, damping: 20 }}
+              animate={{ 
+                rotateY: isFlipped ? 180 : 0,
+                x: shake ? [-10, 10, -10, 10, 0] : 0 
+              }}
+              transition={{ 
+                rotateY: { duration: 0.7, type: 'spring', stiffness: 200, damping: 20 },
+                x: { duration: 0.4 }
+              }}
               className="w-full h-full relative"
               style={{ transformStyle: 'preserve-3d' }}
            >

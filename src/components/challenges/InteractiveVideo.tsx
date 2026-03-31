@@ -182,8 +182,13 @@ export function InteractiveVideo({ url, checkpoints, onComplete }: { url: string
            {/* Pure DOM insertion so React VDOM skips Diffing the replacing Youtube Iframe */}
            <div 
              ref={containerRef}
-             className={`w-full h-full absolute inset-0 ${isOverlayActive ? 'pointer-events-none' : 'pointer-events-auto'}`}
+             className="w-full h-full absolute inset-0 pointer-events-auto"
            />
+
+           {/* Block interactions directly when overlay is active */}
+           {isOverlayActive && (
+              <div className="absolute inset-0 z-[40] cursor-not-allowed bg-transparent" />
+           )}
            
            {/* Question Overlay */}
            <AnimatePresence>

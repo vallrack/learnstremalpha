@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DndContext, useDraggable, useDroppable } from '@dnd-kit/core';
+import { DndContext, useDraggable, useDroppable, useSensors, useSensor, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, RotateCcw } from 'lucide-react';
@@ -32,22 +32,39 @@ export function DragDropSnippets({ template, snippets, correctMapping, onComplet
    const [availableSnippets, setAvailableSnippets] = useState<{id:string, text:string}[]>(snippets);
    const snippetMap = snippets.reduce((acc, s) => ({...acc, [s.id]: s.text}), {} as any);
 
+   const sensors = useSensors(
+      useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+      useSensor(KeyboardSensor)
+   );
+
    const handleDragEnd = (event: any) => {
      const { active, over } = event;
      if (!over) return;
      
      const snippetId = active.id as string;
      const slotId = over.id as string;
+
+     // Si el item ya estaba en otro slot, lo quitamos de allí primero
+     const oldSlot = Object.entries(placements).find(([_, id]) => id === snippetId)?.[0];
      
-     // Remueve del banco
-     setAvailableSnippets(prev => prev.filter(s => s.id !== snippetId));
-     
-     // Si el hueco ya tenia algo, devuelve eso al banco
-     if (placements[slotId]) {
-       setAvailableSnippets(prev => [...prev, snippets.find(s => s.id === placements[slotId])!]);
+     setPlacements(prev => {
+       const next = { ...prev };
+       if (oldSlot) next[oldSlot] = null;
+       
+       // Si el destino ya tenía algo, ese algo vuelve al banco (si no es el mismo snippet reubicado)
+       const previousOccupant = prev[slotId];
+       if (previousOccupant && previousOccupant !== snippetId) {
+          setAvailableSnippets(bank => [...bank, snippets.find(s => s.id === previousOccupant)!]);
+       }
+
+       next[slotId] = snippetId;
+       return next;
+     });
+
+     // Si venía del banco, lo quitamos del banco
+     if (!oldSlot) {
+        setAvailableSnippets(prev => prev.filter(s => s.id !== snippetId));
      }
-     
-     setPlacements(prev => ({...prev, [slotId]: snippetId}));
    };
 
    const resetBoard = () => {
@@ -65,11 +82,13 @@ export function DragDropSnippets({ template, snippets, correctMapping, onComplet
      onComplete(score);
    };
 
+   const isAllFilled = Object.keys(correctMapping).every(slot => !!placements[slot]);
+
    // Parser de plantilla: "const {{{s1}}} = require('{{{s2}}}');"
    const parts = template.split(/(\{\{\{.*?\}\}\})/g);
 
    return (
-     <DndContext onDragEnd={handleDragEnd}>
+     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
        <div className="max-w-4xl mx-auto space-y-10">
          <div className="flex flex-wrap gap-4 p-8 bg-slate-900 rounded-[2.5rem] min-h-[100px] items-center border shadow-inner">
            {availableSnippets.length === 0 ? (
@@ -92,7 +111,11 @@ export function DragDropSnippets({ template, snippets, correctMapping, onComplet
          </div>
 
          <div className="flex justify-center pt-8">
-            <Button onClick={checkForm} className="bg-primary hover:bg-primary/90 h-16 w-full max-w-md rounded-[2rem] font-bold text-xl gap-4 shadow-2xl shadow-primary/30">
+            <Button 
+              onClick={checkForm} 
+              disabled={!isAllFilled}
+              className={`h-16 w-full max-w-md rounded-[2rem] font-bold text-xl gap-4 shadow-2xl transition-all ${isAllFilled ? 'bg-primary hover:bg-primary/90 shadow-primary/30' : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'}`}
+            >
               <CheckCircle2 className="h-7 w-7" /> Evaluar Código Estructural
             </Button>
          </div>

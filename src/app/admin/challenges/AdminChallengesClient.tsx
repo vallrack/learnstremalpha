@@ -98,6 +98,7 @@ export default function AdminChallengesClient() {
   const [aiLessonContent, setAiLessonContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [aiEngine, setAiEngine] = useState<'gemini' | 'claude'>('gemini');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -153,31 +154,74 @@ export default function AdminChallengesClient() {
     setIsGenerating(true);
     setAiError('');
     try {
-      const result = await generateActivities({
-        lessonTitle: title || 'Desafío Nuevo',
-        lessonContent: aiLessonContent,
-        technology: technology || 'General',
-        activityType: type,
-      });
+      let resultData: any;
+
+      if (aiEngine === 'claude') {
+        const puter = (window as any).puter;
+        if (!puter) throw new Error("Puter.js no detectado. Revisa tu conexión.");
+        
+        const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad tipo "${type}" basada en esta lección:
+        
+        TÍTULO: ${title}
+        TECNOLOGÍA: ${technology}
+        CONTENIDO: ${aiLessonContent}
+        
+        REGLAS:
+        - Retorna UNICAMENTE un objeto JSON con esta estructura:
+          { 
+            "activityConfig": "string de JSON válido con la config especifica", 
+            "activityTitle": "título creativo", 
+            "activityDescription": "descripción breve" 
+          }
+        - Para activityConfig, sigue el esquema de ${type}:
+          flashcard: { cards: [{front, back}] }
+          swipe: { deck: [{statement, isTrue}] }
+          sortable: { lines: [{id, text}], correctOrder: [ids] }
+          quiz: { questions: [{question, options, correctIndex}] }
+          code: { initialCode, solution }
+          interview: { targetRole, targetLanguage, solution }
+        - Todo en ESPAÑOL LATINO.`;
+
+        const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet' });
+        const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
+        // Extraer JSON si hay texto extra
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("La IA no devolvió un formato válido.");
+        resultData = JSON.parse(jsonMatch[0]);
+      } else {
+        const result = await generateActivities({
+          lessonTitle: title || 'Desafío Nuevo',
+          lessonContent: aiLessonContent,
+          technology: technology || 'General',
+          activityType: type,
+        });
+        if (!result.success) throw new Error(result.error);
+        resultData = result.data;
+      }
       
-      if (result.success) {
+      if (resultData) {
+        const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
+        
         if (type === 'code') {
-          const config = JSON.parse(result.data.activityConfig);
           setInitialCode(config.initialCode || '');
           setSolution(config.solution || '');
         } else if (type === 'interview') {
-          const config = JSON.parse(result.data.activityConfig);
           setTargetRole(config.targetRole || '');
           setTargetLanguage(config.targetLanguage || 'es');
           setSolution(config.solution || '');
+        } else if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(type)) {
+          setJsonConfig(JSON.stringify(config, null, 2));
+        } else if (type === 'quiz') {
+          setQuestions(config.questions || []);
+        } else if (type === 'wordsearch') {
+          setWords(config.words || []);
         }
-        if (result.data.activityTitle) setTitle(result.data.activityTitle);
-        if (result.data.activityDescription) setDescription(result.data.activityDescription);
+
+        if (resultData.activityTitle) setTitle(resultData.activityTitle);
+        if (resultData.activityDescription) setDescription(resultData.activityDescription);
         
         setIsAIOpen(false);
         setAiLessonContent('');
-      } else {
-        setAiError(result.error);
       }
     } catch (err: any) {
       setAiError(err?.message || 'Error de conexión.');
@@ -538,7 +582,13 @@ export default function AdminChallengesClient() {
                              </Button>
                            ) : (
                              <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5 space-y-3">
-                                <Label className="text-orange-800 font-bold text-xs">Instrucciones de la Lección</Label>
+                                <div className="flex items-center justify-between gap-4 mb-2">
+                                    <Label className="text-orange-800 font-bold text-xs">Instrucciones de la Lección</Label>
+                                    <div className="flex bg-orange-100 rounded-lg p-0.5">
+                                       <button type="button" onClick={() => setAiEngine('gemini')} className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'gemini' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-400'}`}>GEMINI</button>
+                                       <button type="button" onClick={() => setAiEngine('claude')} className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'claude' ? 'bg-white text-indigo-600 shadow-sm' : 'text-orange-400'}`}>CLAUDE</button>
+                                    </div>
+                                 </div>
                                 <Textarea 
                                   value={aiLessonContent} 
                                   onChange={(e) => setAiLessonContent(e.target.value)}

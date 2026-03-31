@@ -31,6 +31,7 @@ export function QuizPlayer({ questions, onComplete }: QuizPlayerProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const [score, setScore] = useState(0);
 
   const handleSelect = (optionIndex: number) => {
@@ -40,6 +41,7 @@ export function QuizPlayer({ questions, onComplete }: QuizPlayerProps) {
   };
 
   const nextStep = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (currentStep < questions.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -62,6 +64,7 @@ export function QuizPlayer({ questions, onComplete }: QuizPlayerProps) {
     setCurrentStep(0);
     setAnswers([]);
     setShowResult(false);
+    setShowSummary(false);
     setScore(0);
   };
 
@@ -74,6 +77,55 @@ export function QuizPlayer({ questions, onComplete }: QuizPlayerProps) {
 
   if (showResult) {
     const passed = score >= 3;
+    
+    if (showSummary) {
+       return (
+         <Card className="rounded-[3rem] border-none shadow-xl overflow-hidden bg-white animate-in fade-in slide-in-from-bottom-4">
+            <CardHeader className="p-10 border-b flex flex-row items-center justify-between">
+               <div>
+                 <CardTitle className="text-2xl font-headline font-bold">Resumen de Respuestas</CardTitle>
+                 <p className="text-sm text-muted-foreground mt-1">Revisa tus aciertos y errores detalladamente.</p>
+               </div>
+               <Button variant="ghost" onClick={() => setShowSummary(false)} className="rounded-xl">Volver</Button>
+            </CardHeader>
+            <CardContent className="p-10 space-y-6 max-h-[60vh] overflow-y-auto">
+               {questions.map((q, i) => {
+                  const isCorrect = answers[i] === q.correctAnswer;
+                  return (
+                     <div key={i} className={`p-6 rounded-2xl border-2 ${isCorrect ? 'border-emerald-100 bg-emerald-50/30' : 'border-rose-100 bg-rose-50/30'}`}>
+                        <div className="flex items-start gap-4">
+                           <div className={`mt-1 p-1 rounded-full ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                              {isCorrect ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                           </div>
+                           <div className="flex-1">
+                              <p className="font-bold text-slate-900 mb-3">{q.question}</p>
+                              <div className="grid gap-2">
+                                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Tu respuesta:</div>
+                                 <div className={`text-sm p-3 rounded-xl border ${isCorrect ? 'bg-emerald-100 border-emerald-200 text-emerald-800' : 'bg-rose-100 border-rose-200 text-rose-800'}`}>
+                                    {q.options[answers[i]] || "No respondida"}
+                                 </div>
+                                 {!isCorrect && (
+                                    <>
+                                       <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mt-2">Respuesta correcta:</div>
+                                       <div className="text-sm p-3 rounded-xl border bg-white border-slate-200 text-slate-600 italic">
+                                          {q.options[q.correctAnswer]}
+                                       </div>
+                                    </>
+                                 )}
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  );
+               })}
+            </CardContent>
+            <CardFooter className="p-10 bg-slate-50 border-t flex justify-center">
+               <Button onClick={() => setShowSummary(false)} className="rounded-xl h-11 px-8 font-bold">Entendido</Button>
+            </CardFooter>
+         </Card>
+       );
+    }
+
     return (
       <Card className="rounded-[3rem] border-none shadow-xl overflow-hidden animate-in fade-in zoom-in duration-500">
         <CardHeader className={`p-12 text-center text-white ${passed ? 'bg-emerald-600' : 'bg-rose-600'}`}>
@@ -98,8 +150,8 @@ export function QuizPlayer({ questions, onComplete }: QuizPlayerProps) {
                 <RefreshCcw className="h-5 w-5" /> Reintentar Prueba
               </Button>
             )}
-            <Button variant="outline" size="lg" className="h-14 px-8 rounded-2xl gap-2 font-bold">
-              Ver Resumen
+            <Button variant="outline" size="lg" onClick={() => setShowSummary(true)} className="h-14 px-8 rounded-2xl gap-2 font-bold">
+              Ver Resumen Detalles
             </Button>
           </div>
         </CardContent>

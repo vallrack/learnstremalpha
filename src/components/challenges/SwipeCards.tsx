@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 export function SwipeCards({ deck, onComplete }: { deck: {statement: string, isTrue: boolean}[], onComplete: (score: number) => void }) {
   const [cards, setCards] = useState(deck);
   const [correctCount, setCorrectCount] = useState(0);
+  const [shake, setShake] = useState(false);
 
   const activeCard = cards[0];
   const x = useMotionValue(0);
@@ -31,7 +32,13 @@ export function SwipeCards({ deck, onComplete }: { deck: {statement: string, isT
 
   const handleSwipe = (directionIsTrue: boolean) => {
       const isCorrect = activeCard.isTrue === directionIsTrue;
-      if (isCorrect) setCorrectCount(c => c + 1);
+      if (isCorrect) {
+          setCorrectCount(c => c + 1);
+      } else {
+          setShake(true);
+          setTimeout(() => setShake(false), 500);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       
       const newCards = [...cards];
       newCards.shift();
@@ -62,7 +69,13 @@ export function SwipeCards({ deck, onComplete }: { deck: {statement: string, isT
                 style={{ x, rotate, background }} 
                 onDragEnd={handleDragEnd}
                 initial={{ scale: 0.9, opacity: 0, y: 50 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
+                animate={{ 
+                    scale: 1, 
+                    opacity: 1, 
+                    y: 0,
+                    x: shake ? [-10, 10, -10, 10, 0] : 0 
+                }}
+                transition={{ duration: 0.4 }}
                 exit={{ scale: 0.8, opacity: 0, x: x.get(), transition: { duration: 0.2 } }}
                 className="absolute w-full h-[450px] rounded-[3rem] shadow-2xl border-4 border-slate-100 flex flex-col items-center justify-center p-10 cursor-grab active:cursor-grabbing z-10"
                 whileDrag={{ scale: 1.05, cursor: 'grabbing', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
@@ -71,9 +84,21 @@ export function SwipeCards({ deck, onComplete }: { deck: {statement: string, isT
                    <h3 className="text-3xl font-headline font-bold text-center text-slate-800 leading-snug">{activeCard.statement}</h3>
                 </div>
                 
-                <div className="w-full flex justify-between text-sm font-bold opacity-30 mt-auto pt-6 border-t border-slate-200">
-                   <span className="text-rose-500 flex flex-col items-center gap-1"><ThumbsDown className="h-6 w-6"/> Falso</span>
-                   <span className="text-emerald-500 flex flex-col items-center gap-1"><ThumbsUp className="h-6 w-6"/> Verdad</span>
+                <div className="w-full flex justify-between text-sm font-bold mt-auto pt-6 border-t border-slate-200">
+                   <button 
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleSwipe(false); }}
+                      className="text-rose-500 flex flex-col items-center gap-1 hover:scale-110 transition-transform active:opacity-50 opacity-40 hover:opacity-100"
+                   >
+                      <ThumbsDown className="h-6 w-6"/> Falso
+                   </button>
+                   <button 
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleSwipe(true); }}
+                      className="text-emerald-500 flex flex-col items-center gap-1 hover:scale-110 transition-transform active:opacity-50 opacity-40 hover:opacity-100"
+                   >
+                      <ThumbsUp className="h-6 w-6"/> Verdad
+                   </button>
                 </div>
              </motion.div>
           )}

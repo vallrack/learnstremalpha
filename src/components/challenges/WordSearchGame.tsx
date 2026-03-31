@@ -20,16 +20,26 @@ export function WordSearchGame({ words, onComplete }: WordSearchGameProps) {
   const [isSelecting, setIsSelecting] = useState(false);
   const [placedWordsPos, setPlacedWordsPos] = useState<{ word: string, cells: { r: number, c: number }[] }[]>([]);
 
+  const normalizeWord = (w: string) => {
+    return w.toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Quita acentos/tildes
+      .replace(/\s+/g, '');
+  };
+
   // Generar la cuadrícula
   useEffect(() => {
-    const cleanWords = words.map(w => w.toUpperCase().replace(/\s+/g, ''));
+    const cleanWords = words.map(normalizeWord);
     const newGrid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(''));
     const positions: { word: string, cells: { r: number, c: number }[] }[] = [];
 
-    cleanWords.forEach(word => {
+    // Ordenar por longitud descendente para colocar primero las difíciles
+    const sortedWords = [...cleanWords].sort((a,b) => b.length - a.length);
+
+    sortedWords.forEach(word => {
       let placed = false;
       let attempts = 0;
-      while (!placed && attempts < 100) {
+      while (!placed && attempts < 150) {
         const direction = Math.floor(Math.random() * 3); // 0: Horiz, 1: Vert, 2: Diag
         const row = Math.floor(Math.random() * GRID_SIZE);
         const col = Math.floor(Math.random() * GRID_SIZE);
@@ -59,7 +69,7 @@ export function WordSearchGame({ words, onComplete }: WordSearchGameProps) {
       }
     });
 
-    // Rellenar vacíos
+    // Rellenar vacíos con letras aleatorias
     for (let r = 0; r < GRID_SIZE; r++) {
       for (let c = 0; c < GRID_SIZE; c++) {
         if (newGrid[r][c] === '') {
@@ -99,8 +109,8 @@ export function WordSearchGame({ words, onComplete }: WordSearchGameProps) {
     if (match && !foundWords.includes(match.word)) {
       const newFound = [...foundWords, match.word];
       setFoundWords(newFound);
-      if (newFound.length === words.length) {
-        onComplete();
+      if (newFound.length === placedWordsPos.length) {
+        setTimeout(onComplete, 600);
       }
     }
   };

@@ -151,10 +151,12 @@ REGLAS POR TIPO:
    - El JSON debe tener la forma: { "targetRole": "...", "targetLanguage": "es/en", "solution": "Instrucciones para la IA sobre en qué profundizar..." }
 
 IMPORTANTE:
-- El campo "activityConfig" DEBE ser un STRING de JSON válido (usa JSON.stringify mentally).  
-- Todo el contenido debe estar en ESPAÑOL.
-- Genera un título creativo y una descripción que motive al estudiante.
-- El contenido debe ser educativamente valioso y basado SOLO en la lección proporcionada.`,
+- El campo "activityConfig" DEBE ser un STRING de JSON válido (usa JSON.stringify).  
+- Todo el contenido debe estar en ESPAÑOL LATINOAMERICANO, con un tono motivador y profesional.
+- Genera un título creativo e impactante.
+- El contenido debe ser educativamente valioso, profundo y basado rigurosamente en la lección.
+- En las actividades de "swipe" (Verdad/Falso), asegúrate de que las afirmaciones falsas sean 'trampas' inteligentes basadas en confusiones comunes en la tecnología, no errores obvios.
+- En "code", el reto debe ser de un nivel que desafíe al estudiante a aplicar lo aprendido estructuralmente.`,
 });
 
 const generateActivitiesFlow = ai.defineFlow(
