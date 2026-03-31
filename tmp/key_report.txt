@@ -1,3 +1,0 @@
-BACKUP_AI_KEY: FAILED - [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/mod
-GOOGLE_GENERATIVE_AI_API_KEY: FAILED - [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/mod
-GEMINI_API_KEY: FAILED - [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/mod

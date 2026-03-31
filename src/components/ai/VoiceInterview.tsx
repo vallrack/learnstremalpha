@@ -187,7 +187,7 @@ export function VoiceInterview({
         });
         reply = response.reply;
       } else if (aiProvider === 'gemini-direct') {
-        const GEMINI_API_KEY = "AIzaSyDWPMrsqtbkmVD1Ck1Rduk44-TgPZY28Z0"; // WARNING: RECENTLY REPORTED AS LEAKED. PLEASE ROTATE.
+        const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_GENERATIVE_AI_API_KEY || ""; 
         // Use 2.0-flash as requested by the user
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
         
@@ -358,8 +358,8 @@ export function VoiceInterview({
                    {/* Ring animations */}
                    {(isListening || isSpeaking || isGenerating) && (
                      <div className="absolute transition-all">
-                        <div className={`absolute -inset-20 rounded-full border-2 border-primary/20 animate-ping duration-[3000ms] ${isGenerating ? 'border-purple-400' : ''}`} />
-                        <div className={`absolute -inset-12 rounded-full border-4 border-primary/30 animate-pulse duration-[2000ms] ${isGenerating ? 'border-purple-300' : ''}`} />
+                        <div className={`absolute -inset-20 rounded-full border-2 border-primary/20 animate-ping shadow-[0_0_15px_rgba(34,197,94,0.2)] ${isGenerating ? 'border-purple-400' : ''}`} style={{ animationDuration: '3s' }} />
+                        <div className={`absolute -inset-12 rounded-full border-4 border-primary/30 animate-pulse shadow-[0_0_20px_rgba(34,197,94,0.3)] ${isGenerating ? 'border-purple-300' : ''}`} style={{ animationDuration: '2s' }} />
                         <div className={`absolute -inset-6 rounded-full border-8 border-primary/40 animate-pulse duration-1000 ${isGenerating ? 'border-purple-200' : ''}`} />
                      </div>
                    )}
