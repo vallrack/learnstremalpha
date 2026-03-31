@@ -114,7 +114,7 @@ export default function ChallengeClient() {
     // Asegurarse que Puter esté inicializado
     if (puter.init) await puter.init();
 
-    const response = await puter.ai.chat(prompt, { model: 'anthropic/claude-3-5-sonnet' });
+    const response = await puter.ai.chat(prompt, { model: 'claude-sonnet-4-6' });
     const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
     
     const jsonMatch = content.match(/\{[\s\S]*\}/);
