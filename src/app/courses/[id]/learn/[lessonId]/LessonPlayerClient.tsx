@@ -194,7 +194,7 @@ function LessonPlayerContent() {
       }, { merge: true });
 
       const { sendCertificateAction } = await import('@/app/actions/email');
-      sendCertificateAction(user!.uid, courseId);
+      await sendCertificateAction(user!.uid, courseId);
 
       setShowSurvey(true);
       toast({ title: "¡Felicidades!", description: "Has finalizado el curso. Revisa tu correo para el diploma." });
