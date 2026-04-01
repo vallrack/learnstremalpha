@@ -221,7 +221,42 @@ export default function AdminChallengesClient() {
       setAiLessonContent('');
     } catch (err: any) {
       console.error("AI Wizard Error Detail:", err);
-      setAiError(err.message || 'Error de conexión con el servicio de IA.');
+      
+      // -- ULTIMO SALVAVIDAS: Fallback en el cliente con Puter.js --
+      try {
+        setIsGenerating(true);
+        const puter = (window as any).puter;
+        if (!puter) throw new Error("Puter.js no detectado.");
+
+        const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad tipo "${type}" basada en esta lección:
+        TÍTULO: ${title}
+        TECNOLOGÍA: ${technology}
+        CONTENIDO: ${aiLessonContent}
+        REGLAS: Retorna UNICAMENTE un objeto JSON con estructura: { "activityConfig": {objeto}, "activityTitle": "...", "activityDescription": "..." }`;
+
+        const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet-20240620' });
+        const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("Puter fallback failed to return JSON.");
+        
+        const resultData = JSON.parse(jsonMatch[0]);
+        const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
+
+        if (type === 'code') { setInitialCode(config.initialCode || ''); setSolution(config.solution || ''); }
+        else if (type === 'interview') { setTargetRole(config.targetRole || ''); setTargetLanguage(config.targetLanguage || 'es'); setSolution(config.solution || ''); }
+        else if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(type)) { setJsonConfig(JSON.stringify(config, null, 2)); }
+        else if (type === 'quiz') { setQuestions(config.questions || []); }
+        
+        if (resultData.activityTitle) setTitle(resultData.activityTitle);
+        if (resultData.activityDescription) setDescription(resultData.activityDescription);
+        
+        toast({ title: "Generado con éxito", description: "Se usó el motor de respaldo (Puter Cloud)." });
+        setIsAIOpen(false);
+        setAiLessonContent('');
+      } catch (fallbackErr: any) {
+        console.error("Puter fallback failed too:", fallbackErr);
+        setAiError(err.message || 'Error de conexión con el servicio de IA.');
+      }
     } finally {
       setIsGenerating(false);
     }
