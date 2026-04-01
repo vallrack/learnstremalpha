@@ -4,7 +4,7 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { CourseCard } from '@/components/courses/CourseCard';
-import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, BookOpen, GraduationCap, CheckCircle2, ArrowRight, Star, Check } from 'lucide-react';
+import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, BookOpen, GraduationCap, CheckCircle2, ArrowRight, Star, Check, Mic2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
@@ -14,6 +14,7 @@ import { collection, query, limit, where, doc, orderBy } from 'firebase/firestor
 import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
