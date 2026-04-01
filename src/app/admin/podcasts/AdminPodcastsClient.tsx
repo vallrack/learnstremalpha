@@ -316,7 +316,7 @@ export default function AdminPodcastsClient() {
                 </div>
                 
                 <DialogFooter>
-                  <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20" disabled={isUploading}>
+                  <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20">
                     {editingId ? 'Guardar Cambios' : 'Publicar Episodio'}
                   </Button>
                 </DialogFooter>
