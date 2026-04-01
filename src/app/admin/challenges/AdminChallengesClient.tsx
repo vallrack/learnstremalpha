@@ -150,123 +150,78 @@ export default function AdminChallengesClient() {
 
   const [activeCategory, setActiveCategory] = useState('all');
 
-  const handleAIGenerate = async (type: any) => {
+    const handleAIGenerate = async (type: any) => {
     if (!aiLessonContent.trim() || !db) return;
     setIsGenerating(true);
     setAiError('');
+
     try {
-      let resultData: any;
-
-      if (aiEngine === 'claude') {
-        const puter = (window as any).puter;
-        if (!puter) throw new Error("Puter.js no detectado. Revisa tu conexión.");
+      const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad tipo "${type}" basada en esta lección:
         
-        const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad tipo "${type}" basada en esta lección:
-        
-        TÍTULO: ${title}
-        TECNOLOGÍA: ${technology}
-        CONTENIDO: ${aiLessonContent}
-        
-        REGLAS:
-        - Retorna UNICAMENTE un objeto JSON con esta estructura:
-          { 
-            "activityConfig": "string de JSON válido con la config especifica", 
-            "activityTitle": "título creativo", 
-            "activityDescription": "descripción breve" 
-          }
-        - Para activityConfig, sigue el esquema de ${type}:
-          flashcard: { cards: [{front, back}] }
-          swipe: { deck: [{statement, isTrue}] }
-          sortable: { lines: [{id, text}], correctOrder: [ids] }
-          quiz: { questions: [{question, options, correctIndex}] }
-          code: { initialCode, solution }
-          interview: { targetRole, targetLanguage, solution }
-        - Todo en ESPAÑOL LATINO.`;
-
-        const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet-20240620' });
-        const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
-        // Extraer JSON si hay texto extra
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("La IA no devolvió un formato válido.");
-        resultData = JSON.parse(jsonMatch[0]);
-      } else if (aiEngine === 'deepseek' || aiEngine === 'qwen') {
-        const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad tipo "${type}" basada en esta lección:
-        
-        TÍTULO: ${title}
-        TECNOLOGÍA: ${technology}
-        CONTENIDO: ${aiLessonContent}
-        
-        REGLAS:
-        - Retorna UNICAMENTE un objeto JSON válido con esta estructura exacta:
-          { 
-            "activityConfig": { ...config especifica según el tipo... }, 
-            "activityTitle": "título creativo", 
-            "activityDescription": "descripción breve" 
-          }
-        - Para activityConfig, sigue el esquema de ${type}:
-          flashcard: { cards: [{front, back}] }
-          swipe: { deck: [{statement, isTrue}] }
-          sortable: { lines: [{id, text}], correctOrder: [ids] }
-          quiz: { questions: [{question, options, correctIndex}] }
-          code: { initialCode, solution }
-          interview: { targetRole, targetLanguage, solution }
-        - IMPORTANTE: activityConfig debe ser un objeto, no un string.
-        - Todo en ESPAÑOL LATINO.`;
-
-        const result = await generateWithExternalAI(prompt, aiEngine);
-        if (!result.success) throw new Error(result.error);
-        resultData = result.data;
-      } else {
-        const result = await generateActivities({
-          lessonTitle: title || 'Desafío Nuevo',
-          lessonContent: aiLessonContent,
-          technology: technology || 'General',
-          activityType: type,
-        });
-        if (!result.success) throw new Error(result.error);
-        resultData = result.data;
-      }
+      TÍTULO: ${title}
+      TECNOLOGÍA: ${technology}
+      CONTENIDO: ${aiLessonContent}
       
-      if (resultData) {
-        const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
-        
-        if (type === 'code') {
-          setInitialCode(config.initialCode || '');
-          setSolution(config.solution || '');
-        } else if (type === 'interview') {
-          setTargetRole(config.targetRole || '');
-          setTargetLanguage(config.targetLanguage || 'es');
-          setSolution(config.solution || '');
-        } else if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(type)) {
-          setJsonConfig(JSON.stringify(config, null, 2));
-        } else if (type === 'quiz') {
-          setQuestions(config.questions || []);
-        } else if (type === 'wordsearch') {
-          setWords(config.words || []);
+      REGLAS:
+      - Retorna UNICAMENTE un objeto JSON válido con esta estructura exacta:
+        { 
+          "activityConfig": { ...config especifica según el tipo... }, 
+          "activityTitle": "título creativo", 
+          "activityDescription": "descripción breve" 
         }
+      - Para activityConfig, sigue el esquema de ${type}:
+        flashcard: { cards: [{front, back}] }
+        swipe: { deck: [{statement, isTrue}] }
+        sortable: { lines: [{id, text}], correctOrder: [ids] }
+        quiz: { questions: [{question, options, correctIndex}] }
+        code: { initialCode, solution }
+        interview: { targetRole, targetLanguage, solution }
+      - IMPORTANTE: activityConfig debe ser un objeto, no un string.
+      - Todo en ESPAÑOL LATINO.`;
 
-        if (resultData.activityTitle) setTitle(resultData.activityTitle);
-        if (resultData.activityDescription) setDescription(resultData.activityDescription);
-        
-        setIsAIOpen(false);
-        setAiLessonContent('');
+      // Llamada al nuevo API Route unificado
+      const res = await fetch('/api/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          provider: aiEngine === 'gemini' ? 'gemini' : 
+                    aiEngine === 'claude' ? 'claude' : 
+                    aiEngine === 'deepseek' ? 'deepseek' : 
+                    aiEngine === 'qwen' ? 'qwen' : 'auto'
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      // Parsear resultado
+      const resultData = typeof data.result === 'string' ? JSON.parse(data.result.match(/\{[\s\S]*\}/)?.[0] || '{}') : data.result;
+      const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
+      
+      if (type === 'code') {
+        setInitialCode(config.initialCode || '');
+        setSolution(config.solution || '');
+      } else if (type === 'interview') {
+        setTargetRole(config.targetRole || '');
+        setTargetLanguage(config.targetLanguage || 'es');
+        setSolution(config.solution || '');
+      } else if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(type)) {
+        setJsonConfig(JSON.stringify(config, null, 2));
+      } else if (type === 'quiz') {
+        setQuestions(config.questions || []);
+      } else if (type === 'wordsearch') {
+        setWords(config.words || []);
       }
+
+      if (resultData.activityTitle) setTitle(resultData.activityTitle);
+      if (resultData.activityDescription) setDescription(resultData.activityDescription);
+      
+      setIsAIOpen(false);
+      setAiLessonContent('');
     } catch (err: any) {
       console.error("AI Wizard Error Detail:", err);
-      let message = err?.message || 'Error de conexión.';
-      
-      // Mapeo detallado de errores para el usuario
-      if (message.includes('API key') || message.includes('401')) {
-        message = "Error: Configuración de API inválida o expirada.";
-      } else if (message.includes('quota') || message.includes('402') || message.includes('balance')) {
-        message = "Error: Saldo o cuota insuficiente en este proveedor.";
-      } else if (message.includes('Puter.js') || message.includes('puter') || message.includes('Puter')) {
-        message = "Error: Puter.js no detectado o sin créditos.";
-      } else if (message.includes('Internal Server Error') || message.includes('500')) {
-        message = "Error: El servidor de la IA está fallando temporalmente.";
-      }
-      
-      setAiError(message);
+      setAiError(err.message || 'Error de conexión con el servicio de IA.');
     } finally {
       setIsGenerating(false);
     }
