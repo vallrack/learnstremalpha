@@ -193,10 +193,13 @@ export default function AdminPodcastsClient() {
         const videoId = url.split('v=')[1]?.split('&')[0] || url.split('be/')[1]?.split('?')[0];
         return `https://www.youtube.com/embed/${videoId}`;
     }
-    if (type === 'anchor') {
+    if (type === 'anchor' || url.includes('spotify.com') || url.includes('anchor.fm')) {
         if (url.includes('embed')) return url;
-        // Basic conversion for anchor
-        return url.replace('/episodes/', '/embed/episodes/');
+        // Spotify: open.spotify.com/episode/... -> open.spotify.com/embed/episode/...
+        // Anchor: anchor.fm/.../episodes/... -> anchor.fm/.../embed/episodes/...
+        return url
+            .replace('open.spotify.com/episode/', 'open.spotify.com/embed/episode/')
+            .replace('/episodes/', '/embed/episodes/');
     }
     return url;
   };
