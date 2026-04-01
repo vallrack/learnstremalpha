@@ -164,7 +164,11 @@ export default function AdminChallengesClient() {
       TECNOLOGÍA: ${technology}
       CONTENIDO: ${aiLessonContent}
       
-      REGLAS:
+      REGLAS DE RETO:
+      - Para retos de CÓDIGO (code/sortable/etc):
+        * El "initialCode" debe ser una ESTRUCTURA INCOMPLETA o un ESQUELETO (ej: solo el inicio del algoritmo o comentarios TODO). 
+        * El "solution" debe ser el CÓDIGO COMPLETO y funcional.
+        * NO pongas el código completo en ambos campos.
       - Retorna UNICAMENTE un objeto JSON válido con esta estructura exacta:
         { 
           "activityConfig": { ...config especifica según el tipo... }, 
