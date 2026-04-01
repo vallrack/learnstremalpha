@@ -183,7 +183,7 @@ export default function AdminChallengesClient() {
           interview: { targetRole, targetLanguage, solution }
         - Todo en ESPAÑOL LATINO.`;
 
-        const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet' });
+        const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet-20240620' });
         const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
         // Extraer JSON si hay texto extra
         const jsonMatch = content.match(/\{[\s\S]*\}/);
