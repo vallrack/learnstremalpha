@@ -61,6 +61,7 @@ export default function AdminPodcastsClient() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewPodcast, setPreviewPodcast] = useState<any | null>(null);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -73,6 +74,7 @@ export default function AdminPodcastsClient() {
   const [price, setPrice] = useState('0');
   const [currency, setCurrency] = useState('COP');
   const [category, setCategory] = useState('Tecnología');
+  const [sourceType, setSourceType] = useState<'pc' | 'url' | 'youtube' | 'anchor'>('url');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -99,6 +101,7 @@ export default function AdminPodcastsClient() {
     setPrice('0');
     setCurrency('COP');
     setCategory('Tecnología');
+    setSourceType('url');
     setUploadProgress(0);
   };
 
@@ -149,6 +152,7 @@ export default function AdminPodcastsClient() {
       price: !isFree ? parseFloat(price) || 0 : 0,
       currency,
       category,
+      sourceType,
       updatedAt: serverTimestamp(),
     };
 
@@ -179,7 +183,22 @@ export default function AdminPodcastsClient() {
     setPrice(podcast.price?.toString() || '0');
     setCurrency(podcast.currency || 'COP');
     setCategory(podcast.category || 'Tecnología');
+    setSourceType(podcast.sourceType || 'url');
     setIsDialogOpen(true);
+  };
+
+  const getEmbedUrl = (url: string, type: string) => {
+    if (!url) return '';
+    if (type === 'youtube') {
+        const videoId = url.split('v=')[1]?.split('&')[0] || url.split('be/')[1]?.split('?')[0];
+        return `https://www.youtube.com/embed/${videoId}`;
+    }
+    if (type === 'anchor') {
+        if (url.includes('embed')) return url;
+        // Basic conversion for anchor
+        return url.replace('/episodes/', '/embed/episodes/');
+    }
+    return url;
   };
 
   if (!isAdmin && !isPodcastsLoading) return <div className="p-20 text-center">No tienes permiso para acceder.</div>;
@@ -241,35 +260,69 @@ export default function AdminPodcastsClient() {
                     </div>
                   </div>
 
-                  <div className="grid gap-2 pt-2">
-                    <Label className="font-bold">Fuente del Audio (PC o URL)</Label>
-                    <div className="flex flex-col gap-4">
-                        <div className="flex gap-2">
-                            <Input value={audioUrl} onChange={(e) => setAudioUrl(e.target.value)} placeholder="Pega URL de audio (.mp3, .m4a)" className="rounded-xl h-11" />
-                            <div className="relative">
-                                <Input type="file" accept="audio/*" onChange={handleFileUpload} className="hidden" id="audio-upload" />
-                                <Label htmlFor="audio-upload" className="cursor-pointer">
-                                    <Button type="button" variant="outline" className={`rounded-xl h-11 gap-2 ${isUploading ? 'opacity-50' : ''}`} asChild>
-                                        <span>
-                                            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                                            Subir PC
-                                        </span>
-                                    </Button>
-                                </Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label className="font-bold">Fuente de Contenido</Label>
+                        <Select value={sourceType} onValueChange={(v: any) => setSourceType(v)}>
+                            <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="pc">Subir desde PC (.mp3)</SelectItem>
+                                <SelectItem value="url">Enlace Directo (.mp3, .wav)</SelectItem>
+                                <SelectItem value="youtube">YouTube (Video / Audio)</SelectItem>
+                                <SelectItem value="anchor">Anchor / Spotify (Embed)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-2 pt-2">
+                        <Label className="font-bold">
+                            {sourceType === 'pc' ? 'Archivo de Audio' : 
+                             sourceType === 'youtube' ? 'Link de YouTube' : 
+                             sourceType === 'anchor' ? 'Link de Anchor/Spotify' : 'Enlace Directo'}
+                        </Label>
+                        <div className="flex flex-col gap-4">
+                            <div className="flex gap-2">
+                                <Input 
+                                    value={audioUrl} 
+                                    onChange={(e) => setAudioUrl(e.target.value)} 
+                                    placeholder={
+                                        sourceType === 'youtube' ? "https://youtube.com/watch?v=..." : 
+                                        sourceType === 'anchor' ? "https://podcasters.spotify.com/..." : 
+                                        "Pega el enlace del audio"
+                                    } 
+                                    className="rounded-xl h-11" 
+                                />
+                                {sourceType === 'pc' && (
+                                    <div className="relative">
+                                        <Input type="file" accept="audio/*" onChange={handleFileUpload} className="hidden" id="audio-upload" />
+                                        <Label htmlFor="audio-upload" className="cursor-pointer">
+                                            <Button type="button" variant="outline" className={`rounded-xl h-11 gap-2 ${isUploading ? 'opacity-50' : ''}`} asChild>
+                                                <span>
+                                                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                                    PC
+                                                </span>
+                                            </Button>
+                                        </Label>
+                                    </div>
+                                )}
                             </div>
+                            {isUploading && (
+                                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border">
+                                    <div className="bg-primary h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                </div>
+                            )}
+                            {sourceType === 'youtube' && audioUrl.includes('watch') && (
+                                <div className="text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg border border-amber-100 animate-in fade-in">
+                                    Nota: Usaremos este video para el reproductor embebido.
+                                </div>
+                            )}
+                            {audioUrl && !isUploading && sourceType === 'pc' && (
+                                <div className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-100 rounded-xl">
+                                    <Music4 className="h-4 w-4 text-emerald-600" />
+                                    <span className="text-[10px] font-bold text-emerald-700 truncate flex-1">{audioUrl}</span>
+                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-emerald-600" onClick={() => setAudioUrl('')}><X className="h-3 w-3" /></Button>
+                                </div>
+                            )}
                         </div>
-                        {isUploading && (
-                            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border">
-                                <div className="bg-primary h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                            </div>
-                        )}
-                        {audioUrl && !isUploading && (
-                            <div className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-100 rounded-xl">
-                                <Music4 className="h-4 w-4 text-emerald-600" />
-                                <span className="text-[10px] font-bold text-emerald-700 truncate flex-1">{audioUrl}</span>
-                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-emerald-600" onClick={() => setAudioUrl('')}><X className="h-3 w-3" /></Button>
-                            </div>
-                        )}
                     </div>
                   </div>
 
@@ -384,7 +437,18 @@ export default function AdminPodcastsClient() {
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                        {p.audioUrl ? <Play className="h-4 w-4 text-emerald-500" /> : <X className="h-4 w-4 text-rose-500" />}
+                        {p.audioUrl ? (
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
+                                onClick={() => setPreviewPodcast(p)}
+                            >
+                                <Play className="h-4 w-4" />
+                            </Button>
+                        ) : (
+                            <X className="h-4 w-4 text-rose-500" />
+                        )}
                         {p.videoUrl && <Video className="h-4 w-4 text-indigo-500" />}
                     </div>
                   </TableCell>
@@ -400,6 +464,62 @@ export default function AdminPodcastsClient() {
           </Table>
         </div>
       </main>
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewPodcast} onOpenChange={(open) => !open && setPreviewPodcast(null)}>
+        <DialogContent className="sm:max-w-[600px] rounded-[2.5rem]">
+            <DialogHeader>
+                <DialogTitle className="text-xl font-headline flex items-center gap-2">
+                    <Play className="h-5 w-5 text-primary" /> Vista Previa: {previewPodcast?.title}
+                </DialogTitle>
+            </DialogHeader>
+            <div className="py-6 flex flex-col items-center">
+                {previewPodcast?.sourceType === 'youtube' ? (
+                    <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border">
+                        <iframe 
+                            src={getEmbedUrl(previewPodcast.audioUrl, 'youtube')}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    </div>
+                ) : previewPodcast?.sourceType === 'anchor' ? (
+                    <div className="w-full h-[161px] rounded-2xl overflow-hidden shadow-lg border">
+                        <iframe 
+                            src={getEmbedUrl(previewPodcast.audioUrl, 'anchor')}
+                            className="w-full h-full"
+                            frameBorder="0"
+                            scrolling="no"
+                        />
+                    </div>
+                ) : (
+                    <div className="w-full bg-slate-50 p-8 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center gap-6">
+                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                            <Mic2 className="h-10 w-10 text-primary" />
+                        </div>
+                        <audio controls src={previewPodcast?.audioUrl} className="w-full" />
+                        <p className="text-xs text-muted-foreground font-medium italic">Reproductor simple de administración</p>
+                    </div>
+                )}
+                
+                <div className="mt-8 grid grid-cols-2 w-full gap-4">
+                    <div className="p-4 bg-slate-50 rounded-2xl border">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Fuente</p>
+                        <Badge className="font-bold text-[10px] uppercase">{previewPodcast?.sourceType || 'url'}</Badge>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-2xl border">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Acceso</p>
+                        <Badge className={previewPodcast?.isFree ? 'bg-emerald-100 text-emerald-600 border-none' : 'bg-amber-100 text-amber-600 border-none'}>
+                            {previewPodcast?.isFree ? 'GRATIS' : 'PREMIUM'}
+                        </Badge>
+                    </div>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" className="rounded-xl w-full" onClick={() => setPreviewPodcast(null)}>Cerrar Previsualización</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

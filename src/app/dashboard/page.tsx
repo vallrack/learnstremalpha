@@ -24,7 +24,8 @@ import {
   Users,
   TrendingUp, CheckCircle2,
   MessageSquare,
-  ArrowRight
+  ArrowRight,
+  Mic2
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit, doc, where } from 'firebase/firestore';
@@ -82,6 +83,12 @@ export default function DashboardPage() {
     return query(collection(db, 'users', user.uid, 'achievements'), orderBy('unlockedAt', 'desc'));
   }, [db, user?.uid]);
   const { data: achievements } = useCollection(achievementsQuery);
+
+  const podcastsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'podcasts'), limit(4));
+  }, [db]);
+  const { data: recentPodcasts } = useCollection(podcastsQuery);
 
   const enrolledCourses = useMemo(() => {
     if (!userProgress || !allCourses) return [];
@@ -222,6 +229,35 @@ export default function DashboardPage() {
                   <Button className="rounded-xl font-bold">Explorar Cursos</Button>
                 </Link>
               </Card>
+            )}
+
+            {/* Podcasts para el estudiante */}
+            {(recentPodcasts && recentPodcasts.length > 0) && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-headline font-bold flex items-center gap-2">
+                        <Mic2 className="h-5 w-5 text-emerald-500" /> Podcasts para ti
+                    </h3>
+                    <Link href="/podcasts" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">Ver todos <ArrowRight className="h-3 w-3" /></Link>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {recentPodcasts.map(p => (
+                        <Link key={p.id} href="/podcasts" className="bg-white p-4 rounded-3xl border shadow-sm flex items-center gap-4 hover:border-emerald-200 transition-all group">
+                            <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 overflow-hidden relative">
+                                {p.thumbnailUrl ? <img src={p.thumbnailUrl} alt="" className="w-full h-full object-cover" /> : <Mic2 className="h-8 w-8 text-emerald-200" />}
+                                <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <PlayCircle className="h-6 w-6 text-emerald-600" />
+                                </div>
+                            </div>
+                            <div className="min-w-0">
+                                <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[9px] px-2 py-0 mb-1">{p.category}</Badge>
+                                <h4 className="font-bold text-sm truncate group-hover:text-emerald-600 transition-colors">{p.title}</h4>
+                                <p className="text-[10px] text-muted-foreground">{p.duration || '00:00'}</p>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+              </div>
             )}
 
             <DailyMissions />

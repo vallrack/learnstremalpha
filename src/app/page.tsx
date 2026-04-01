@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
 import { useBrand } from '@/lib/branding/BrandingProvider';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, initializeFirebase } from '@/firebase';
-import { collection, query, limit, where, doc } from 'firebase/firestore';
+import { collection, query, limit, where, doc, orderBy } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from '@/hooks/use-toast';
@@ -110,6 +110,12 @@ export default function Home() {
   }, coursesDependencies);
 
   const { data: featuredCourses, isLoading } = useCollection(coursesQuery);
+
+  const podcastsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'podcasts'), limit(3));
+  }, [db]);
+  const { data: featuredPodcasts, isLoading: isPodcastsLoading } = useCollection(podcastsQuery);
 
   // Lógica de visibilidad corregida: Solo mostrar la sección si hay cursos o está cargando.
   // El estado vacío con botón de admin se quita del Home para mantenerlo profesional.
@@ -252,6 +258,58 @@ export default function Home() {
                   ))}
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* Podcasts Section */}
+        {(isPodcastsLoading || (featuredPodcasts && featuredPodcasts.length > 0)) && (
+          <section className="py-24 px-6 bg-slate-50/50 overflow-hidden">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex flex-col md:flex-row items-center justify-between mb-16 gap-6">
+                <div className="text-center md:text-left">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest mb-4">
+                        <Mic2 className="h-3.5 w-3.5" /> Nuevo: LearnStream Podcasts
+                    </div>
+                    <h2 className="text-3xl md:text-5xl font-headline font-extrabold mb-4">Aprende sobre la marcha</h2>
+                    <p className="text-muted-foreground text-lg">Escucha a expertos y mantente al día con lo último en tecnología.</p>
+                </div>
+                <Link href="/podcasts">
+                    <Button variant="outline" className="font-bold h-12 px-8 rounded-full border-2 hover:bg-emerald-50 text-emerald-600 border-emerald-100">
+                        Ir al Catálogo <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {isPodcastsLoading ? (
+                    [1,2,3].map(i => <div key={i} className="h-64 bg-white rounded-[2.5rem] animate-pulse border" />)
+                ) : featuredPodcasts?.map(p => (
+                    <Link key={p.id} href="/podcasts" className="group">
+                        <div className="bg-white rounded-[2.5rem] p-6 border-2 border-slate-100 shadow-sm hover:shadow-2xl hover:border-emerald-100 transition-all duration-500 hover:-translate-y-2 flex flex-col gap-6">
+                            <div className="relative h-40 rounded-2xl overflow-hidden bg-emerald-50">
+                                {p.thumbnailUrl ? (
+                                    <img src={p.thumbnailUrl} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-emerald-200">
+                                        <Mic2 className="h-16 w-16" />
+                                    </div>
+                                )}
+                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+                                        <PlayCircle className="h-6 w-6 fill-current" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none font-bold text-[10px] uppercase tracking-widest">{p.category}</Badge>
+                                <h4 className="text-xl font-headline font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">{p.title}</h4>
+                                <p className="text-xs text-muted-foreground line-clamp-2 font-medium">{p.description}</p>
+                            </div>
+                        </div>
+                    </Link>
+                ))}
+              </div>
             </div>
           </section>
         )}

@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PodcastPlayer } from '@/components/podcasts/PodcastPlayer';
+import { Youtube, Music2, Share2, Video } from 'lucide-react';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/currency';
 
@@ -198,6 +199,18 @@ export default function PodcastsPage() {
                              <Music4 className="h-12 w-12" />
                            </div>
                          )}
+                         <div className="absolute top-4 left-4 z-20">
+                            {p.sourceType === 'youtube' && (
+                                <div className="bg-red-600 text-white p-1.5 rounded-lg shadow-lg">
+                                    <Youtube className="h-3.5 w-3.5" />
+                                </div>
+                            )}
+                            {p.sourceType === 'anchor' && (
+                                <div className="bg-emerald-500 text-white p-1.5 rounded-lg shadow-lg">
+                                    <Music2 className="h-3.5 w-3.5" />
+                                </div>
+                            )}
+                         </div>
                          <div className="absolute top-4 right-4">
                             {!hasAccess(p) && !p.isFree && (
                                 <div className="bg-black/60 backdrop-blur-md p-2 rounded-xl text-white">
