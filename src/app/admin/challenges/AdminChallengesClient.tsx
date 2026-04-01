@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { WaitingHall } from '@/components/instructor/WaitingHall';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   Edit, 
@@ -95,6 +96,7 @@ export default function AdminChallengesClient() {
   const [currency, setCurrency] = useState('COP');
 
   // AI Generation state
+  const { toast } = useToast();
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [aiLessonContent, setAiLessonContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
