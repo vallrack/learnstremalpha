@@ -26,7 +26,8 @@ import {
   Landmark,
   Clock,
   Compass,
-  Zap
+  Zap,
+  Mic2
 } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -51,6 +52,16 @@ import { useTranslation } from '@/lib/i18n/use-translation';
 import { useState } from 'react';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useBrand } from '@/lib/branding/BrandingProvider';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 
 export function Navbar() {
   const { user, profile, isUserLoading } = useUser();
@@ -58,6 +69,8 @@ export function Navbar() {
   const router = useRouter();
   const { t, language, setLanguage } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [isPuterActive, setIsPuterActive] = useState(false);
 
   const isDemoAccount = user?.email === 'demo@learnstream.ai';
 
@@ -68,8 +81,28 @@ export function Navbar() {
   const hasManagementAccess = isAdmin || isInstructor || isPendingInstructor;
 
   const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/');
+    // Detectar si Puter está activo y el usuario está logueado
+    const puter = (window as any).puter;
+    if (puter?.auth?.isSignedIn()) {
+      setIsPuterActive(true);
+      setIsLogoutDialogOpen(true);
+    } else {
+      await performFinalLogout(false);
+    }
+  };
+
+  const performFinalLogout = async (signOutPuter: boolean) => {
+    try {
+      if (signOutPuter) {
+        (window as any).puter?.auth?.signOut();
+      }
+      await signOut(auth);
+      router.push('/');
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setIsLogoutDialogOpen(false);
+    }
   };
 
   const { name, logoUrl } = useBrand();
@@ -79,6 +112,7 @@ export function Navbar() {
     { href: '/paths', label: 'Rutas', icon: Compass },
     { href: '/courses', label: t.common.courses, icon: BookOpen },
     { href: '/challenges', label: t.common.challenges, icon: Code2 },
+    { href: '/podcasts', label: 'Podcasts', icon: Mic2 },
     { href: '/leaderboard', label: t.common.leaderboard, icon: Trophy },
   ];
 
@@ -89,6 +123,7 @@ export function Navbar() {
   const adminLinks = [
     { href: '/admin/finances', label: 'Finanzas', icon: Landmark, roles: ['admin', 'instructor'] },
     { href: '/admin/challenges', label: 'Desafíos', icon: Code2, roles: ['admin', 'instructor'] },
+    { href: '/admin/podcasts', label: 'Podcasts', icon: Mic2, roles: ['admin', 'instructor'] },
     { href: '/admin', label: 'Catálogo Cursos', icon: LayoutDashboard, roles: ['admin', 'instructor'] },
     { href: '/admin/applications', label: 'Solicitudes Instructor', icon: FileText, roles: ['admin'] },
     { href: '/admin/students', label: 'Usuarios y Roles', icon: Users, roles: ['admin'] },
@@ -365,6 +400,39 @@ export function Navbar() {
         )}
       </div>
     </nav>
+
+    {/* Diálogo de Confirmación de Salida con Puter */}
+    <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+      <AlertDialogContent className="rounded-[2rem] p-8 border-none shadow-2xl">
+        <AlertDialogHeader className="space-y-4">
+          <div className="mx-auto bg-amber-100/50 p-4 rounded-full w-fit">
+            <LogOut className="h-8 w-8 text-amber-600" />
+          </div>
+          <AlertDialogTitle className="text-2xl font-headline font-bold text-center">¿Deseas cerrar sesión?</AlertDialogTitle>
+          <AlertDialogDescription className="text-center text-slate-500 font-medium pb-2">
+            Hemos detectado que tienes una sesión activa de <strong>Puter (IA Claude)</strong>. 
+            ¿Deseas cerrarla también o prefieres mantenerla abierta para tu próxima visita?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex flex-col sm:flex-row gap-3 sm:gap-2">
+          <AlertDialogAction 
+            onClick={() => performFinalLogout(true)}
+            className="rounded-xl h-12 bg-destructive hover:bg-destructive/90 font-bold"
+          >
+            Cerrar Todo y Salir
+          </AlertDialogAction>
+          <AlertDialogAction 
+            onClick={() => performFinalLogout(false)}
+            className="rounded-xl h-12 bg-slate-900 hover:bg-slate-800 font-bold"
+          >
+            Cerrar LearnStream solamente
+          </AlertDialogAction>
+          <AlertDialogCancel className="rounded-xl h-12 border-none bg-slate-100 hover:bg-slate-200 mt-0 sm:mt-0 font-bold">
+            Cancelar
+          </AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

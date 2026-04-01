@@ -67,6 +67,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { VisualH5PBuilder } from './VisualH5PBuilder';
 import { generateActivities } from '@/ai/flows/generate-activities';
+import { generateWithExternalAI } from '@/app/actions/ai-generation';
 
 export default function AdminChallengesClient() {
   const { user } = useUser();
@@ -98,7 +99,7 @@ export default function AdminChallengesClient() {
   const [aiLessonContent, setAiLessonContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiError, setAiError] = useState('');
-  const [aiEngine, setAiEngine] = useState<'gemini' | 'claude'>('gemini');
+  const [aiEngine, setAiEngine] = useState<'gemini' | 'claude' | 'deepseek' | 'qwen'>('gemini');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -188,6 +189,33 @@ export default function AdminChallengesClient() {
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("La IA no devolvió un formato válido.");
         resultData = JSON.parse(jsonMatch[0]);
+      } else if (aiEngine === 'deepseek' || aiEngine === 'qwen') {
+        const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad tipo "${type}" basada en esta lección:
+        
+        TÍTULO: ${title}
+        TECNOLOGÍA: ${technology}
+        CONTENIDO: ${aiLessonContent}
+        
+        REGLAS:
+        - Retorna UNICAMENTE un objeto JSON válido con esta estructura exacta:
+          { 
+            "activityConfig": { ...config especifica según el tipo... }, 
+            "activityTitle": "título creativo", 
+            "activityDescription": "descripción breve" 
+          }
+        - Para activityConfig, sigue el esquema de ${type}:
+          flashcard: { cards: [{front, back}] }
+          swipe: { deck: [{statement, isTrue}] }
+          sortable: { lines: [{id, text}], correctOrder: [ids] }
+          quiz: { questions: [{question, options, correctIndex}] }
+          code: { initialCode, solution }
+          interview: { targetRole, targetLanguage, solution }
+        - IMPORTANTE: activityConfig debe ser un objeto, no un string.
+        - Todo en ESPAÑOL LATINO.`;
+
+        const result = await generateWithExternalAI(prompt, aiEngine);
+        if (!result.success) throw new Error(result.error);
+        resultData = result.data;
       } else {
         const result = await generateActivities({
           lessonTitle: title || 'Desafío Nuevo',

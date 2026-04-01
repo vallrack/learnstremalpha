@@ -31,6 +31,7 @@ import {
 import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp, increment } from 'firebase/firestore';
 import { evaluateChallenge, type EvaluateChallengeOutput } from '@/ai/flows/evaluate-challenge';
+import { evaluateWithExternalAI } from '@/app/actions/ai-generation';
 import { WordSearchGame } from '@/components/challenges/WordSearchGame';
 import { QuizPlayer } from '@/components/challenges/QuizPlayer';
 import { InteractiveVideo } from '@/components/challenges/InteractiveVideo';
@@ -189,15 +190,52 @@ export default function ChallengeClient() {
              El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`
           : code;
 
-        const fallbackResult = await handleClaudeFallback(submissionCode);
-        processResult(fallbackResult);
-      } catch (fallbackError) {
+      const fallbackResult = await handleClaudeFallback(submissionCode);
+      processResult(fallbackResult);
+    } catch (fallbackError) {
+      console.warn("Claude fallback failed, trying DeepSeek...");
+      try {
+        const submissionCode = quizScore !== undefined && !code.trim()
+          ? `[REPORTE DE DESEMPEÑO INTERACTIVO]
+             Reto: ${challenge.title}
+             Materia: ${challenge.technology}
+             Puntaje Alcanzado: ${quizScore.toFixed(1)}/5.0. 
+             El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`
+          : code;
+        
+        const prompt = `Evalúa esta entrega técnica:
+        RETO: ${challenge.title}
+        TECNOLOGÍA: ${challenge.technology}
+        DESCRIPCIÓN: ${challenge.description}
+        ENTREGA: ${submissionCode}
+        
+        Responde estrictamente en JSON: { "score": 0-5, "passed": bool, "feedback": "español", "awardedBadge": { "title": "...", "description": "...", "iconType": "logic/style/data/architecture/speed/communication" } }`;
+
+        const dsResult = await evaluateWithExternalAI(prompt, 'deepseek');
+        if (dsResult.success) {
+          processResult(dsResult.data);
+          return;
+        }
+        
+        const qwenResult = await evaluateWithExternalAI(prompt, 'qwen');
+        if (qwenResult.success) {
+          processResult(qwenResult.data);
+          return;
+        }
+
         toast({ 
           variant: "destructive", 
           title: "Error Crítico", 
-          description: "Ningún motor de IA respondió correctamente." 
+          description: "Ningún motor de IA (Gemini, Claude, DeepSeek, Qwen) respondió correctamente." 
+        });
+      } catch (lastError) {
+        toast({ 
+          variant: "destructive", 
+          title: "Fallo General de IA", 
+          description: "Todos los motores de evaluación están fuera de línea." 
         });
       }
+    }
     } finally {
       setIsEvaluating(false);
     }
