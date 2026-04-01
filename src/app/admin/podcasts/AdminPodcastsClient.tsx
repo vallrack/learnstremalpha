@@ -284,45 +284,69 @@ export default function AdminPodcastsClient() {
                         </Label>
                         <div className="flex flex-col gap-4">
                             <div className="flex gap-2">
-                                <Input 
-                                    value={audioUrl} 
-                                    onChange={(e) => setAudioUrl(e.target.value)} 
-                                    placeholder={
-                                        sourceType === 'youtube' ? "https://youtube.com/watch?v=..." : 
-                                        sourceType === 'anchor' ? "https://podcasters.spotify.com/..." : 
-                                        "Pega el enlace del audio"
-                                    } 
-                                    className="rounded-xl h-11" 
-                                />
-                                {sourceType === 'pc' && (
-                                    <div className="relative">
-                                        <Input type="file" accept="audio/*" onChange={handleFileUpload} className="hidden" id="audio-upload" />
+                                {sourceType === 'pc' ? (
+                                    <div className="flex-1 flex gap-2">
+                                        <div className="flex-1 bg-slate-50 border rounded-xl h-11 px-4 flex items-center text-xs text-muted-foreground italic overflow-hidden">
+                                            {audioUrl ? (
+                                                <span className="text-emerald-600 font-bold truncate">✅ {audioUrl.split('/').pop()}</span>
+                                            ) : isUploading ? (
+                                                <span className="animate-pulse">Subiendo... {Math.round(uploadProgress)}%</span>
+                                            ) : (
+                                                "Selecciona archivo MP3"
+                                            )}
+                                        </div>
                                         <Label htmlFor="audio-upload" className="cursor-pointer">
-                                            <Button type="button" variant="outline" className={`rounded-xl h-11 gap-2 ${isUploading ? 'opacity-50' : ''}`} asChild>
+                                            <Button type="button" variant="outline" className={`rounded-xl h-11 gap-2 ${isUploading ? 'opacity-50' : ''}`} asChild disabled={isUploading}>
                                                 <span>
-                                                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic2 className="h-4 w-4" />}
                                                     PC
                                                 </span>
                                             </Button>
                                         </Label>
+                                        <input 
+                                            id="audio-upload"
+                                            type="file"
+                                            accept="audio/*"
+                                            className="hidden"
+                                            onChange={handleFileUpload}
+                                            disabled={isUploading}
+                                        />
                                     </div>
+                                ) : (
+                                    <Input 
+                                        value={audioUrl} 
+                                        onChange={(e) => setAudioUrl(e.target.value)} 
+                                        placeholder={
+                                            sourceType === 'youtube' ? "https://youtube.com/watch?v=..." : 
+                                            sourceType === 'anchor' ? "https://podcasters.spotify.com/..." : 
+                                            "Pega el enlace del audio"
+                                        } 
+                                        className="rounded-xl h-11" 
+                                        disabled={isUploading}
+                                    />
                                 )}
                             </div>
+
                             {isUploading && (
                                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border">
                                     <div className="bg-primary h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                                 </div>
                             )}
+
                             {sourceType === 'youtube' && audioUrl.includes('watch') && (
-                                <div className="text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg border border-amber-100 animate-in fade-in">
+                                <div className="text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg border border-amber-100">
                                     Nota: Usaremos este video para el reproductor embebido.
                                 </div>
                             )}
+
                             {audioUrl && !isUploading && sourceType === 'pc' && (
                                 <div className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-100 rounded-xl">
-                                    <Music4 className="h-4 w-4 text-emerald-600" />
-                                    <span className="text-[10px] font-bold text-emerald-700 truncate flex-1">{audioUrl}</span>
-                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-emerald-600" onClick={() => setAudioUrl('')}><X className="h-3 w-3" /></Button>
+                                    <div className="flex-1 flex items-center gap-2 overflow-hidden">
+                                        <span className="text-[10px] font-bold text-emerald-700 truncate">{audioUrl}</span>
+                                    </div>
+                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-emerald-600" onClick={() => setAudioUrl('')}>
+                                        <X className="h-3 w-3" />
+                                    </Button>
                                 </div>
                             )}
                         </div>

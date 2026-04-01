@@ -252,7 +252,12 @@ export default function AdminChallengesClient() {
         setAiLessonContent('');
       }
     } catch (err: any) {
-      setAiError(err?.message || 'Error de conexión.');
+      console.error("AI Wizard Error:", err);
+      let message = err?.message || 'Error de conexión.';
+      if (message.includes('API key')) message = "Error: Configuración de API inválida.";
+      if (message.includes('quota')) message = "Error: Límite de cuota o créditos alcanzados.";
+      if (message.includes('Puter.js')) message = "Error: Puter.js no detectado o sesión expirada.";
+      setAiError(message);
     } finally {
       setIsGenerating(false);
     }
@@ -612,9 +617,11 @@ export default function AdminChallengesClient() {
                              <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5 space-y-3">
                                 <div className="flex items-center justify-between gap-4 mb-2">
                                     <Label className="text-orange-800 font-bold text-xs">Instrucciones de la Lección</Label>
-                                    <div className="flex bg-orange-100 rounded-lg p-0.5">
-                                       <button type="button" onClick={() => setAiEngine('gemini')} className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'gemini' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-400'}`}>GEMINI</button>
-                                       <button type="button" onClick={() => setAiEngine('claude')} className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'claude' ? 'bg-white text-indigo-600 shadow-sm' : 'text-orange-400'}`}>CLAUDE</button>
+                                    <div className="flex bg-orange-100 rounded-lg p-0.5 gap-0.5">
+                                       <button type="button" onClick={() => setAiEngine('gemini')} title="Google Gemini 1.5" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'gemini' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-400 hover:text-orange-600'}`}>GEMINI</button>
+                                       <button type="button" onClick={() => setAiEngine('claude')} title="Anthropic Claude (Puter)" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'claude' ? 'bg-white text-indigo-600 shadow-sm' : 'text-orange-400 hover:text-indigo-600'}`}>CLAUDE</button>
+                                       <button type="button" onClick={() => setAiEngine('deepseek')} title="DeepSeek V3" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'deepseek' ? 'bg-white text-blue-600 shadow-sm' : 'text-orange-400 hover:text-blue-600'}`}>DEEPSEEK</button>
+                                       <button type="button" onClick={() => setAiEngine('qwen')} title="Alibaba Qwen Max" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'qwen' ? 'bg-white text-emerald-600 shadow-sm' : 'text-orange-400 hover:text-emerald-600'}`}>QWEN</button>
                                     </div>
                                  </div>
                                 <Textarea 
