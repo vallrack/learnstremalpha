@@ -27,13 +27,11 @@ import {
   useUser, 
   useDoc, 
   useMemoFirebase, 
-  useStorage,
   addDocumentNonBlocking, 
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase';
 import { collection, serverTimestamp, doc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
   Dialog, 
   DialogContent, 
@@ -54,13 +52,10 @@ import { formatPrice } from '@/lib/currency';
 export default function AdminPodcastsClient() {
   const { user } = useUser();
   const db = useFirestore();
-  const storage = useStorage();
   const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [previewPodcast, setPreviewPodcast] = useState<any | null>(null);
 
   // Form state
@@ -74,7 +69,7 @@ export default function AdminPodcastsClient() {
   const [price, setPrice] = useState('0');
   const [currency, setCurrency] = useState('COP');
   const [category, setCategory] = useState('Tecnología');
-  const [sourceType, setSourceType] = useState<'pc' | 'url' | 'youtube' | 'anchor'>('url');
+  const [sourceType, setSourceType] = useState<'url' | 'youtube' | 'anchor'>('url');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -102,39 +97,6 @@ export default function AdminPodcastsClient() {
     setCurrency('COP');
     setCategory('Tecnología');
     setSourceType('url');
-    setUploadProgress(0);
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !storage || !user) return;
-
-    if (!file.type.startsWith('audio/')) {
-        toast({ title: "Archivo inválido", description: "Por favor sube solo archivos de audio (mp3, wav, m4a).", variant: "destructive" });
-        return;
-    }
-
-    setIsUploading(true);
-    const storageRef = ref(storage, `podcasts/${user.uid}/${Date.now()}_${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(progress);
-      }, 
-      (error) => {
-        console.error("Upload error:", error);
-        toast({ title: "Error subida", description: "No se pudo subir el archivo.", variant: "destructive" });
-        setIsUploading(false);
-      }, 
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        setAudioUrl(downloadURL);
-        setIsUploading(false);
-        toast({ title: "Subida completada", description: "Archivo listo para ser publicado." });
-      }
-    );
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -269,84 +231,35 @@ export default function AdminPodcastsClient() {
                         <Select value={sourceType} onValueChange={(v: any) => setSourceType(v)}>
                             <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="pc">Subir desde PC (.mp3)</SelectItem>
                                 <SelectItem value="url">Enlace Directo (.mp3, .wav)</SelectItem>
                                 <SelectItem value="youtube">YouTube (Video / Audio)</SelectItem>
-                                <SelectItem value="anchor">Anchor / Spotify (Embed)</SelectItem>
+                                <SelectItem value="anchor">Spotify / Anchor (Embed)</SelectItem>
                             </SelectContent>
                         </Select>
+                        <p className="text-[10px] text-muted-foreground px-1 italic">
+                          💡 Tip: Si tienes un archivo propio, súbelo a Google Drive o Dropbox y pega el link compartido en "Enlace Directo".
+                        </p>
                     </div>
                     <div className="grid gap-2 pt-2">
                         <Label className="font-bold">
-                            {sourceType === 'pc' ? 'Archivo de Audio' : 
-                             sourceType === 'youtube' ? 'Link de YouTube' : 
+                            {sourceType === 'youtube' ? 'Link de YouTube' : 
                              sourceType === 'anchor' ? 'Link de Anchor/Spotify' : 'Enlace Directo'}
                         </Label>
                         <div className="flex flex-col gap-4">
-                            <div className="flex gap-2">
-                                {sourceType === 'pc' ? (
-                                    <div className="flex-1 flex gap-2">
-                                        <div className="flex-1 bg-slate-50 border rounded-xl h-11 px-4 flex items-center text-xs text-muted-foreground italic overflow-hidden">
-                                            {audioUrl ? (
-                                                <span className="text-emerald-600 font-bold truncate">✅ {audioUrl.split('/').pop()}</span>
-                                            ) : isUploading ? (
-                                                <span className="animate-pulse">Subiendo... {Math.round(uploadProgress)}%</span>
-                                            ) : (
-                                                "Selecciona archivo MP3"
-                                            )}
-                                        </div>
-                                        <Label htmlFor="audio-upload" className="cursor-pointer">
-                                            <Button type="button" variant="outline" className={`rounded-xl h-11 gap-2 ${isUploading ? 'opacity-50' : ''}`} asChild disabled={isUploading}>
-                                                <span>
-                                                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic2 className="h-4 w-4" />}
-                                                    PC
-                                                </span>
-                                            </Button>
-                                        </Label>
-                                        <input 
-                                            id="audio-upload"
-                                            type="file"
-                                            accept="audio/*"
-                                            className="hidden"
-                                            onChange={handleFileUpload}
-                                            disabled={isUploading}
-                                        />
-                                    </div>
-                                ) : (
-                                    <Input 
-                                        value={audioUrl} 
-                                        onChange={(e) => setAudioUrl(e.target.value)} 
-                                        placeholder={
-                                            sourceType === 'youtube' ? "https://youtube.com/watch?v=..." : 
-                                            sourceType === 'anchor' ? "https://podcasters.spotify.com/..." : 
-                                            "Pega el enlace del audio"
-                                        } 
-                                        className="rounded-xl h-11" 
-                                        disabled={isUploading}
-                                    />
-                                )}
-                            </div>
-
-                            {isUploading && (
-                                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border">
-                                    <div className="bg-primary h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                                </div>
-                            )}
+                            <Input 
+                                value={audioUrl} 
+                                onChange={(e) => setAudioUrl(e.target.value)} 
+                                placeholder={
+                                    sourceType === 'youtube' ? "https://youtube.com/watch?v=..." : 
+                                    sourceType === 'anchor' ? "https://podcasters.spotify.com/..." : 
+                                    "Pega el enlace del audio"
+                                } 
+                                className="rounded-xl h-11" 
+                            />
 
                             {sourceType === 'youtube' && audioUrl.includes('watch') && (
                                 <div className="text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg border border-amber-100">
                                     Nota: Usaremos este video para el reproductor embebido.
-                                </div>
-                            )}
-
-                            {audioUrl && !isUploading && sourceType === 'pc' && (
-                                <div className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-100 rounded-xl">
-                                    <div className="flex-1 flex items-center gap-2 overflow-hidden">
-                                        <span className="text-[10px] font-bold text-emerald-700 truncate">{audioUrl}</span>
-                                    </div>
-                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-emerald-600" onClick={() => setAudioUrl('')}>
-                                        <X className="h-3 w-3" />
-                                    </Button>
                                 </div>
                             )}
                         </div>

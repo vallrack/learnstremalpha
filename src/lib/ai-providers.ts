@@ -35,28 +35,42 @@ export async function callExternalAI(
     throw new Error(`API Key para ${provider} no configurada en el servidor.`);
   }
 
-  const response = await fetch(baseUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: options.temperature ?? 0.7,
-      max_tokens: options.max_tokens ?? 2000,
-      response_format: { type: 'json_object' } // DeepSeek supports this, Qwen might require prompt-based JSON
-    }),
-  });
+  try {
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey.trim()}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: options.temperature ?? 0.7,
+        max_tokens: options.max_tokens ?? 2000,
+        response_format: provider === 'deepseek' ? { type: 'json_object' } : undefined
+      }),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(`${provider} API Error: ${response.status} - ${JSON.stringify(errorData)}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const statusCode = response.status;
+      
+      if (statusCode === 402) {
+        throw new Error(`Saldo insuficiente en tu cuenta de ${provider}.`);
+      }
+      if (statusCode === 401) {
+        throw new Error(`La API Key de ${provider} es inválida o ha expirado. (ID: ${apiKey.slice(0, 5)}...${apiKey.slice(-4)})`);
+      }
+      
+      throw new Error(`${provider} API Error: ${statusCode} - ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error: any) {
+    console.error(`Fetch error for ${provider}:`, error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data.choices[0].message.content;
 }
 
 /**

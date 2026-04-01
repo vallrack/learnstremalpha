@@ -252,11 +252,20 @@ export default function AdminChallengesClient() {
         setAiLessonContent('');
       }
     } catch (err: any) {
-      console.error("AI Wizard Error:", err);
+      console.error("AI Wizard Error Detail:", err);
       let message = err?.message || 'Error de conexión.';
-      if (message.includes('API key')) message = "Error: Configuración de API inválida.";
-      if (message.includes('quota')) message = "Error: Límite de cuota o créditos alcanzados.";
-      if (message.includes('Puter.js')) message = "Error: Puter.js no detectado o sesión expirada.";
+      
+      // Mapeo detallado de errores para el usuario
+      if (message.includes('API key') || message.includes('401')) {
+        message = "Error: Configuración de API inválida o expirada.";
+      } else if (message.includes('quota') || message.includes('402') || message.includes('balance')) {
+        message = "Error: Saldo o cuota insuficiente en este proveedor.";
+      } else if (message.includes('Puter.js') || message.includes('puter') || message.includes('Puter')) {
+        message = "Error: Puter.js no detectado o sin créditos.";
+      } else if (message.includes('Internal Server Error') || message.includes('500')) {
+        message = "Error: El servidor de la IA está fallando temporalmente.";
+      }
+      
       setAiError(message);
     } finally {
       setIsGenerating(false);
