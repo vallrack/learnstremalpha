@@ -40,8 +40,15 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
   const { toast } = useToast();
 
   const isLocked = !hasAccess && !podcast.isFree;
-  const sourceType = podcast.sourceType || 'url';
+  const getSourceType = () => {
+    if (podcast.sourceType) return podcast.sourceType;
+    const url = podcast.audioUrl?.toLowerCase() || '';
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+    if (url.includes('anchor.fm') || url.includes('spotify.com')) return 'anchor';
+    return 'url';
+  };
 
+  const sourceType = getSourceType();
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume / 100;
@@ -53,6 +60,21 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
         audioRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate]);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Autoplay/Playback blocked:", error);
+          setIsPlaying(false);
+        });
+      }
+    } else {
+      audioRef.current.pause();
+    }
+  }, [isPlaying]);
 
   const getEmbedUrl = (url: string, type: string) => {
     if (!url) return '';

@@ -41,6 +41,11 @@ export default function PodcastsPage() {
     return doc(db, 'users', user.uid);
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
+  
+  const handleSelectPodcast = (podcast: any) => {
+    setSelectedPodcast(podcast);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const podcastsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -148,7 +153,7 @@ export default function PodcastsPage() {
                   <div className="flex items-center gap-6 pt-4">
                     <Button 
                         size="lg" 
-                        onClick={() => setSelectedPodcast(featuredPodcast)}
+                        onClick={() => handleSelectPodcast(featuredPodcast)}
                         className="rounded-2xl h-16 px-10 gap-3 text-lg font-bold bg-white text-slate-900 hover:bg-slate-100 shadow-2xl transition-all hover:translate-y-[-2px] active:translate-y-0"
                     >
                         <Play className="h-6 w-6 fill-current" /> Reproducir Ahora
@@ -188,7 +193,7 @@ export default function PodcastsPage() {
                 {filteredPodcasts.map(p => (
                    <div 
                     key={p.id} 
-                    onClick={() => setSelectedPodcast(p)}
+                    onClick={() => handleSelectPodcast(p)}
                     className="group bg-white rounded-[2.5rem] border border-slate-100 p-6 shadow-sm hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 cursor-pointer flex flex-col gap-6"
                    >
                       <div className="relative h-48 rounded-[1.75rem] overflow-hidden bg-slate-100">

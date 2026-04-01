@@ -164,6 +164,12 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
+    // 🛰️ PODCASTS (Público lectura, Admin escritura)
+    match /podcasts/{podcastId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // 🗺️ RUTAS DE APRENDIZAJE (Bootcamps)
     match /paths/{pathId} {
       allow read: if true;

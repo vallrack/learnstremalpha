@@ -426,7 +426,7 @@ export default function AdminPodcastsClient() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                         {p.isFree ? (
-                            <Badge className="bg-emerald-100 text-emerald-600 border-none hover:bg-emerald-100 font-bold text-[10px] uppercase">Gatis</Badge>
+                            <Badge className="bg-emerald-100 text-emerald-600 border-none hover:bg-emerald-100 font-bold text-[10px] uppercase">Gratis</Badge>
                         ) : (
                             <div className="flex flex-col gap-1">
                                 <Badge className="bg-amber-100 text-amber-600 border-none hover:bg-amber-100 font-bold text-[10px] uppercase">Premium</Badge>
@@ -474,33 +474,41 @@ export default function AdminPodcastsClient() {
                 </DialogTitle>
             </DialogHeader>
             <div className="py-6 flex flex-col items-center">
-                {previewPodcast?.sourceType === 'youtube' ? (
-                    <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border">
-                        <iframe 
-                            src={getEmbedUrl(previewPodcast.audioUrl, 'youtube')}
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                        />
-                    </div>
-                ) : previewPodcast?.sourceType === 'anchor' ? (
-                    <div className="w-full h-[161px] rounded-2xl overflow-hidden shadow-lg border">
-                        <iframe 
-                            src={getEmbedUrl(previewPodcast.audioUrl, 'anchor')}
-                            className="w-full h-full"
-                            frameBorder="0"
-                            scrolling="no"
-                        />
-                    </div>
-                ) : (
-                    <div className="w-full bg-slate-50 p-8 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center gap-6">
-                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-                            <Mic2 className="h-10 w-10 text-primary" />
+                {(() => {
+                    const st = previewPodcast?.sourceType || (previewPodcast?.audioUrl?.toLowerCase().includes('youtube') || previewPodcast?.audioUrl?.toLowerCase().includes('youtu.be') ? 'youtube' : previewPodcast?.audioUrl?.toLowerCase().includes('anchor') || previewPodcast?.audioUrl?.toLowerCase().includes('spotify') ? 'anchor' : 'url');
+                    
+                    if (st === 'youtube') return (
+                        <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border">
+                            <iframe 
+                                src={getEmbedUrl(previewPodcast.audioUrl, 'youtube')}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
                         </div>
-                        <audio controls src={previewPodcast?.audioUrl} className="w-full" />
-                        <p className="text-xs text-muted-foreground font-medium italic">Reproductor simple de administración</p>
-                    </div>
-                )}
+                    );
+                    
+                    if (st === 'anchor') return (
+                        <div className="w-full h-[161px] rounded-2xl overflow-hidden shadow-lg border">
+                            <iframe 
+                                src={getEmbedUrl(previewPodcast.audioUrl, 'anchor')}
+                                className="w-full h-full"
+                                frameBorder="0"
+                                scrolling="no"
+                            />
+                        </div>
+                    );
+                    
+                    return (
+                        <div className="w-full bg-slate-50 p-8 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center gap-6">
+                            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                                <Mic2 className="h-10 w-10 text-primary" />
+                            </div>
+                            <audio controls src={previewPodcast?.audioUrl} className="w-full" />
+                            <p className="text-xs text-muted-foreground font-medium italic">Reproductor simple de administración</p>
+                        </div>
+                    );
+                })()}
                 
                 <div className="mt-8 grid grid-cols-2 w-full gap-4">
                     <div className="p-4 bg-slate-50 rounded-2xl border">
