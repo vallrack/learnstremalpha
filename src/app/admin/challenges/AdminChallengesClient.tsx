@@ -180,6 +180,8 @@ export default function AdminChallengesClient() {
         swipe: { deck: [{statement, isTrue}] }
         sortable: { lines: [{id, text}], correctOrder: [ids] }
         quiz: { questions: [{question, options, correctIndex}] }
+        wordsearch: { words: ["PALABRA1", "PALABRA2"] }
+        dragdrop: { template: "texto con {{{hueco}}}", snippets: [{id, text}], correctMapping: {hueco: id} }
         code: { initialCode, solution }
         interview: { targetRole, targetLanguage, solution }
       - IMPORTANTE: activityConfig debe ser un objeto, no un string.
@@ -252,6 +254,7 @@ export default function AdminChallengesClient() {
         else if (type === 'interview') { setTargetRole(config.targetRole || ''); setTargetLanguage(config.targetLanguage || 'es'); setSolution(config.solution || ''); }
         else if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(type)) { setJsonConfig(JSON.stringify(config, null, 2)); }
         else if (type === 'quiz') { setQuestions(config.questions || []); }
+        else if (type === 'wordsearch') { setWords(config.words || []); }
         
         if (resultData.activityTitle) setTitle(resultData.activityTitle);
         if (resultData.activityDescription) setDescription(resultData.activityDescription);
@@ -550,6 +553,42 @@ export default function AdminChallengesClient() {
                   </div>
                   
                   <div className="space-y-8 bg-muted/20 p-6 rounded-[2rem] border">
+                    {/* AI Wizard Global */}
+                    <div className="mb-6">
+                       {!isAIOpen ? (
+                         <Button type="button" onClick={() => setIsAIOpen(true)} variant="outline" className="w-full h-11 rounded-xl border-orange-200 bg-orange-50/50 text-orange-700 font-bold hover:bg-orange-100 hover:border-orange-300 transition-all gap-2">
+                           <Sparkles className="h-4 w-4" />
+                           Despertar Genio IA para este Reto
+                         </Button>
+                       ) : (
+                         <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5 space-y-3 shadow-lg animate-in zoom-in-95">
+                            <div className="flex items-center justify-between gap-4 mb-2">
+                                <Label className="text-orange-800 font-bold text-xs uppercase tracking-wider">Instrucciones de la Lección</Label>
+                                <div className="flex bg-orange-100 rounded-lg p-0.5 gap-0.5">
+                                   <button type="button" onClick={() => setAiEngine('gemini')} title="Google Gemini 1.5" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'gemini' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-400 hover:text-orange-600'}`}>GEMINI</button>
+                                   <button type="button" onClick={() => setAiEngine('claude')} title="Anthropic Claude (Puter)" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'claude' ? 'bg-white text-indigo-600 shadow-sm' : 'text-orange-400 hover:text-indigo-600'}`}>CLAUDE</button>
+                                   <button type="button" onClick={() => setAiEngine('deepseek')} title="DeepSeek V3" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'deepseek' ? 'bg-white text-blue-600 shadow-sm' : 'text-orange-400 hover:text-blue-600'}`}>DEEPSEEK</button>
+                                   <button type="button" onClick={() => setAiEngine('qwen')} title="Alibaba Qwen Max" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'qwen' ? 'bg-white text-emerald-600 shadow-sm' : 'text-orange-400 hover:text-emerald-600'}`}>QWEN</button>
+                                </div>
+                             </div>
+                            <Textarea 
+                              value={aiLessonContent} 
+                              onChange={(e) => setAiLessonContent(e.target.value)}
+                              placeholder="Pega el contenido base (lección, texto, código) para generar el reto automáticamente..."
+                              className="min-h-[120px] text-xs bg-white border-orange-100 rounded-xl focus-visible:ring-orange-200"
+                            />
+                            {aiError && <p className="text-[10px] text-rose-500 font-bold">{aiError}</p>}
+                            <div className="flex gap-2">
+                               <Button type="button" onClick={() => handleAIGenerate(challengeType)} disabled={isGenerating} className="flex-1 bg-orange-600 hover:bg-orange-700 h-10 text-xs font-bold rounded-xl shadow-md shadow-orange-200 transition-all active:scale-95">
+                                  {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                                  Generar Estructura y Solución
+                               </Button>
+                               <Button type="button" variant="ghost" size="sm" onClick={() => {setIsAIOpen(false); setAiError('')}} className="text-orange-600 hover:bg-orange-100 h-10 rounded-xl">Cancelar</Button>
+                            </div>
+                         </div>
+                       )}
+                    </div>
+
                     {['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challengeType) ? (
                       <div className="grid gap-4">
                         <Tabs defaultValue="visual" className="w-full">
@@ -610,42 +649,6 @@ export default function AdminChallengesClient() {
                             </div>
                           </div>
                         )}
-
-                        {/* AI Wizard for Code/Interview */}
-                        <div className="mb-6">
-                           {!isAIOpen ? (
-                             <Button type="button" onClick={() => setIsAIOpen(true)} variant="outline" className="w-full h-11 rounded-xl border-orange-200 bg-orange-50/50 text-orange-700 font-bold hover:bg-orange-100 hover:border-orange-300 transition-all gap-2">
-                               <Sparkles className="h-4 w-4" />
-                               Despertar Genio IA para este Reto
-                             </Button>
-                           ) : (
-                             <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5 space-y-3">
-                                <div className="flex items-center justify-between gap-4 mb-2">
-                                    <Label className="text-orange-800 font-bold text-xs">Instrucciones de la Lección</Label>
-                                    <div className="flex bg-orange-100 rounded-lg p-0.5 gap-0.5">
-                                       <button type="button" onClick={() => setAiEngine('gemini')} title="Google Gemini 1.5" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'gemini' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-400 hover:text-orange-600'}`}>GEMINI</button>
-                                       <button type="button" onClick={() => setAiEngine('claude')} title="Anthropic Claude (Puter)" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'claude' ? 'bg-white text-indigo-600 shadow-sm' : 'text-orange-400 hover:text-indigo-600'}`}>CLAUDE</button>
-                                       <button type="button" onClick={() => setAiEngine('deepseek')} title="DeepSeek V3" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'deepseek' ? 'bg-white text-blue-600 shadow-sm' : 'text-orange-400 hover:text-blue-600'}`}>DEEPSEEK</button>
-                                       <button type="button" onClick={() => setAiEngine('qwen')} title="Alibaba Qwen Max" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'qwen' ? 'bg-white text-emerald-600 shadow-sm' : 'text-orange-400 hover:text-emerald-600'}`}>QWEN</button>
-                                    </div>
-                                 </div>
-                                <Textarea 
-                                  value={aiLessonContent} 
-                                  onChange={(e) => setAiLessonContent(e.target.value)}
-                                  placeholder="Pega el contenido base para generar el reto..."
-                                  className="min-h-[100px] text-xs bg-white border-orange-100"
-                                />
-                                {aiError && <p className="text-[10px] text-rose-500 font-bold">{aiError}</p>}
-                                <div className="flex gap-2">
-                                   <Button type="button" onClick={() => handleAIGenerate(challengeType)} disabled={isGenerating} className="flex-1 bg-orange-600 hover:bg-orange-700 h-9 text-xs">
-                                      {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
-                                      Generar Estructura y Solución
-                                   </Button>
-                                   <Button type="button" variant="ghost" size="sm" onClick={() => {setIsAIOpen(false); setAiError('')}} className="text-orange-600 hover:bg-orange-100 h-9">Cancelar</Button>
-                                </div>
-                             </div>
-                           )}
-                        </div>
 
                         <div className="grid gap-3">
                           <Label className="font-bold">{challengeType === 'code' ? 'Código Inicial (Estructura Base)' : 'Puntos Clave a Mencionar'}</Label>
