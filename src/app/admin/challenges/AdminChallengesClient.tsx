@@ -204,26 +204,18 @@ export default function AdminChallengesClient() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
 
-      const cleanJSON = (str: string) => {
+      const cleanAIJSON = (str: string) => {
         try {
-          // 1. Extraer bloque que parece JSON
           const match = str.match(/\{[\s\S]*\}/);
           if (!match) return "{}";
-          let json = match[0];
-          
-          // 2. Limpieza agresiva de caracteres invisibles y saltos de línea reales dentro de strings
-          json = json
-            .replace(/[\x00-\x1F\x7F]/g, "") // Elimina caracteres de control ASCII
-            .replace(/\n/g, " ")             // Convierte saltos de línea reales en espacios
-            .replace(/\r/g, "")              // Elimina retornos de carro
-            .replace(/\\+"/g, '"')           // Arregla comillas doblemente escapadas
-            .replace(/\\'/g, "'");           // Arregla comillas simples escapadas
-            
-          return json;
+          return match[0]
+            .replace(/\n/g, " ") // Solo quita saltos de linea reales
+            .replace(/\r/g, "")
+            .trim();
         } catch { return "{}"; }
       };
 
-      const resultData = JSON.parse(cleanJSON(typeof data.result === 'string' ? data.result : JSON.stringify(data.result)));
+      const resultData = JSON.parse(cleanAIJSON(typeof data.result === 'string' ? data.result : JSON.stringify(data.result)));
       const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
       
       if (type === 'code') {
@@ -268,15 +260,15 @@ export default function AdminChallengesClient() {
         CONTENIDO: ${aiLessonContent}
         REGLAS: Retorna UNICAMENTE un objeto JSON con estructura: { "activityConfig": {objeto}, "activityTitle": "...", "activityDescription": "..." }`;
 
-        const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet' }); // Modelo más estable
+        const response = await puter.ai.chat(prompt, { model: 'gpt-4o' }); // Modelo más estable
         const rawPuter = response?.message?.content?.[0]?.text || response?.message?.content || "";
         
-        const cleanJSON = (str: string) => {
+        const cleanAIJSON = (str: string) => {
           const match = str.match(/\{[\s\S]*\}/);
-          return match ? match[0].replace(/[\x00-\x1F\x7F]/g, "").replace(/\n/g, " ").replace(/\r/g, "") : "{}";
+          return match ? match[0].replace(/\n/g, " ").replace(/\r/g, "").trim() : "{}";
         };
         
-        const resultData = JSON.parse(cleanJSON(rawPuter));
+        const resultData = JSON.parse(cleanAIJSON(rawPuter));
         const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
 
         if (type === 'code') { setInitialCode(config.initialCode || ''); setSolution(config.solution || ''); }
