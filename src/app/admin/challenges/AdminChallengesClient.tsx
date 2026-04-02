@@ -179,7 +179,7 @@ export default function AdminChallengesClient() {
         flashcard: { cards: [{front, back}] }
         swipe: { deck: [{statement, isTrue}] }
         sortable: { lines: [{id, text}], correctOrder: [ids] }
-        quiz: { questions: [{question, options, correctIndex}] }
+        quiz: { questions: [{question, options, correctAnswer}] }
         wordsearch: { words: ["PALABRA1", "PALABRA2"] }
         dragdrop: { template: "texto con {{{hueco}}}", snippets: [{id, text}], correctMapping: {hueco: id} }
         code: { initialCode, solution }
@@ -217,9 +217,16 @@ export default function AdminChallengesClient() {
       } else if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(type)) {
         setJsonConfig(JSON.stringify(config, null, 2));
       } else if (type === 'quiz') {
-        setQuestions(config.questions || []);
+        const mappedQuestions = (config.questions || []).map((q: any) => ({
+          question: q.question || '',
+          options: q.options || ['', ''],
+          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 
+                         typeof q.correctIndex === 'number' ? q.correctIndex : 0
+        }));
+        setQuestions(mappedQuestions);
       } else if (type === 'wordsearch') {
-        setWords(config.words || []);
+        const rawWords = config.words || [];
+        setWords(rawWords.map((w: string) => w.toUpperCase()));
       }
 
       if (resultData.activityTitle) setTitle(resultData.activityTitle);
@@ -253,8 +260,15 @@ export default function AdminChallengesClient() {
         if (type === 'code') { setInitialCode(config.initialCode || ''); setSolution(config.solution || ''); }
         else if (type === 'interview') { setTargetRole(config.targetRole || ''); setTargetLanguage(config.targetLanguage || 'es'); setSolution(config.solution || ''); }
         else if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(type)) { setJsonConfig(JSON.stringify(config, null, 2)); }
-        else if (type === 'quiz') { setQuestions(config.questions || []); }
-        else if (type === 'wordsearch') { setWords(config.words || []); }
+        else if (type === 'quiz') {
+          const mapped = (config.questions || []).map((q: any) => ({
+            question: q.question || '',
+            options: q.options || ['', ''],
+            correctAnswer: q.correctAnswer ?? q.correctIndex ?? 0
+          }));
+          setQuestions(mapped);
+        }
+        else if (type === 'wordsearch') { setWords((config.words || []).map((w: any) => String(w).toUpperCase())); }
         
         if (resultData.activityTitle) setTitle(resultData.activityTitle);
         if (resultData.activityDescription) setDescription(resultData.activityDescription);
