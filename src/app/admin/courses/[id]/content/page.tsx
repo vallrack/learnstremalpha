@@ -35,7 +35,7 @@ import {
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
   Dialog, 
@@ -299,85 +299,31 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
   const [price, setPrice] = useState('0');
   const [currency, setCurrency] = useState('COP');
 
-  // Quiz state
   const [questions, setQuestions] = useState<any[]>([]);
 
-  // Cargar todos los desafíos y actividades H5P
   const challengesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return collection(db, 'coding_challenges');
   }, [db]);
   const { data: allChallenges } = useCollection(challengesQuery);
-  
   const compatibleChallenges = allChallenges || [];
 
   const lessonsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'courses', course.id, 'modules', moduleId, 'lessons'), orderBy('orderIndex', 'asc'));
   }, [db, course.id, moduleId]);
-
   const { data: lessons } = useCollection(lessonsQuery);
   
-  // Sincronizar precio cuando se selecciona un desafío
   useEffect(() => {
     if (type === 'challenge' && challengeId && allChallenges) {
       const challenge = allChallenges.find(c => c.id === challengeId);
       if (challenge && challenge.price !== undefined) {
         setPrice(challenge.price.toString());
         setCurrency(challenge.currency || 'COP');
-        if (challenge.price > 0) {
-          setIsPremium(true);
-        }
+        if (challenge.price > 0) setIsPremium(true);
       }
     }
   }, [challengeId, type, allChallenges]);
-
-  const handleSaveLesson = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!db) return;
-
-    const lessonData: any = {
-      title,
-      description,
-      type,
-      durationInMinutes: parseInt(duration),
-      orderIndex: parseInt(order),
-      isPremium,
-      moduleId,
-      instructorId: course.instructorId,
-      courseIsFree: course.isFree ?? true,
-      price: isPremium ? parseFloat(price) || 0 : 0,
-      currency: currency,
-      updatedAt: serverTimestamp(),
-    };
-
-    if (type === 'video') {
-      lessonData.videoUrl = videoUrl;
-    } else if (type === 'challenge') {
-      lessonData.challengeId = challengeId;
-      const challenge = compatibleChallenges.find(c => c.id === challengeId);
-      if (challenge) {
-        lessonData.title = challenge.title;
-        lessonData.description = challenge.description;
-      }
-    } else if (type === 'quiz') {
-      lessonData.questions = questions;
-    }
-
-    // Eliminar campos undefined para evitar error de Firestore (Ej: instructorId faltante o challengeId vacío)
-    const safeData = Object.fromEntries(Object.entries(lessonData).filter(([_, v]) => v !== undefined));
-
-    if (editingLesson) {
-      updateDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', editingLesson.id), safeData);
-    } else {
-      addDocumentNonBlocking(collection(db, 'courses', course.id, 'modules', moduleId, 'lessons'), {
-        ...safeData,
-        createdAt: serverTimestamp(),
-      });
-    }
-    setIsDialogOpen(false);
-    resetForm();
-  };
 
   const resetForm = () => {
     setEditingLesson(null);
@@ -392,6 +338,58 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     setPrice('0');
     setCurrency('COP');
     setQuestions([]);
+  };
+
+  const handleSaveLesson = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db) return;
+
+    const lessonData: any = {
+      title,
+      description: type === 'video' ? '' : description, 
+      type,
+      durationInMinutes: parseInt(duration),
+      orderIndex: parseInt(order),
+      isPremium,
+      moduleId,
+      instructorId: course.instructorId,
+      courseIsFree: course.isFree ?? true,
+      price: isPremium ? parseFloat(price) || 0 : 0,
+      currency: currency,
+      updatedAt: serverTimestamp(),
+    };
+
+    try {
+      const lId = editingLesson?.id || doc(collection(db, 'courses', course.id, 'modules', moduleId, 'lessons')).id;
+      const lessonRef = doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lId);
+
+      await setDoc(lessonRef, {
+        ...lessonData,
+        updatedAt: serverTimestamp(),
+        ...(editingLesson ? {} : { createdAt: serverTimestamp() })
+      }, { merge: true });
+
+      const sensitiveData: any = {};
+      if (type === 'video') {
+        sensitiveData.videoUrl = videoUrl;
+        sensitiveData.description = description;
+      } else if (type === 'quiz') {
+        sensitiveData.questions = questions;
+      } else if (type === 'challenge') {
+        sensitiveData.challengeId = challengeId;
+      }
+
+      const premiumRef = doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lId, 'premium', 'data');
+      await setDoc(premiumRef, {
+        ...sensitiveData,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (err: any) {
+      console.error("Error saving lesson:", err);
+    }
   };
 
   const handleEdit = (lesson: any) => {
@@ -417,22 +415,17 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     }
   };
 
-  const addQuestion = () => {
-    setQuestions([...questions, { question: '', options: ['', '', ''], correctAnswer: 0 }]);
-  };
-
+  const addQuestion = () => setQuestions([...questions, { question: '', options: ['', '', ''], correctAnswer: 0 }]);
   const updateQuestion = (index: number, field: string, value: any) => {
     const newQuestions = [...questions];
     newQuestions[index][field] = value;
     setQuestions(newQuestions);
   };
-
   const updateOption = (qIndex: number, oIndex: number, value: string) => {
     const newQuestions = [...questions];
     newQuestions[qIndex].options[oIndex] = value;
     setQuestions(newQuestions);
   };
-
   const addOption = (qIndex: number) => {
     const newQuestions = [...questions];
     if (newQuestions[qIndex].options.length < 6) {
@@ -440,17 +433,12 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
       setQuestions(newQuestions);
     }
   };
-
   const removeOption = (qIndex: number, oIndex: number) => {
     const newQuestions = [...questions];
     if (newQuestions[qIndex].options.length > 2) {
       newQuestions[qIndex].options.splice(oIndex, 1);
-      // Ajustar la respuesta correcta si es necesario
-      if (newQuestions[qIndex].correctAnswer === oIndex) {
-        newQuestions[qIndex].correctAnswer = 0;
-      } else if (newQuestions[qIndex].correctAnswer > oIndex) {
-        newQuestions[qIndex].correctAnswer -= 1;
-      }
+      if (newQuestions[qIndex].correctAnswer === oIndex) newQuestions[qIndex].correctAnswer = 0;
+      else if (newQuestions[qIndex].correctAnswer > oIndex) newQuestions[qIndex].correctAnswer -= 1;
       setQuestions(newQuestions);
     }
   };
@@ -459,30 +447,19 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h4 className="font-bold text-sm text-muted-foreground uppercase">Contenido del Módulo</h4>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="outline" className="h-8 rounded-lg">
-              <Plus className="h-3 w-3 mr-1" /> Añadir Contenido
-            </Button>
-          </DialogTrigger>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+          <DialogTrigger asChild><Button size="sm" variant="outline" className="h-8 rounded-lg"><Plus className="h-3 w-3 mr-1" /> Añadir Contenido</Button></DialogTrigger>
           <DialogContent className="rounded-3xl sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSaveLesson}>
               <DialogHeader>
                 <DialogTitle>{editingLesson ? 'Editar Contenido' : 'Añadir Contenido'}</DialogTitle>
-                <DialogDescription>
-                  Elige entre clase de video, desafío de código o cuestionario teórico.
-                </DialogDescription>
+                <DialogDescription>Elige entre clase de video, desafío de código o cuestionario teórico.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-6">
                 <div className="grid gap-2">
                   <Label>Tipo de Contenido</Label>
                   <Select value={type} onValueChange={(v: any) => setType(v)}>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="video">Clase de Video / Texto</SelectItem>
                       <SelectItem value="challenge">Actividad H5P / Desafío de Código / Entrevista</SelectItem>
@@ -490,39 +467,23 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="grid gap-2">
                   <Label>Título de la Clase</Label>
                   <Input placeholder="Ej: Introducción a..." value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl" />
                 </div>
-
                 {type === 'video' && (
-                  <>
-                    <div className="grid gap-2">
-                      <Label>URL del Video (YouTube)</Label>
-                      <Input placeholder="https://youtube.com/..." value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="rounded-xl" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Descripción o Contenido Escrito</Label>
-                      <Textarea placeholder="Contenido de la lección..." value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[120px] rounded-xl" />
-                    </div>
-                  </>
+                  <><div className="grid gap-2"><Label>URL del Video (YouTube)</Label><Input placeholder="https://youtube.com/..." value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="rounded-xl" /></div>
+                  <div className="grid gap-2"><Label>Descripción o Contenido Escrito</Label><Textarea placeholder="Contenido de la lección..." value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[120px] rounded-xl" /></div></>
                 )}
-
                 {type === 'challenge' && (
-                  <div className="grid gap-2">
-                    <Label>Vincular Desafío o Actividad Global</Label>
+                  <div className="grid gap-2"><Label>Vincular Desafío o Actividad Global</Label>
                     <Select value={challengeId} onValueChange={setChallengeId} required>
-                      <SelectTrigger className="rounded-xl h-12">
-                        <SelectValue placeholder="Elige un reto o actividad de la biblioteca..." />
-                      </SelectTrigger>
+                      <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Elige un reto o actividad de la biblioteca..." /></SelectTrigger>
                       <SelectContent>
                         {compatibleChallenges.map(c => (
                           <SelectItem key={c.id} value={c.id}>
                             <div className="flex flex-col items-start gap-1">
-                              <span className="font-bold flex items-center gap-2">
-                                {['swipe', 'flashcard', 'interactive-video', 'dragdrop', 'sortable', 'wordsearch'].includes(c.type) ? '🎮' : '💻'} {c.title}
-                              </span>
+                              <span className="font-bold flex items-center gap-2">{['swipe', 'flashcard', 'interactive-video', 'dragdrop', 'sortable', 'wordsearch'].includes(c.type) ? '🎮' : '💻'} {c.title}</span>
                               <span className="text-[10px] opacity-60 uppercase">{c.technology || 'General'} • {c.difficulty} • {c.type}</span>
                             </div>
                           </SelectItem>
@@ -531,124 +492,58 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
                     </Select>
                   </div>
                 )}
-
                 {type === 'quiz' && (
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-lg font-bold">Preguntas</Label>
-                      <Button type="button" onClick={addQuestion} variant="outline" size="sm" className="rounded-xl gap-2">
-                        <Plus className="h-4 w-4" /> Añadir Pregunta
-                      </Button>
+                    <div className="flex items-center justify-between"><Label className="text-lg font-bold">Preguntas</Label>
+                      <Button type="button" onClick={addQuestion} variant="outline" size="sm" className="rounded-xl gap-2"><Plus className="h-4 w-4" /> Añadir Pregunta</Button>
                     </div>
-                    
                     {questions.map((q, qIndex) => (
                       <Card key={qIndex} className="rounded-2xl border-2 border-slate-100 bg-slate-50/50">
                         <CardContent className="p-6 space-y-4">
                           <div className="flex items-start gap-4">
                             <span className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-xs">{qIndex + 1}</span>
                             <div className="flex-1 space-y-2">
-                              <Input 
-                                placeholder="Escribe la pregunta..." 
-                                value={q.question} 
-                                onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)} 
-                                required
-                                className="rounded-xl border-none shadow-none text-sm font-bold bg-transparent"
-                              />
+                              <Input placeholder="Escribe la pregunta..." value={q.question} onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)} required className="rounded-xl border-none shadow-none text-sm font-bold bg-transparent" />
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {q.options.map((opt: string, oIndex: number) => (
                                   <div key={oIndex} className="flex items-center gap-2 group">
-                                    <input 
-                                      type="radio" 
-                                      name={`correct-${qIndex}`} 
-                                      checked={q.correctAnswer === oIndex}
-                                      onChange={() => updateQuestion(qIndex, 'correctAnswer', oIndex)}
-                                      className="h-4 w-4 text-primary shrink-0"
-                                    />
+                                    <input type="radio" name={`correct-${qIndex}`} checked={q.correctAnswer === oIndex} onChange={() => updateQuestion(qIndex, 'correctAnswer', oIndex)} className="h-4 w-4 text-primary shrink-0" />
                                     <div className="flex-1 relative">
-                                      <Input 
-                                        placeholder={`Opción ${oIndex + 1}`} 
-                                        value={opt} 
-                                        onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                                        required
-                                        className="rounded-lg h-9 text-xs bg-white pr-8"
-                                      />
+                                      <Input placeholder={`Opción ${oIndex + 1}`} value={opt} onChange={(e) => updateOption(qIndex, oIndex, e.target.value)} required className="rounded-lg h-9 text-xs bg-white pr-8" />
                                       {q.options.length > 2 && (
-                                        <button 
-                                          type="button" 
-                                          onClick={() => removeOption(qIndex, oIndex)}
-                                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </button>
+                                        <button type="button" onClick={() => removeOption(qIndex, oIndex)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-3 w-3" /></button>
                                       )}
                                     </div>
                                   </div>
                                 ))}
                                 {q.options.length < 6 && (
-                                  <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    onClick={() => addOption(qIndex)}
-                                    className="h-9 rounded-lg border-2 border-dashed text-[10px] font-bold text-muted-foreground hover:text-primary hover:border-primary/50"
-                                  >
-                                    <Plus className="h-3 w-3 mr-1" /> Añadir Opción
-                                  </Button>
+                                  <Button type="button" variant="ghost" size="sm" onClick={() => addOption(qIndex)} className="h-9 rounded-lg border-2 border-dashed text-[10px] font-bold text-muted-foreground hover:text-primary hover:border-primary/50"><Plus className="h-3 w-3 mr-1" /> Añadir Opción</Button>
                                 )}
                               </div>
                             </div>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setQuestions(questions.filter((_, i) => i !== qIndex))}>
-                              <X className="h-4 w-4" />
-                            </Button>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setQuestions(questions.filter((_, i) => i !== qIndex))}><X className="h-4 w-4" /></Button>
                           </div>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
                 )}
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label>Duración (min)</Label>
-                    <Input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} className="rounded-xl" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Orden</Label>
-                    <Input type="number" value={order} onChange={(e) => setOrder(e.target.value)} className="rounded-xl" />
-                  </div>
+                  <div className="grid gap-2"><Label>Duración (min)</Label><Input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} className="rounded-xl" /></div>
+                  <div className="grid gap-2"><Label>Orden</Label><Input type="number" value={order} onChange={(e) => setOrder(e.target.value)} className="rounded-xl" /></div>
                 </div>
-
                 <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl">
                   <input type="checkbox" id="prem" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary" />
                   <Label htmlFor="prem" className="text-xs">Lección Premium (Solo suscriptores)</Label>
                 </div>
-
                 {isPremium && (
-                  <div className="grid grid-cols-2 gap-4 p-4 border-2 border-primary/20 rounded-2xl bg-primary/5 animate-in fade-in slide-in-from-top-2">
-                    <div className="grid gap-2">
-                      <Label htmlFor="l-price">Precio de Desbloqueo</Label>
-                      <Input id="l-price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="Ej: 15000" className="bg-white" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="l-currency">Moneda</Label>
-                      <Select value={currency} onValueChange={setCurrency}>
-                        <SelectTrigger id="l-currency" className="bg-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="COP">COP (Pesos Colombianos)</SelectItem>
-                          <SelectItem value="USD">USD (Dólares)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="grid grid-cols-2 gap-4 p-4 border-2 border-primary/20 rounded-2xl bg-primary/5">
+                    <div className="grid gap-2"><Label htmlFor="l-price">Precio de Desbloqueo</Label><Input id="l-price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="Ej: 15000" className="bg-white" /></div>
+                    <div className="grid gap-2"><Label htmlFor="l-currency">Moneda</Label><Select value={currency} onValueChange={setCurrency}><SelectTrigger id="l-currency" className="bg-white"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="COP">COP (Pesos Colombianos)</SelectItem><SelectItem value="USD">USD (Dólares)</SelectItem></SelectContent></Select></div>
                   </div>
                 )}
               </div>
-              <DialogFooter>
-                <Button type="submit" className="w-full rounded-xl h-11" disabled={(type === 'challenge' && !challengeId) || (type === 'quiz' && questions.length === 0)}>
-                  Guardar Contenido
-                </Button>
-              </DialogFooter>
+              <DialogFooter><Button type="submit" className="w-full rounded-xl h-11" disabled={(type === 'challenge' && !challengeId) || (type === 'quiz' && questions.length === 0)}>Guardar Contenido</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -658,36 +553,17 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
           <div key={lesson.id} className="bg-slate-50 p-4 rounded-2xl border flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${lesson.type === 'challenge' ? 'bg-primary/10 text-primary' : lesson.type === 'quiz' ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-600'}`}>
-                  {lesson.type === 'challenge' ? <Code2 className="h-5 w-5" /> : lesson.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-sm">{lesson.title}</p>
-                    {lesson.isPremium && <Badge variant="outline" className="text-[10px] py-0 h-4 bg-amber-50 text-amber-600 border-amber-200">Premium</Badge>}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                    {lesson.type === 'challenge' ? 'Actividad / Reto' : lesson.type === 'quiz' ? 'Cuestionario Local' : 'Lección de Contenido'}
-                  </p>
-                </div>
+                <div className={`p-2 rounded-xl ${lesson.type === 'challenge' ? 'bg-primary/10 text-primary' : lesson.type === 'quiz' ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-600'}`}>{lesson.type === 'challenge' ? <Code2 className="h-5 w-5" /> : lesson.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}</div>
+                <div><div className="flex items-center gap-2"><p className="font-bold text-sm">{lesson.title}</p>{lesson.isPremium && <Badge variant="outline" className="text-[10px] py-0 h-4 bg-amber-50 text-amber-600 border-amber-200">Premium</Badge>}</div><p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{lesson.type === 'challenge' ? 'Actividad / Reto' : lesson.type === 'quiz' ? 'Cuestionario Local' : 'Lección de Contenido'}</p></div>
               </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(lesson)}><Edit className="h-4 w-4" /></Button>
-                {isAuthorized && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-4 w-4" /></Button>
-                )}
+              <div className="flex gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(lesson)}><Edit className="h-4 w-4" /></Button>
+                {isAuthorized && <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-4 w-4" /></Button>}
               </div>
             </div>
-            {lesson.type === 'video' && (
-              <ResourceManager course={course} moduleId={moduleId} lesson={lesson} isAuthorized={isAuthorized} />
-            )}
+            {lesson.type === 'video' && <ResourceManager course={course} moduleId={moduleId} lesson={lesson} isAuthorized={isAuthorized} />}
           </div>
         ))}
-        {(!lessons || lessons.length === 0) && (
-          <div className="py-12 text-center bg-white rounded-2xl border-2 border-dashed">
-            <p className="text-sm text-muted-foreground italic">No hay lecciones en este módulo.</p>
-          </div>
-        )}
+        {(!lessons || lessons.length === 0) && <div className="py-12 text-center bg-white rounded-2xl border-2 border-dashed"><p className="text-sm text-muted-foreground italic">No hay lecciones en este módulo.</p></div>}
       </div>
     </div>
   );

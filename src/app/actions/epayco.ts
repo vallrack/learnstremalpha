@@ -35,7 +35,8 @@ export async function verifyEpaycoTransaction(
           const courseId = isComplex ? parts[0] : extra3;
           const moduleId = isComplex ? parts[1] : 'none';
           const lessonId = isComplex ? parts[2] : 'none';
-          const challengeId = parts.length === 4 ? parts[3] : 'none';
+          const challengeId = parts.length >= 4 ? parts[3] : 'none';
+          const podcastId = parts.length === 5 ? parts[4] : 'none';
 
           const amount = Number(result.data.x_amount);
           
@@ -69,6 +70,38 @@ export async function verifyEpaycoTransaction(
               const currentChallenges = userData?.purchasedChallenges || [];
               if (!currentChallenges.includes(challengeId)) {
                 updateData.purchasedChallenges = [...currentChallenges, challengeId];
+              }
+            }
+          } else if (podcastId !== 'none') {
+            // COMPRA DE PODCAST INDEPENDIENTE
+            const podcastDoc = await adminDb.collection('podcasts').doc(podcastId).get();
+            if (podcastDoc.exists) {
+              const podcastData = podcastDoc.data();
+              const instructorId = podcastData?.instructorId;
+              const revenueShare = 70; // Por defecto para podcasts
+              
+              const instructorCut = Math.floor(amount * (revenueShare / 100));
+              const adminCut = amount - instructorCut;
+
+              await adminDb.collection('transactions').add({
+                userId,
+                userEmail: extraData?.userEmail || result.data.x_customer_email || '',
+                podcastId,
+                courseTitle: `Podcast: ${podcastData?.title || 'Sin título'}`,
+                instructorId,
+                amount,
+                instructorShare: instructorCut,
+                adminShare: adminCut,
+                ref_payco,
+                createdAt: new Date(),
+                status: 'completed'
+              });
+
+              const userSnap = await userRef.get();
+              const userData = userSnap.data();
+              const currentPodcasts = userData?.purchasedPodcasts || [];
+              if (!currentPodcasts.includes(podcastId)) {
+                updateData.purchasedPodcasts = [...currentPodcasts, podcastId];
               }
             }
           } else {

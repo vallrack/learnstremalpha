@@ -130,6 +130,9 @@ function LessonPlayerContent() {
     return doc(db, 'users', user.uid, 'courseProgress', courseId);
   }, [db, user?.uid, courseId]);
   const { data: progress } = useDoc(progressRef);
+  
+  const [premiumData, setPremiumData] = useState<any>(null);
+  const [isLoadingPremium, setIsLoadingPremium] = useState(false);
   const [totalLessons, setTotalLessons] = useState(0);
 
   // Calcular total de lecciones del curso para la barra de progreso
@@ -254,6 +257,32 @@ function LessonPlayerContent() {
   // Bloqueo total si es Premium (lección o módulo) y no tienes acceso especial
   const finalizedAccess = (isLessonPremium || isModulePremium) ? (isPremium || isAuthor || hasPurchased) : hasValidAccess;
 
+  useEffect(() => {
+    async function fetchPremiumData() {
+      if (!db || !finalizedAccess || !courseId || !moduleId || !lessonId) return;
+      
+      setIsLoadingPremium(true);
+      try {
+        const premiumRef = doc(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId, 'premium', 'data');
+        const snap = await getDoc(premiumRef);
+        if (snap.exists()) {
+          setPremiumData(snap.data());
+        }
+      } catch (err) {
+        console.error("Error fetching premium lesson data:", err);
+      } finally {
+        setIsLoadingPremium(false);
+      }
+    }
+
+    fetchPremiumData();
+  }, [db, finalizedAccess, courseId, moduleId, lessonId]);
+
+  const effectiveVideoUrl = premiumData?.videoUrl || currentLesson?.videoUrl;
+  const effectiveDescription = premiumData?.description || currentLesson?.description;
+  const effectiveQuestions = premiumData?.questions || currentLesson?.questions;
+  const effectiveChallengeId = premiumData?.challengeId || currentLesson?.challengeId;
+
   if (!finalizedAccess) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
@@ -313,7 +342,7 @@ function LessonPlayerContent() {
     );
   }
 
-  const videoSource = currentLesson.videoUrl || (currentLesson.title.startsWith('http') ? currentLesson.title : null);
+  const videoSource = effectiveVideoUrl || (currentLesson.title.startsWith('http') ? currentLesson.title : null);
 
   const formatVideoUrl = (url: string) => {
     if (!url) return '';
@@ -395,14 +424,14 @@ function LessonPlayerContent() {
             <div className="max-w-4xl mx-auto space-y-8">
               {currentLesson.type === 'challenge' ? (
                  <EmbeddedChallenge 
-                    challengeId={currentLesson.challengeId}
+                    challengeId={effectiveChallengeId}
                     onComplete={() => {
                        toast({ title: '¡Actividad Superada!', description: 'Has demostrado dominio del tema. Avanzando progreso...' });
                        handleMarkAsCompleted();
                     }}
                  />
               ) : currentLesson.type === 'quiz' ? (
-                <div className="max-w-2xl mx-auto"><QuizPlayer questions={currentLesson.questions || []} onComplete={handleMarkAsCompleted} /></div>
+                <div className="max-w-2xl mx-auto"><QuizPlayer questions={effectiveQuestions || []} onComplete={handleMarkAsCompleted} /></div>
               ) : (
                 <>
                   {videoSource ? (
@@ -415,7 +444,7 @@ function LessonPlayerContent() {
                     <div className="md:col-span-2 space-y-8">
                       <article className="prose prose-slate max-w-none bg-card p-8 md:p-10 rounded-3xl border shadow-sm">
                         <h1 className="text-3xl font-headline font-bold mb-6">{currentLesson.title}</h1>
-                        <div className="text-lg leading-relaxed text-muted-foreground space-y-6 whitespace-pre-wrap">{currentLesson.description || "Sin descripción."}</div>
+                        <div className="text-lg leading-relaxed text-muted-foreground space-y-6 whitespace-pre-wrap">{effectiveDescription || "Sin descripción."}</div>
                       </article>
                       
                       <LessonDiscussion courseId={courseId} lessonId={lessonId} />
@@ -461,7 +490,7 @@ function LessonPlayerContent() {
       </div>
       <FloatingAITutor 
         lessonTitle={currentLesson.title} 
-        lessonContent={currentLesson.description || ''} 
+        lessonContent={effectiveDescription || ''} 
         isDisabled={isAcademy && profile?.permissions?.canUseAI === false}
       />
 

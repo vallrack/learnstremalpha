@@ -280,12 +280,8 @@ export async function generateWithAI(
   throw new Error(`Todos los proveedores del SERVIDOR fallaron:\n${errors.join('\n')}`);
 }
 
+import { robustJSONParse } from './robust-parse';
+
 export function parseAIJson(content: string) {
-  try {
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON found");
-    return JSON.parse(jsonMatch[0]);
-  } catch (error) {
-    return null;
-  }
+  return robustJSONParse(content);
 }

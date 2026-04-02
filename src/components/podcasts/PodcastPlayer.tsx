@@ -20,6 +20,8 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useFirestore } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface PodcastPlayerProps {
   podcast: any;
@@ -35,14 +37,41 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
   const [isMuted, setIsMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [premiumData, setPremiumData] = useState<any>(null);
+  const [isLoadingPremium, setIsLoadingPremium] = useState(false);
   
+  const db = useFirestore();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    async function fetchPremiumContent() {
+      if (!db || !hasAccess || !podcast.id || podcast.isFree) return;
+      
+      setIsLoadingPremium(true);
+      try {
+        const premiumRef = doc(db, 'podcasts', podcast.id, 'premium', 'data');
+        const snap = await getDoc(premiumRef);
+        if (snap.exists()) {
+          setPremiumData(snap.data());
+        }
+      } catch (err) {
+        console.error("Error fetching premium content:", err);
+      } finally {
+        setIsLoadingPremium(false);
+      }
+    }
+
+    fetchPremiumContent();
+  }, [db, hasAccess, podcast.id, podcast.isFree]);
+
+  const effectiveAudioUrl = premiumData?.audioUrl || podcast.audioUrl;
+  const effectiveVideoUrl = premiumData?.videoUrl || podcast.videoUrl;
 
   const isLocked = !hasAccess && !podcast.isFree;
   const getSourceType = () => {
     if (podcast.sourceType) return podcast.sourceType;
-    const url = podcast.audioUrl?.toLowerCase() || '';
+    const url = effectiveAudioUrl?.toLowerCase() || '';
     if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
     if (url.includes('anchor.fm') || url.includes('spotify.com')) return 'anchor';
     if (url.includes('drive.google.com')) return 'drive';
@@ -166,9 +195,9 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
         return;
     }
 
-    if (podcast.audioUrl) {
+    if (effectiveAudioUrl) {
       const link = document.createElement('a');
-      link.href = podcast.audioUrl;
+      link.href = effectiveAudioUrl;
       link.download = `${podcast.title}.mp3`;
       document.body.appendChild(link);
       link.click();
@@ -214,7 +243,7 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
                 </div>
                 <div className="w-full aspect-video rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-slate-50 bg-slate-100">
                     <iframe 
-                        src={getEmbedUrl(podcast.audioUrl, 'youtube')}
+                        src={getEmbedUrl(effectiveAudioUrl, 'youtube')}
                         className="w-full h-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
@@ -234,7 +263,7 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
                 </div>
                 <div className="w-full h-[161px] rounded-[2rem] overflow-hidden shadow-lg border-2 border-slate-50 bg-slate-50">
                     <iframe 
-                        src={getEmbedUrl(podcast.audioUrl, 'anchor')}
+                        src={getEmbedUrl(effectiveAudioUrl, 'anchor')}
                         className="w-full h-full"
                         frameBorder="0"
                         scrolling="no"
@@ -254,7 +283,7 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
                 </div>
                 <div className="w-full aspect-video md:aspect-auto md:h-[400px] rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-slate-50 bg-slate-100">
                     <iframe 
-                        src={getEmbedUrl(podcast.audioUrl, 'drive')}
+                        src={getEmbedUrl(effectiveAudioUrl, 'drive')}
                         className="w-full h-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
@@ -269,7 +298,7 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
             <div className="flex flex-col md:flex-row gap-10 items-center">
                 <audio 
                     ref={audioRef} 
-                    src={isLocked ? '' : podcast.audioUrl} 
+                    src={isLocked ? '' : effectiveAudioUrl} 
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
                     onWaiting={() => setIsBuffering(true)}

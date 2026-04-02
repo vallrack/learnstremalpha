@@ -62,6 +62,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { setDoc } from 'firebase/firestore';
 import { Switch } from '@/components/ui/switch';
 import { TECH_STACK } from '@/lib/languages';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -317,7 +318,7 @@ export default function AdminChallengesClient() {
     setIsDialogOpen(true);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db || !user) return;
 
@@ -334,38 +335,57 @@ export default function AdminChallengesClient() {
       updatedAt: serverTimestamp(),
     };
 
-    if (challengeType === 'code' || challengeType === 'interview') {
-      challengeData.initialCode = initialCode;
-      challengeData.solution = solution;
-      if (challengeType === 'interview') {
-        challengeData.targetLanguage = targetLanguage;
-        challengeData.targetRole = targetRole || title;
-      }
-    } else if (challengeType === 'wordsearch') {
-      challengeData.words = words;
-    } else if (challengeType === 'quiz') {
-      challengeData.questions = questions;
-    } else {
-      try {
-         const parsed = JSON.parse(jsonConfig);
-         Object.assign(challengeData, parsed);
-      } catch (err) {
-         alert("La configuración JSON es inválida. Revisa la sintaxis.");
-         return;
-      }
-    }
+    try {
+      const cId = editingId || doc(collection(db, 'coding_challenges')).id;
+      const challengeRef = doc(db, 'coding_challenges', cId);
 
-    if (editingId) {
-      updateDocumentNonBlocking(doc(db, 'coding_challenges', editingId), challengeData);
-    } else {
-      challengeData.instructorId = user.uid;
-      challengeData.instructorName = profile?.displayName || user.displayName || user.email || 'Demo Instructor';
-      challengeData.createdAt = serverTimestamp();
-      addDocumentNonBlocking(collection(db, 'coding_challenges'), challengeData);
+      // Guardar metadata pública
+      await setDoc(challengeRef, {
+        ...challengeData,
+        instructorId: user.uid,
+        instructorName: profile?.displayName || user.displayName || user.email || 'Demo Instructor',
+        ...(editingId ? {} : { createdAt: serverTimestamp() })
+      }, { merge: true });
+
+      // Guardar contenido sensible en subcolección protegida
+      const sensitiveData: any = {};
+      if (challengeType === 'code' || challengeType === 'interview') {
+        sensitiveData.initialCode = initialCode;
+        sensitiveData.solution = solution;
+        if (challengeType === 'interview') {
+          sensitiveData.targetLanguage = targetLanguage;
+          sensitiveData.targetRole = targetRole || title;
+        }
+      } else if (challengeType === 'wordsearch') {
+        sensitiveData.words = words;
+      } else if (challengeType === 'quiz') {
+        sensitiveData.questions = questions;
+      } else {
+        try {
+           const parsed = JSON.parse(jsonConfig);
+           Object.assign(sensitiveData, parsed);
+        } catch (err) {
+           alert("La configuración JSON es inválida. Revisa la sintaxis.");
+           return;
+        }
+      }
+
+      const premiumRef = doc(db, 'coding_challenges', cId, 'premium', 'data');
+      await setDoc(premiumRef, {
+        ...sensitiveData,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      setIsDialogOpen(false);
+      resetForm();
+      toast({ 
+        title: editingId ? "Reto actualizado" : "Reto publicado", 
+        description: "La estructura de seguridad (decoupled) ha sido aplicada correctamente." 
+      });
+    } catch (err: any) {
+      console.error("Error saving challenge:", err);
+      toast({ title: "Error al guardar", description: err.message, variant: "destructive" });
     }
-    
-    setIsDialogOpen(false);
-    resetForm();
   };
 
   const addQuestion = () => {
@@ -833,7 +853,7 @@ export default function AdminChallengesClient() {
                            {['swipe', 'flashcard', 'interactive-video', 'dragdrop', 'sortable'].includes(c.type) ? <Sparkles className="h-5 w-5" /> : c.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : c.type === 'interview' ? <MessageSquare className="h-5 w-5" /> : c.type === 'wordsearch' ? <Gamepad2 className="h-5 w-5" /> : <Terminal className="h-5 w-5" />}
                          </div>
                          <div className="flex flex-col">
-                           <span className="font-bold text-slate-900 text-sm leading-tight mb-1">{c.title}</span>
+                           <span className="font-bold text-slate-900 text-sm leading-tight mb-1 truncate max-w-[200px]">{c.title}</span>
                            <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-[10px] uppercase font-bold border-none bg-slate-100 text-slate-500 py-0 h-4 px-1.5 rounded-sm">{c.technology}</Badge>
                               <span className="text-[10px] text-slate-400">•</span>

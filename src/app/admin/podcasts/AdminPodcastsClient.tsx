@@ -46,6 +46,7 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
+import { setDoc } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -114,41 +115,50 @@ export default function AdminPodcastsClient() {
     setUploadingImage(false);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db || !user) return;
 
     const podcastData: any = {
       title,
       description,
-      audioUrl,
-      videoUrl,
       thumbnailUrl,
       duration,
+      category,
+      sourceType,
       isFree,
       price: !isFree ? parseFloat(price) || 0 : 0,
       currency,
-      category,
-      sourceType,
       updatedAt: serverTimestamp(),
     };
 
-    if (editingId) {
-      updateDocumentNonBlocking(doc(db, 'podcasts', editingId), podcastData);
-      toast({ title: "Podcast actualizado", description: "Los cambios se guardaron correctamente." });
-    } else {
-      podcastData.instructorId = user.uid;
-      podcastData.instructorName = profile?.displayName || user.displayName || 'Admin';
-      podcastData.createdAt = serverTimestamp();
-      if (!podcastData.thumbnailUrl) {
-          podcastData.thumbnailUrl = `https://picsum.photos/seed/${Math.random()}/800/450`;
-      }
-      addDocumentNonBlocking(collection(db, 'podcasts'), podcastData);
-      toast({ title: "Podcast publicado", description: "El episodio ya está disponible en el catálogo." });
+    try {
+      const pId = editingId || doc(collection(db, 'podcasts')).id;
+      const podcastRef = doc(db, 'podcasts', pId);
+      
+      // Guardar metadata pública
+      await setDoc(podcastRef, {
+        ...podcastData,
+        instructorId: user.uid,
+        instructorName: profile?.displayName || user.displayName || 'Admin',
+        ...(editingId ? {} : { createdAt: serverTimestamp() })
+      }, { merge: true });
+      
+      // Guardar contenido privado (URLS) en subcolección protegida
+      const premiumRef = doc(db, 'podcasts', pId, 'premium', 'data');
+      await setDoc(premiumRef, { 
+        audioUrl, 
+        videoUrl,
+        updatedAt: serverTimestamp() 
+      }, { merge: true });
+
+      setIsDialogOpen(false);
+      resetForm();
+      toast({ title: editingId ? "Podcast actualizado" : "Podcast publicado", description: "La arquitectura de seguridad ha sido aplicada." });
+    } catch (err: any) {
+      console.error("Error saving podcast:", err);
+      toast({ title: "Error al guardar", description: err.message, variant: "destructive" });
     }
-    
-    setIsDialogOpen(false);
-    resetForm();
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -576,7 +586,7 @@ export default function AdminPodcastsClient() {
                         {p.thumbnailUrl ? <img src={p.thumbnailUrl} alt="" className="w-full h-full object-cover" /> : <Mic2 className="h-6 w-6" />}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 text-sm leading-tight">{p.title}</span>
+                        <span className="font-bold text-slate-900 text-sm leading-tight truncate max-w-[200px]">{p.title}</span>
                         <span className="text-[10px] text-slate-400">{p.duration || '00:00'}</span>
                       </div>
                     </div>

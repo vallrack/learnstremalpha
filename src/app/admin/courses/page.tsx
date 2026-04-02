@@ -513,7 +513,7 @@ export default function AdminCoursesPage() {
                           />
                         </div>
                         <div className="flex flex-col">
-                          <span className="line-clamp-1">{course.title}</span>
+                          <span className="line-clamp-1 max-w-[250px]">{course.title}</span>
                           <span className="text-[10px] text-muted-foreground font-normal">{course.category}</span>
                         </div>
                       </div>

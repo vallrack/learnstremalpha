@@ -44,6 +44,7 @@ import Link from 'next/link';
 import Editor from '@monaco-editor/react';
 import { XPRewardAnimation } from '@/components/gamification/XPRewardAnimation';
 import { formatPrice } from '@/lib/currency';
+import { robustJSONParse } from '@/lib/robust-parse';
 
 export default function ChallengeClient() {
   const params = useParams();
@@ -70,6 +71,8 @@ export default function ChallengeClient() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [result, setResult] = useState<EvaluateChallengeOutput | null>(null);
   const [showXPReward, setShowXPReward] = useState<{ xpGained: number; newTotalXP: number; badge?: { title: string; description: string } | null } | null>(null);
+  const [premiumData, setPremiumData] = useState<any>(null);
+  const [isLoadingPremium, setIsLoadingPremium] = useState(false);
 
   useEffect(() => {
     if (challenge) setCode(challenge.initialCode || '');
@@ -86,6 +89,32 @@ export default function ChallengeClient() {
     return !isActuallyFree && !isSubscriber && !hasPurchased;
   }, [challenge, profile, challengeId]);
 
+  useEffect(() => {
+    async function fetchPremiumData() {
+      if (!db || isPremiumLocked || !challengeId) return;
+      
+      setIsLoadingPremium(true);
+      try {
+        const { doc, getDoc } = await import('firebase/firestore');
+        const premiumRef = doc(db, 'coding_challenges', challengeId, 'premium', 'data');
+        const snap = await getDoc(premiumRef);
+        if (snap.exists()) {
+          setPremiumData(snap.data());
+        }
+      } catch (err) {
+        console.error("Error fetching premium challenge data:", err);
+      } finally {
+        setIsLoadingPremium(false);
+      }
+    }
+
+    fetchPremiumData();
+  }, [db, isPremiumLocked, challengeId]);
+
+  const effectiveSolution = premiumData?.solution || challenge?.solution;
+  const effectiveQuestions = premiumData?.questions || challenge?.questions;
+  const effectiveJsonConfig = premiumData || challenge; // For types that use spreading
+
   const handleClaudeFallback = async (submissionCode: string) => {
     const puter = (window as any).puter;
     if (!puter) throw new Error("Motor de respaldo (Puter) no disponible.");
@@ -94,7 +123,7 @@ export default function ChallengeClient() {
     RETO: ${challenge?.title}
     DESCRIPCIÓN: ${challenge?.description}
     TECNOLOGÍA: ${challenge?.technology}
-    SOLUCIÓN REFERENCIA: ${challenge?.solution || ""}
+    SOLUCIÓN REFERENCIA: ${effectiveSolution || ""}
     
     ENTREGA DEL ESTUDIANTE O REPORTE DE DESEMPEÑO:
     ${submissionCode}
@@ -119,10 +148,8 @@ export default function ChallengeClient() {
     const response = await puter.ai.chat(prompt, { model: 'claude-sonnet-4-6' });
     const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
     
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Claude no pudo generar un formato de evaluación válido.");
-    
-    return JSON.parse(jsonMatch[0]) as EvaluateChallengeOutput;
+    const cleanedContent = content.match(/\{[\s\S]*\}/)?.[0] || content;
+    return robustJSONParse(cleanedContent) as EvaluateChallengeOutput;
   };
 
   const handleSubmit = async (quizScore?: number) => {
@@ -151,11 +178,8 @@ export default function ChallengeClient() {
         : code;
 
       const res = await evaluateChallenge({
-        challengeTitle: challenge.title,
-        challengeDescription: challenge.description,
-        technology: challenge.technology,
+        challengeId: challenge.id,
         studentCode: submissionCode,
-        solutionReference: challenge.solution,
       });
 
       if (res.success) {
@@ -410,14 +434,14 @@ export default function ChallengeClient() {
               </div>
             ) : challenge.type === 'quiz' ? (
               <div className="max-w-3xl mx-auto py-12">
-                <QuizPlayer questions={challenge.questions || []} onComplete={(s) => handleSubmit(s)} />
+                <QuizPlayer questions={effectiveQuestions || []} onComplete={(s) => handleSubmit(s)} />
               </div>
             ) : challenge.type === 'interview' ? (
               <div className="flex flex-col gap-6 animate-in fade-in duration-700">
                 <VoiceInterview 
                   role={challenge.targetRole || challenge.title} 
                   initialLanguage={challenge.targetLanguage || 'es'} 
-                  instructions={challenge.solution}
+                  instructions={effectiveSolution}
                   isPremiumChallenge={!challenge.isFree}
                   isAdmin={profile?.role === 'admin'}
                   onComplete={(transcript) => {
@@ -427,23 +451,23 @@ export default function ChallengeClient() {
               </div>
             ) : challenge.type === 'interactive-video' ? (
               <div className="max-w-4xl mx-auto py-12 px-6 w-full animate-in fade-in zoom-in duration-500">
-                 <InteractiveVideo url={challenge.videoUrl as string} checkpoints={challenge.checkpoints || []} onComplete={(score) => handleSubmit(score)} />
+                 <InteractiveVideo url={effectiveJsonConfig.videoUrl as string} checkpoints={effectiveJsonConfig.checkpoints || []} onComplete={(score) => handleSubmit(score)} />
               </div>
             ) : challenge.type === 'dragdrop' ? (
               <div className="max-w-5xl mx-auto py-12 px-6 w-full animate-in slide-in-from-bottom-8 duration-500">
-                 <DragDropSnippets template={challenge.template as string} snippets={challenge.snippets || []} correctMapping={challenge.correctMapping || {}} onComplete={(score) => handleSubmit(score)} />
+                 <DragDropSnippets template={effectiveJsonConfig.template as string} snippets={effectiveJsonConfig.snippets || []} correctMapping={effectiveJsonConfig.correctMapping || {}} onComplete={(score) => handleSubmit(score)} />
               </div>
             ) : challenge.type === 'sortable' ? (
               <div className="max-w-4xl mx-auto py-12 px-6 w-full animate-in slide-in-from-right-8 duration-500">
-                 <SortableCodeBlocks lines={challenge.lines || []} correctOrder={challenge.correctOrder || []} onComplete={(score) => handleSubmit(score)} />
+                 <SortableCodeBlocks lines={effectiveJsonConfig.lines || []} correctOrder={effectiveJsonConfig.correctOrder || []} onComplete={(score) => handleSubmit(score)} />
               </div>
             ) : challenge.type === 'flashcard' ? (
               <div className="max-w-2xl mx-auto py-6 px-4 w-full h-[700px] flex items-center justify-center animate-in zoom-in-90 duration-500">
-                 <FlipFlashcards cards={challenge.cards || []} onComplete={(score) => handleSubmit(score)} />
+                 <FlipFlashcards cards={effectiveJsonConfig.cards || []} onComplete={(score) => handleSubmit(score)} />
               </div>
             ) : challenge.type === 'swipe' ? (
               <div className="max-w-xl mx-auto py-6 px-4 w-full h-[700px] flex items-center justify-center animate-in slide-in-from-bottom-20 duration-500">
-                 <SwipeCards deck={challenge.deck || []} onComplete={(score) => handleSubmit(score)} />
+                 <SwipeCards deck={effectiveJsonConfig.deck || []} onComplete={(score) => handleSubmit(score)} />
               </div>
             ) : (
               <div className="h-full bg-[#1e1e1e] rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-4 border-[#1e1e1e]">

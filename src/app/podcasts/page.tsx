@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { 
   useCollection, 
@@ -30,6 +31,7 @@ import Link from 'next/link';
 import { formatPrice } from '@/lib/currency';
 
 export default function PodcastsPage() {
+  const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
   const [search, setSearch] = useState('');
@@ -147,7 +149,7 @@ export default function PodcastsPage() {
                 podcast={selectedPodcast} 
                 hasAccess={hasAccess(selectedPodcast)} 
                 onPurchaseClick={() => {
-                    // Lógica para redirigir al checkout
+                   router.push(`/checkout?podcastId=${selectedPodcast.id}`);
                 }}
                />
             </div>

@@ -24,6 +24,21 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'instructor';
     }
 
+    function isPremium() {
+      return isAdmin() || (isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremiumSubscriber == true);
+    }
+
+    function hasPurchased(collectionName, docId) {
+      if (!isSignedIn()) return false;
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return (collectionName == 'courses' && docId in (userData.purchasedCourses || [])) ||
+             (collectionName == 'modules' && docId in (userData.purchasedModules || [])) ||
+             (collectionName == 'lessons' && docId in (userData.purchasedLessons || [])) ||
+             (collectionName == 'podcasts' && docId in (userData.purchasedPodcasts || [])) ||
+             (collectionName == 'coding_challenges' && docId in (userData.purchasedChallenges || []));
+    }
+
     // ⭐ CONFIGURACIÓN GLOBAL (Público Lectura)
     match /settings/branding {
       allow read: if true;
@@ -95,6 +110,10 @@ service cloud.firestore {
       allow create: if (isAdmin() || isSignedIn()) && request.resource.data.instructorId == request.auth.uid;
       allow update: if isAdmin() || (isSignedIn() && resource.data.instructorId == request.auth.uid && request.resource.data.instructorId == resource.data.instructorId);
       allow delete: if isAdmin() || (isSignedIn() && resource.data.instructorId == request.auth.uid);
+
+      match /premium/data {
+        allow read: if isPremium() || hasPurchased('coding_challenges', challengeId);
+      }
     }
     
     match /courses/{courseId} {
@@ -107,15 +126,22 @@ service cloud.firestore {
         allow read: if true;
         allow write: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId == request.auth.uid);
 
-        match /lessons/{lessonId} {
-            allow read: if true;
-            allow write: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId == request.auth.uid);
-
-            match /resources/{resourceId} {
+            match /lessons/{lessonId} {
                 allow read: if true;
                 allow write: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId == request.auth.uid);
+
+                match /premium/data {
+                    allow read: if isPremium() || 
+                                  hasPurchased('courses', courseId) || 
+                                  hasPurchased('modules', moduleId) || 
+                                  hasPurchased('lessons', lessonId);
+                }
+
+                match /resources/{resourceId} {
+                    allow read: if true;
+                    allow write: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId == request.auth.uid);
+                }
             }
-        }
       }
     }
 
@@ -171,6 +197,10 @@ service cloud.firestore {
     match /podcasts/{podcastId} {
       allow read: if true;
       allow write: if isAdmin();
+
+      match /premium/data {
+        allow read: if isPremium() || hasPurchased('podcasts', podcastId);
+      }
     }
 
     // 🗺️ RUTAS DE APRENDIZAJE (Bootcamps)

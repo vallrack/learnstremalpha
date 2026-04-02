@@ -47,6 +47,7 @@ function CheckoutContent() {
   const moduleId = searchParams.get('moduleId');
   const lessonId = searchParams.get('lessonId');
   const challengeId = searchParams.get('challengeId');
+  const podcastId = searchParams.get('podcastId');
   const { toast } = useToast();
   const { name, supportWhatsapp, academyCurrency, academyMonthlyPrice, academyAnnualPrice } = useBrand();
   
@@ -86,7 +87,14 @@ function CheckoutContent() {
   }, [db, challengeId]);
   const { data: challengeData, isLoading: isChallengeLoading } = useDoc(standaloneChallengeRef);
   
+  const podcastRef = useMemoFirebase(() => {
+    if (!db || !podcastId) return null;
+    return doc(db, 'podcasts', podcastId);
+  }, [db, podcastId]);
+  const { data: podcastData, isLoading: isPodcastLoading } = useDoc(podcastRef);
+  
   const currentCurrency = 
+    podcastId && podcastData ? (podcastData.currency || 'COP') :
     challengeId && challengeData ? (challengeData.currency || 'COP') :
     lessonId && lessonData ? (lessonData.currency || 'COP') : 
     moduleId && moduleData ? (moduleData.currency || 'COP') : 
@@ -94,6 +102,7 @@ function CheckoutContent() {
     (academyCurrency || 'COP');
 
   const BASE_PRICE = 
+    podcastId && podcastData ? (podcastData.price || 0) :
     challengeId && challengeData ? (challengeData.price || 0) :
     lessonId && lessonData ? (lessonData.price || 0) : 
     moduleId && moduleData ? (moduleData.price || 0) : 
@@ -204,7 +213,8 @@ function CheckoutContent() {
         test: false // MODO PRODUCCIÓN ACTIVADO
       });
 
-      const purchaseName = challengeId && challengeData ? `Actividad: ${challengeData.title}` :
+      const purchaseName = podcastId && podcastData ? `Podcast: ${podcastData.title}` :
+                          challengeId && challengeData ? `Actividad: ${challengeData.title}` :
                           lessonId && lessonData ? `Clase: ${lessonData.title}` : 
                           moduleId && moduleData ? `Módulo: ${moduleData.title}` :
                           courseId && course ? `Curso: ${course.title}` : 
@@ -212,7 +222,8 @@ function CheckoutContent() {
 
       const data = {
         name: purchaseName,
-        description: challengeId ? "Acceso individual a desafío premium" :
+        description: podcastId ? "Acceso individual a podcast premium" :
+                    challengeId ? "Acceso individual a desafío premium" :
                     lessonId ? "Acceso individual a lección premium" : 
                     moduleId ? "Acceso completo al módulo premium" :
                     courseId ? "Acceso de por vida al curso" : 
@@ -230,7 +241,7 @@ function CheckoutContent() {
         email_billing: user.email,
         extra1: user.uid, 
         extra2: appliedCoupon?.id || "none",
-        extra3: `${courseId || 'none'}|${moduleId || 'none'}|${lessonId || 'none'}|${challengeId || 'none'}`,
+        extra3: `${courseId || 'none'}|${moduleId || 'none'}|${lessonId || 'none'}|${challengeId || 'none'}|${podcastId || 'none'}`,
       };
 
       handler.open(data);
@@ -242,7 +253,7 @@ function CheckoutContent() {
     }
   };
 
-  if (isUserLoading || isCourseLoading || isModuleLoading || isLessonLoading || isChallengeLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isUserLoading || isCourseLoading || isModuleLoading || isLessonLoading || isChallengeLoading || isPodcastLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const whatsappLink = `https://wa.me/${supportWhatsapp}?text=Hola%20${name},%20tengo%20problemas%20con%20el%20pago%20de%20mi%20suscripci%C3%B3n%20Premium%20y%20me%20gustar%C3%ADa%20recibir%20ayuda.`;
 
@@ -284,14 +295,15 @@ function CheckoutContent() {
           <div className="space-y-8">
             <div>
               <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">
-                {challengeId && challengeData ? `Desbloquea: ${challengeData.title}` :
+                {podcastId && podcastData ? `Escucha: ${podcastData.title}` :
+                 challengeId && challengeData ? `Desbloquea: ${challengeData.title}` :
                  lessonId && lessonData ? `Desbloquea: ${lessonData.title}` :
                  moduleId && moduleData ? `Módulo: ${moduleData.title}` :
                  courseId && course ? `Inscríbete en: ${course.title}` : 
                  "Potencia tu carrera hoy"}
               </h1>
               <p className="text-lg text-muted-foreground">
-                {challengeId || lessonId || moduleId ? "Adquiere acceso permanente a este contenido premium." :
+                {podcastId || challengeId || lessonId || moduleId ? "Adquiere acceso permanente a este contenido premium." :
                  courseId && course ? "Adquiere acceso de por vida a este programa certificado." : 
                  "Desbloquea herramientas profesionales con medios de pago locales a través de ePayco."}
               </p>
@@ -358,7 +370,8 @@ function CheckoutContent() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-dashed">
                   <span className="text-slate-600 font-medium whitespace-pre-wrap flex-1 pr-4">
-                    {challengeId && challengeData ? `Actividad Premium: ${challengeData.title}` :
+                    {podcastId && podcastData ? `Podcast Premium: ${podcastData.title}` :
+                     challengeId && challengeData ? `Actividad Premium: ${challengeData.title}` :
                      lessonId && lessonData ? `Clase Premium: ${lessonData.title}` :
                      moduleId && moduleData ? `Módulo Premium: ${moduleData.title}` :
                      courseId && course ? `Curso: ${course.title}` : 

@@ -11,11 +11,8 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const EvaluateChallengeInputSchema = z.object({
-  challengeTitle: z.string(),
-  challengeDescription: z.string(),
-  technology: z.string(),
+  challengeId: z.string(),
   studentCode: z.string(),
-  solutionReference: z.string().optional(),
 });
 export type EvaluateChallengeInput = z.infer<typeof EvaluateChallengeInputSchema>;
 
@@ -35,9 +32,30 @@ export type SafeEvaluateChallengeOutput =
   | { success: true; data: EvaluateChallengeOutput }
   | { success: false; error: string };
 
+import { adminDb as db } from '@/lib/firebase-admin';
+
 export async function evaluateChallenge(input: EvaluateChallengeInput): Promise<SafeEvaluateChallengeOutput> {
   try {
-    const data = await evaluateChallengeFlow(input);
+    // 1. Fetch challenge and premium data securely
+    const challengeSnap = await db.collection('coding_challenges').doc(input.challengeId).get();
+    if (!challengeSnap.exists) throw new Error("Reto no encontrado.");
+    
+    const challengeData = challengeSnap.data()!;
+    const premiumSnap = await db.collection('coding_challenges').doc(input.challengeId).collection('premium').doc('data').get();
+    const premiumData = premiumSnap.exists ? premiumSnap.data()! : {};
+
+    // 2. Prepare full input for AI
+    const fullInput = {
+      challengeId: input.challengeId,
+      challengeTitle: challengeData.title || "Reto",
+      challengeDescription: challengeData.description || "",
+      technology: challengeData.technology || "General",
+      studentCode: input.studentCode,
+      solutionReference: premiumData.solution || challengeData.solution || "", // Fallback for old data
+      ...premiumData // Include other sensitive context if needed
+    };
+
+    const data = await evaluateChallengeFlow(fullInput);
     return { success: true, data };
   } catch (error: any) {
     console.error("Evaluation Error:", error);
@@ -52,9 +70,17 @@ export async function evaluateChallenge(input: EvaluateChallengeInput): Promise<
   }
 }
 
+const EvaluateChallengeInternalSchema = z.object({
+  challengeTitle: z.string(),
+  challengeDescription: z.string(),
+  technology: z.string(),
+  studentCode: z.string(),
+  solutionReference: z.string().optional(),
+});
+
 const prompt = ai.definePrompt({
   name: 'evaluateChallengePrompt',
-  input: {schema: EvaluateChallengeInputSchema},
+  input: {schema: EvaluateChallengeInternalSchema},
   output: {schema: EvaluateChallengeOutputSchema},
   prompt: `Eres un arquitecto de software senior y reclutador técnico de élite.
 Tu misión es realizar una evaluación CRÍTICA, TÉCNICA y ALTAMENTE CONSTRUCTIVA sobre la entrega del estudiante.
@@ -101,7 +127,7 @@ OBLIGATORIO:
 const evaluateChallengeFlow = ai.defineFlow(
   {
     name: 'evaluateChallengeFlow',
-    inputSchema: EvaluateChallengeInputSchema,
+    inputSchema: EvaluateChallengeInternalSchema,
     outputSchema: EvaluateChallengeOutputSchema,
   },
   async (input) => {
