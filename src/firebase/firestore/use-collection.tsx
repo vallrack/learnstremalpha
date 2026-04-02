@@ -4,6 +4,7 @@ import { Query, onSnapshot, DocumentData, FirestoreError, QuerySnapshot, Collect
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import useSWRSubscription from 'swr/subscription';
+import { useMemo } from 'react';
 
 type WithId<T> = T & { id: string };
 
@@ -67,9 +68,9 @@ export function useCollection<T = any>(
     }
   );
 
-  return { 
+  return useMemo(() => ({ 
     data: data === undefined ? null : data, 
     isLoading: data === undefined && error === undefined && !!memoizedTargetRefOrQuery, 
     error: error || null 
-  };
+  }), [data, error, !!memoizedTargetRefOrQuery]);
 }

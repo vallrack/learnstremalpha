@@ -4,6 +4,7 @@ import { DocumentReference, onSnapshot, DocumentData, FirestoreError, DocumentSn
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import useSWRSubscription from 'swr/subscription';
+import { useMemo } from 'react';
 
 export type WithId<T> = T & { id: string };
 
@@ -46,9 +47,9 @@ export function useDoc<T = any>(
     }
   );
 
-  return {
+  return useMemo(() => ({
     data: data === undefined ? null : data,
     isLoading: data === undefined && error === undefined && !!memoizedDocRef,
     error: error || null,
-  };
+  }), [data, error, !!memoizedDocRef]);
 }
