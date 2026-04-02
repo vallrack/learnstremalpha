@@ -10,10 +10,18 @@ import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { formatPrice } from '@/lib/currency';
 
 export default function CourseDetailPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>}>
+      <CourseDetailContent />
+    </Suspense>
+  );
+}
+
+function CourseDetailContent() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -130,8 +138,8 @@ export default function CourseDetailPage() {
       return url.replace('watch?v=', 'embed/');
     }
     if (url.includes('youtu.be/')) {
-      const id = url.split('/').pop()?.split('?')[0];
-      return `https://www.youtube.com/embed/${id}`;
+      const idStr = url.split('/').pop()?.split('?')[0];
+      return `https://www.youtube.com/embed/${idStr}`;
     }
     return url;
   };
@@ -139,6 +147,7 @@ export default function CourseDetailPage() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <Navbar />
+
       
       <div className="bg-slate-900 pt-16 pb-32 md:pb-40 px-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-primary/10" />

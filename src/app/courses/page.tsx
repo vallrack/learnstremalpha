@@ -9,9 +9,17 @@ import { Button } from '@/components/ui/button';
 import { Search, Loader2, BookOpen, X, SlidersHorizontal } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 
 export default function CoursesPage() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <CoursesContent />
+    </Suspense>
+  );
+}
+
+function CoursesContent() {
   const db = useFirestore();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
@@ -63,6 +71,7 @@ export default function CoursesPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
+
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-10">
         {/* Header */}

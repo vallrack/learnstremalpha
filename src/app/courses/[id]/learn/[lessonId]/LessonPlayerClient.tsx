@@ -222,12 +222,6 @@ function LessonPlayerContent() {
     }
   };
 
-  if (isCourseLoading || isLessonLoading || isModulesLoading || isModuleLoading || isUserLoading) {
-    return <div className="h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-muted-foreground animate-pulse font-medium">Cargando lección...</p></div>;
-  }
-
-  if (!course || !currentLesson) return <div className="h-screen flex items-center justify-center">No encontrado</div>;
-
   const isAcademy = profile?.role === 'academy' || false;
   const isAcademyActive = (isAcademy && profile?.subscription?.status === 'active') || false;
   const isAuthor = (user && course && user.uid === course.instructorId) || false;
@@ -236,31 +230,32 @@ function LessonPlayerContent() {
   const hasPurchasedLesson = (profile?.purchasedLessons?.includes(lessonId)) || false;
   
   const hasPurchased = hasPurchasedCourse || hasPurchasedModule || hasPurchasedLesson;
-  const isFreeCourse = course.isFree === true;
-  const isLessonPremium = !!currentLesson.isPremium;
+  const isFreeCourse = course?.isFree === true;
+  const isLessonPremium = !!currentLesson?.isPremium;
   const isModulePremium = !!currentModule?.isPremium;
   const isGuest = !user || user.isAnonymous;
 
   const isPremium = useMemo(() => {
-     if (isUserLoading) return false;
-     return profile?.role === 'admin' || profile?.isPremiumSubscriber || profile?.purchasedCourses?.includes(courseId);
+     if (isUserLoading || !profile) return false;
+     return profile?.role === 'admin' || profile?.isPremiumSubscriber || (courseId && profile?.purchasedCourses?.includes(courseId));
   }, [profile, courseId, isUserLoading]);
 
   const isEnrolled = useMemo(() => {
-    if (isUserLoading) return false;
-    if (!user || !profile) return false;
+    if (isUserLoading || !user || !profile) return false;
     if (profile.role === 'admin') return true;
-    return profile.purchasedCourses?.includes(courseId) || profile.isPremiumSubscriber;
+    return (courseId && profile.purchasedCourses?.includes(courseId)) || profile.isPremiumSubscriber;
   }, [user, profile, courseId, isUserLoading]);
 
   const hasValidAccess = useMemo(() => {
-    if (!course || isUserLoading || isCourseLoading) return false;
+    // Si los datos base están cargando, consideramos que tiene acceso para evitar parpadeos de bloqueo
+    if (isUserLoading || isCourseLoading) return true;
     if (profile?.role === 'admin') return true;
+    if (!course) return false;
     return !course.isPaid || isEnrolled || isPremium;
   }, [course, isEnrolled, isPremium, profile, isUserLoading, isCourseLoading]);
 
   const finalizedAccess = useMemo(() => {
-    if (isUserLoading || isCourseLoading) return false;
+    if (isUserLoading || isCourseLoading) return true; // Mantener true durante carga
     if (profile?.role === 'admin') return true;
     return hasValidAccess;
   }, [hasValidAccess, isUserLoading, isCourseLoading, profile]);
@@ -285,6 +280,13 @@ function LessonPlayerContent() {
 
     fetchPremiumData();
   }, [db, finalizedAccess, courseId, moduleId, lessonId, isUserLoading, isCourseLoading, isLessonLoading]);
+
+  if (isCourseLoading || isLessonLoading || isModulesLoading || isModuleLoading || isUserLoading) {
+    return <div className="h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-muted-foreground animate-pulse font-medium">Cargando lección...</p></div>;
+  }
+
+  if (!course || !currentLesson) return <div className="h-screen flex items-center justify-center">No encontrado</div>;
+
 
   const effectiveVideoUrl = premiumData?.videoUrl || currentLesson?.videoUrl;
   const effectiveDescription = premiumData?.description || currentLesson?.description;

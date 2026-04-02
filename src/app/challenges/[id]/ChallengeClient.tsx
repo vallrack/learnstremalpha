@@ -2,7 +2,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +47,14 @@ import { formatPrice } from '@/lib/currency';
 import { robustJSONParse } from '@/lib/robust-parse';
 
 export default function ChallengeClient() {
+  return (
+    <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <ChallengeContent />
+    </Suspense>
+  );
+}
+
+function ChallengeContent() {
   const params = useParams();
   const router = useRouter();
   const challengeId = params.id as string;
