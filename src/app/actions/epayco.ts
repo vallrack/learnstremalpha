@@ -51,7 +51,15 @@ export async function verifyEpaycoTransaction(
             if (challengeDoc.exists) {
               const challengeData = challengeDoc.data();
               const instructorId = challengeData?.instructorId;
-              const revenueShare = 70;
+              
+              // Obtener porcentaje del perfil del instructor o usar 70 por defecto
+              let revenueShare = 70;
+              if (instructorId) {
+                const instructorDoc = await adminDb.collection('users').doc(instructorId).get();
+                if (instructorDoc.exists) {
+                  revenueShare = instructorDoc.data()?.revenueSharePercentage ?? 70;
+                }
+              }
               
               const instructorCut = Math.floor(amount * (revenueShare / 100));
               const adminCut = amount - instructorCut;
@@ -95,7 +103,15 @@ export async function verifyEpaycoTransaction(
             if (podcastDoc.exists) {
               const podcastData = podcastDoc.data();
               const instructorId = podcastData?.instructorId;
-              const revenueShare = 70;
+              
+              // Obtener porcentaje del perfil del instructor o usar 70 por defecto
+              let revenueShare = 70;
+              if (instructorId) {
+                const instructorDoc = await adminDb.collection('users').doc(instructorId).get();
+                if (instructorDoc.exists) {
+                  revenueShare = instructorDoc.data()?.revenueSharePercentage ?? 70;
+                }
+              }
               
               const instructorCut = Math.floor(amount * (revenueShare / 100));
               const adminCut = amount - instructorCut;
@@ -140,7 +156,19 @@ export async function verifyEpaycoTransaction(
             if (courseDoc.exists) {
               const courseData = courseDoc.data();
               const instructorId = courseData?.instructorId;
-              const revenueShare = courseData?.instructorRevenueShare ?? 70;
+              
+              // Obtener porcentaje del perfil del instructor o usar el del curso o 70
+              let revenueShare = 70;
+              if (instructorId) {
+                const instructorDoc = await adminDb.collection('users').doc(instructorId).get();
+                if (instructorDoc.exists) {
+                  revenueShare = instructorDoc.data()?.revenueSharePercentage ?? 
+                                 courseData?.instructorRevenueShare ?? 
+                                 70;
+                } else {
+                  revenueShare = courseData?.instructorRevenueShare ?? 70;
+                }
+              }
               
               const instructorCut = Math.floor(amount * (revenueShare / 100));
               const adminCut = amount - instructorCut;

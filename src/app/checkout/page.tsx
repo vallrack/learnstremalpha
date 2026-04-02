@@ -110,9 +110,16 @@ function CheckoutContent() {
     courseId ? (course?.price || 0) : 
     (academyMonthlyPrice || 120000);
 
-  // CRITICAL FIX: Ensure currency is always a string and price is always a number
   const finalizedCurrency = currentCurrency || 'COP';
   const finalizedBasePrice = Number(BASE_PRICE) || 0;
+
+  const instructorId = podcastData?.instructorId || challengeData?.instructorId || course?.instructorId;
+  const instructorRef = useMemoFirebase(() => {
+    if (!db || !instructorId) return null;
+    return doc(db, 'users', instructorId);
+  }, [db, instructorId]);
+  const { data: instructorProfile } = useDoc(instructorRef);
+
 
   useEffect(() => {
     // Solo redirigir si NO es un podcast y no hay usuario
@@ -252,6 +259,24 @@ function CheckoutContent() {
         extra2: appliedCoupon?.id || "none",
         extra3: `${courseId || 'none'}|${moduleId || 'none'}|${lessonId || 'none'}|${challengeId || 'none'}|${podcastId || 'none'}`,
       };
+
+      // CONFIGURACIÓN DE PAGO DIVIDIDO (70/30) SI HAY INSTRUCTOR CON ID CONFIGURADO
+      const appMerchantId = process.env.NEXT_PUBLIC_EPAYCO_MERCHANT_ID;
+      if (appMerchantId && instructorProfile?.epaycoMerchantId) {
+        const sharePercentage = instructorProfile.revenueSharePercentage || 70;
+        const instructorAmount = Math.floor(finalPrice * (sharePercentage / 100));
+        
+        (data as any).splitpayment = "true";
+        (data as any).split_app_id = appMerchantId;
+        (data as any).split_merchant_id = appMerchantId;
+        (data as any).split_type = "01"; // Valor fijo para mayor precisión
+        (data as any).split_receivers = JSON.stringify([
+          {
+            id: instructorProfile.epaycoMerchantId,
+            total: instructorAmount.toString()
+          }
+        ]);
+      }
 
       handler.open(data);
     } catch (err) {

@@ -347,7 +347,29 @@ export default function DashboardPage() {
 
 function InstructorAnalytics({ userId, myCourses, profile }: { userId: string; myCourses: any[]; profile: any }) {
   const db = useFirestore();
+  const { toast } = useToast();
   const [stats, setStats] = useState({ sales: 0, students: 0, avgRating: 0, totalReviews: 0 });
+  const [epaycoMerchantId, setEpaycoMerchantId] = useState(profile?.epaycoMerchantId || '');
+  const [isSavingId, setIsSavingId] = useState(false);
+
+  useEffect(() => {
+    if (profile?.epaycoMerchantId) setEpaycoMerchantId(profile.epaycoMerchantId);
+  }, [profile?.epaycoMerchantId]);
+
+  const handleSaveMerchantId = async () => {
+    if (!db || !userId) return;
+    setIsSavingId(true);
+    try {
+      await updateDocumentNonBlocking(doc(db, 'users', userId), {
+        epaycoMerchantId: epaycoMerchantId
+      });
+      toast({ title: "ID Guardado", description: "Tu ID de comercio ePayco ha sido actualizado." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el ID." });
+    } finally {
+      setIsSavingId(false);
+    }
+  };
 
   useEffect(() => {
     if (!db || !userId) return;
@@ -398,7 +420,27 @@ function InstructorAnalytics({ userId, myCourses, profile }: { userId: string; m
           <TrendingUp className="h-5 w-5 text-emerald-400" />
         </div>
         <h3 className="text-4xl font-headline font-bold mb-2">${(profile?.totalEarnings || 0).toLocaleString()} <span className="text-sm opacity-50 font-normal">COP</span></h3>
-        <p className="text-xs text-slate-500">Comisión activa: {profile?.revenueSharePercentage || 70}%</p>
+        <div className="flex items-center gap-4 mt-4">
+          <div className="bg-white/10 p-2 px-3 rounded-lg border border-white/10 text-[10px] font-bold">
+            Comisión: {profile?.revenueSharePercentage || 70}%
+          </div>
+          <div className="flex-1 flex gap-2">
+            <Input 
+              placeholder="ID Comercio ePayco" 
+              value={epaycoMerchantId} 
+              onChange={e => setEpaycoMerchantId(e.target.value)}
+              className="h-8 text-[10px] bg-white/10 border-white/20 text-white placeholder:text-slate-500 rounded-lg focus-visible:ring-emerald-500"
+            />
+            <Button 
+              size="sm" 
+              onClick={handleSaveMerchantId} 
+              disabled={isSavingId} 
+              className="h-8 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg px-3 text-[10px] font-bold"
+            >
+              {isSavingId ? <Loader2 className="h-3 w-3 animate-spin" /> : "Guardar ID"}
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8">
