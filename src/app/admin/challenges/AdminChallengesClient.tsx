@@ -639,9 +639,9 @@ export default function AdminChallengesClient() {
                     {['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challengeType) ? (
                       <div className="grid gap-4">
                         <Tabs defaultValue="visual" className="w-full">
-                           <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-slate-200/50 rounded-xl p-1">
-                             <TabsTrigger value="visual" className="rounded-lg font-bold">🛠️ Editor Visual No-Code</TabsTrigger>
-                             <TabsTrigger value="json" className="rounded-lg font-bold">⚙️ Ajustes Avanzados (Opcional)</TabsTrigger>
+                           <TabsList className="flex flex-col sm:flex-row w-full mb-6 h-auto sm:h-12 bg-slate-200/50 rounded-xl p-1 gap-1">
+                             <TabsTrigger value="visual" className="flex-1 rounded-lg font-bold py-2 sm:py-0 text-[10px] sm:text-xs">🛠️ Editor Visual No-Code</TabsTrigger>
+                             <TabsTrigger value="json" className="flex-1 rounded-lg font-bold py-2 sm:py-0 text-[10px] sm:text-xs truncate px-2">⚙️ Ajustes Avanzados (Opcional)</TabsTrigger>
                            </TabsList>
                            <TabsContent value="visual" className="bg-white p-6 rounded-[2rem] border shadow-sm">
                                <VisualH5PBuilder type={challengeType} jsonConfig={jsonConfig} setJsonConfig={setJsonConfig} technology={technology} lessonTitle={title} />

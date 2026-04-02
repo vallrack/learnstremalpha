@@ -124,15 +124,42 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
     return (
       <div className="space-y-6">
         {AIPanel}
-        <div className="flex justify-end"><Button type="button" onClick={() => update({ ...data, lines: [...lines, { id: `L${Date.now()}`, text: '' }], correctOrder: [...correctOrder, `L${Date.now()}`] })} size="sm" variant="outline" className="h-8"><Plus className="h-3 w-3 mr-2" /> Insertar Línea</Button></div>
-        <div className="grid gap-3 max-h-[300px] overflow-y-auto pr-2">
+        <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-dashed">
+            <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-700">Líneas del Algoritmo</span>
+                <span className="text-[10px] text-slate-500">Define el orden final correcto.</span>
+            </div>
+            <Button type="button" onClick={() => update({ ...data, lines: [...lines, { id: `L${Date.now()}`, text: '' }], correctOrder: [...correctOrder, `L${Date.now()}`] })} size="sm" className="h-9 rounded-xl shadow-lg shadow-primary/10 transition-transform active:scale-95"><Plus className="h-3.5 w-3.5 mr-2" /> Insertar Línea</Button>
+        </div>
+        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
            {lines.map((L: any, i: number) => (
-             <div key={L.id} className="flex gap-2 items-center group">
-               <div className="bg-slate-800 text-slate-400 text-xs px-2 py-1 rounded-md font-mono">{i + 1}</div>
-               <Input value={L.text} onChange={(e) => { const n = [...lines]; n[i].text = e.target.value; update({ ...data, lines: n }); }} className="h-9 font-mono text-xs bg-slate-900 text-emerald-400 border-none flex-1" placeholder="function() {" />
-               <Button type="button" size="icon" variant="ghost" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { const n = [...lines]; const ord = [...correctOrder]; n.splice(i, 1); const ordIdx = ord.indexOf(L.id); if(ordIdx>-1) ord.splice(ordIdx, 1); update({ ...data, lines: n, correctOrder: ord }); }}><Trash2 className="h-4 w-4" /></Button>
+             <div key={L.id} className="flex gap-3 items-center group bg-slate-900/50 p-2 rounded-2xl border border-slate-800 hover:border-emerald-500/50 transition-all">
+               <div className="bg-slate-800 text-slate-500 text-[10px] h-7 w-7 flex items-center justify-center rounded-full font-mono shrink-0 shadow-inner">
+                 {i + 1}
+               </div>
+               <Input 
+                 value={L.text} 
+                 onChange={(e) => { const n = [...lines]; n[i].text = e.target.value; update({ ...data, lines: n }); }} 
+                 className="h-10 font-mono text-[11px] bg-slate-950 text-emerald-400 border-none flex-1 placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-emerald-500/30 rounded-xl" 
+                 placeholder='Ej: print("Hola Mundo")' 
+               />
+               <Button 
+                 type="button" 
+                 size="icon" 
+                 variant="ghost" 
+                 className="h-9 w-9 text-rose-500/50 hover:text-rose-500 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" 
+                 onClick={() => { const n = [...lines]; const ord = [...correctOrder]; n.splice(i, 1); const ordIdx = ord.indexOf(L.id); if(ordIdx>-1) ord.splice(ordIdx, 1); update({ ...data, lines: n, correctOrder: ord }); }}
+               >
+                 <Trash2 className="h-4 w-4" />
+               </Button>
              </div>
            ))}
+           {lines.length === 0 && (
+             <div className="flex flex-col items-center justify-center py-10 opacity-40">
+                <Code2 className="h-10 w-10 mb-2" />
+                <p className="text-xs font-bold">Sin líneas de código aún</p>
+             </div>
+           )}
            <p className="text-[10px] text-slate-500 text-center mt-4 border-t pt-4">Ingresa las líneas en el <b>orden correcto final</b>. El sistema las mezclará al azar para el estudiante.</p>
         </div>
       </div>

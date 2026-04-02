@@ -16,12 +16,20 @@ export function FirebaseErrorListener() {
 
   useEffect(() => {
     const handleError = (error: FirestorePermissionError) => {
-      // 1. Si no hay usuario logueado, los errores de permiso son esperados en fondos (ej: progreso)
-      // No queremos asustar al visitante con alertas de seguridad rojas.
+      // 1. Si no hay usuario logueado en este momento exacto, ignoramos.
+      // Usamos el "user" reactivo pero también validamos si el componente ya detectó el cambio.
       if (!user && !isUserLoading) return;
 
-      // 2. Ignorar rutas no críticas o esperadas.
-      const ignoredPaths = ['notifications', 'notifications-query', 'courseProgress', 'lesson_discussions', 'reviews'];
+      // 2. Ignorar rutas no críticas o esperadas durante transiciones.
+      const ignoredPaths = [
+        'notifications', 
+        'notifications-query', 
+        'courseProgress', 
+        'lesson_discussions', 
+        'reviews', 
+        'podcasts', 
+        'podcast_comments'
+      ];
       const errorPath = error.request?.path || '';
       
       if (ignoredPaths.some(p => errorPath.includes(p))) {
@@ -29,13 +37,14 @@ export function FirebaseErrorListener() {
         return;
       }
       
-      console.error("FirebasePermissionError Catched:", error);
+      console.error("FirebasePermissionError Captured:", error);
       
-      // Notify the user without crashing the app
+      // Solo mostramos el toast si realmente creemos que el usuario debería tener acceso
+      // y no está en medio de un logout.
       toast({
         variant: "destructive",
-        title: "Acceso Denegado (Seguridad)",
-        description: "No tienes permisos suficientes para ver o modificar este recurso.",
+        title: "Acceso Restringido",
+        description: "No tienes permisos para realizar esta acción o ver este recurso.",
       });
     };
 
@@ -44,7 +53,7 @@ export function FirebaseErrorListener() {
     return () => {
       errorEmitter.off('permission-error', handleError);
     };
-  }, [toast]);
+  }, [toast, user, isUserLoading]);
 
   // This component renders nothing but listens to events.
   return null;
