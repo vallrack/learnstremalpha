@@ -27,7 +27,7 @@ import {
   ArrowRight,
   Mic2
 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, limit, doc, where } from 'firebase/firestore';
 import Image from 'next/image';
 import Link from 'next/link';
