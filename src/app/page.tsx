@@ -15,7 +15,7 @@ import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
@@ -286,7 +286,7 @@ export default function Home() {
                 {isPodcastsLoading ? (
                     [1,2,3].map(i => <div key={i} className="h-64 bg-white rounded-[2.5rem] animate-pulse border" />)
                 ) : featuredPodcasts?.map(p => (
-                    <Link key={p.id} href="/podcasts" className="group">
+                    <Link key={p.id} href={`/podcasts?playId=${p.id}`} className="group">
                         <div className="bg-white rounded-[2.5rem] p-6 border-2 border-slate-100 shadow-sm hover:shadow-2xl hover:border-emerald-100 transition-all duration-500 hover:-translate-y-2 flex flex-col gap-6">
                             <div className="relative h-40 rounded-2xl overflow-hidden bg-emerald-50">
                                 {p.thumbnailUrl ? (
@@ -296,13 +296,24 @@ export default function Home() {
                                         <Mic2 className="h-16 w-16" />
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
                                     <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
                                         <PlayCircle className="h-6 w-6 fill-current" />
                                     </div>
                                 </div>
+                                <div className="absolute top-3 right-3 z-30 flex gap-1.5">
+                                    {!p.isFree ? (
+                                        <div className="bg-slate-900/80 backdrop-blur-md p-1.5 rounded-lg text-amber-400 shadow-md">
+                                            <Lock className="h-4 w-4" />
+                                        </div>
+                                    ) : (
+                                        <div className="bg-emerald-500/90 backdrop-blur-md px-2 py-1 rounded-lg text-white shadow-md text-[10px] font-black uppercase tracking-wider flex items-center">
+                                            Gratis
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-3 relative z-20">
                                 <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none font-bold text-[10px] uppercase tracking-widest">{p.category}</Badge>
                                 <h4 className="text-xl font-headline font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">{p.title}</h4>
                                 <p className="text-xs text-muted-foreground line-clamp-2 font-medium">{p.description}</p>

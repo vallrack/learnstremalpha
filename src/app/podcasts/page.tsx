@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { 
   useCollection, 
@@ -52,6 +52,23 @@ export default function PodcastsPage() {
     return collection(db, 'podcasts');
   }, [db]);
   const { data: podcasts, isLoading } = useCollection(podcastsQuery);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && podcasts && podcasts.length > 0) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const playId = urlParams.get('playId');
+      if (playId) {
+        const p = podcasts.find((p: any) => p.id === playId);
+        if (p) {
+            setSelectedPodcast(p);
+            setTimeout(() => {
+                window.history.replaceState({}, '', '/podcasts');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 100);
+        }
+      }
+    }
+  }, [podcasts]);
 
   const categories = ['Todas', 'Tecnología', 'Carrera', 'Englishtech', 'Mentalidad'];
 
