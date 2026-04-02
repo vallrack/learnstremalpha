@@ -35,7 +35,7 @@ import {
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
   Dialog, 
@@ -392,19 +392,39 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     }
   };
 
-  const handleEdit = (lesson: any) => {
+  const handleEdit = async (lesson: any) => {
     setEditingLesson(lesson);
     setType(lesson.type || 'video');
     setTitle(lesson.title || '');
-    setDescription(lesson.description || '');
-    setVideoUrl(lesson.videoUrl || '');
-    setChallengeId(lesson.challengeId || '');
     setDuration(lesson.durationInMinutes?.toString() || '10');
     setOrder(lesson.orderIndex?.toString() || '0');
     setIsPremium(lesson.isPremium || false);
     setPrice(lesson.price?.toString() || '0');
     setCurrency(lesson.currency || 'COP');
-    setQuestions(lesson.questions || []);
+
+    // Cargar contenido sensible desde la subcolección
+    if (db) {
+      try {
+        const premiumRef = doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lesson.id, 'premium', 'data');
+        const snap = await getDoc(premiumRef);
+        if (snap.exists()) {
+          const pData = snap.data();
+          setDescription(pData.description || lesson.description || '');
+          setVideoUrl(pData.videoUrl || '');
+          setQuestions(pData.questions || []);
+          setChallengeId(pData.challengeId || lesson.challengeId || '');
+        } else {
+          // Fallback a campos legacy
+          setDescription(lesson.description || '');
+          setVideoUrl(lesson.videoUrl || '');
+          setQuestions(lesson.questions || []);
+          setChallengeId(lesson.challengeId || '');
+        }
+      } catch (err) {
+        console.error("Error loading lesson premium data:", err);
+      }
+    }
+    
     setIsDialogOpen(true);
   };
 

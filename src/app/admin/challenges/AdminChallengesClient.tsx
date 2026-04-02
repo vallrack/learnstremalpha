@@ -40,7 +40,7 @@ import {
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase';
-import { collection, serverTimestamp, doc, query, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, deleteDoc, updateDoc, serverTimestamp, setDoc, getDoc, where } from 'firebase/firestore';
 import { 
   Dialog, 
   DialogContent, 
@@ -62,7 +62,6 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { setDoc } from 'firebase/firestore';
 import { Switch } from '@/components/ui/switch';
 import { TECH_STACK } from '@/lib/languages';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -290,29 +289,53 @@ export default function AdminChallengesClient() {
     return activityCategories[activeCategory as keyof typeof activityCategories].types.includes(c.type);
   });
 
-  const handleEditClick = (challenge: any) => {
+  const handleEditClick = async (challenge: any) => {
     setEditingId(challenge.id);
     setTitle(challenge.title || '');
     setDescription(challenge.description || '');
     setDifficulty(challenge.difficulty || 'Principiante');
     setTechnology(challenge.technology || '');
     setChallengeType(challenge.type || 'code');
-    setWords(challenge.words || []);
-    setInitialCode(challenge.initialCode || '');
-    setSolution(challenge.solution || '');
     setIsFree(challenge.isFree ?? true);
     setVisibility(challenge.visibility || 'public');
-    setQuestions(challenge.questions || []);
-    setTargetLanguage(challenge.targetLanguage || 'es');
-    setTargetRole(challenge.targetRole || '');
     setPrice(challenge.price?.toString() || '0');
     setCurrency(challenge.currency || 'COP');
-    
-    if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challenge.type)) {
-       const { id, title, description, difficulty, technology, type, isFree, visibility, updatedAt, instructorId, instructorName, createdAt, ...rest } = challenge;
-       setJsonConfig(JSON.stringify(rest, null, 2));
-    } else {
-       setJsonConfig('{\n\n}');
+
+    // Cargar datos premium desde la subcolección
+    if (db) {
+      try {
+        const premiumRef = doc(db, 'coding_challenges', challenge.id, 'premium', 'data');
+        const snap = await getDoc(premiumRef);
+        if (snap.exists()) {
+          const pData = snap.data();
+          setInitialCode(pData.initialCode || '');
+          setSolution(pData.solution || '');
+          setQuestions(pData.questions || []);
+          setWords(pData.words || []);
+          setTargetLanguage(pData.targetLanguage || 'es');
+          setTargetRole(pData.targetRole || '');
+
+          if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challenge.type)) {
+              const { updatedAt, createdAt, ...rest } = pData;
+              setJsonConfig(JSON.stringify(rest, null, 2));
+          }
+        } else {
+          // Fallback a campos legacy si aún existen por el proceso de migración
+          setWords(challenge.words || []);
+          setInitialCode(challenge.initialCode || '');
+          setSolution(challenge.solution || '');
+          setQuestions(challenge.questions || []);
+          setTargetLanguage(challenge.targetLanguage || 'es');
+          setTargetRole(challenge.targetRole || '');
+
+          if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challenge.type)) {
+             const { id, title, description, difficulty, technology, type, isFree, visibility, updatedAt, instructorId, instructorName, createdAt, ...rest } = challenge;
+             setJsonConfig(JSON.stringify(rest, null, 2));
+          }
+        }
+      } catch (err) {
+        console.error("Error loading challenge premium data:", err);
+      }
     }
     
     setIsDialogOpen(true);

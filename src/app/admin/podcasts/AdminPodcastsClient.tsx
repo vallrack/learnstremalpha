@@ -36,7 +36,7 @@ import {
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase';
-import { collection, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, getDoc, setDoc } from 'firebase/firestore';
 import { 
   Dialog, 
   DialogContent, 
@@ -46,7 +46,6 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { setDoc } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -208,12 +207,10 @@ export default function AdminPodcastsClient() {
     setThumbnailUrl(finalUrl);
   };
 
-  const handleEdit = (podcast: any) => {
+  const handleEdit = async (podcast: any) => {
     setEditingId(podcast.id);
     setTitle(podcast.title || '');
     setDescription(podcast.description || '');
-    setAudioUrl(podcast.audioUrl || '');
-    setVideoUrl(podcast.videoUrl || '');
     setThumbnailUrl(podcast.thumbnailUrl || '');
     setDuration(podcast.duration || '');
     setIsFree(podcast.isFree ?? true);
@@ -221,6 +218,26 @@ export default function AdminPodcastsClient() {
     setCurrency(podcast.currency || 'COP');
     setCategory(podcast.category || 'Tecnología');
     setSourceType(podcast.sourceType || 'url');
+
+    // Cargar URLs privadas desde la subcolección
+    if (db) {
+      try {
+        const premiumRef = doc(db, 'podcasts', podcast.id, 'premium', 'data');
+        const snap = await getDoc(premiumRef);
+        if (snap.exists()) {
+          const pData = snap.data();
+          setAudioUrl(pData.audioUrl || '');
+          setVideoUrl(pData.videoUrl || '');
+        } else {
+          // Fallback a campos legacy
+          setAudioUrl(podcast.audioUrl || '');
+          setVideoUrl(podcast.videoUrl || '');
+        }
+      } catch (err) {
+        console.error("Error loading podcast premium data:", err);
+      }
+    }
+    
     setIsDialogOpen(true);
   };
 
