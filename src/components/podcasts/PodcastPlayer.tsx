@@ -45,6 +45,7 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
     const url = podcast.audioUrl?.toLowerCase() || '';
     if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
     if (url.includes('anchor.fm') || url.includes('spotify.com')) return 'anchor';
+    if (url.includes('drive.google.com')) return 'drive';
     return 'url';
   };
 
@@ -89,6 +90,17 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
         return url
             .replace('open.spotify.com/episode/', 'open.spotify.com/embed/episode/')
             .replace('/episodes/', '/embed/episodes/');
+    }
+    if (type === 'drive' || url.includes('drive.google.com')) {
+        let embedUrl = url;
+        if (url.includes('/view')) embedUrl = url.replace(/\/view.*$/, '/preview');
+        else if (url.includes('uc?export=download&id=')) {
+            const id = url.split('id=')[1]?.split('&')[0];
+            embedUrl = `https://drive.google.com/file/d/${id}/preview`;
+        } else if (!url.endsWith('/preview')) {
+            embedUrl = url.split('?')[0].replace(/\/$/, '') + '/preview';
+        }
+        return embedUrl;
     }
     return url;
   };
@@ -226,6 +238,26 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
                         className="w-full h-full"
                         frameBorder="0"
                         scrolling="no"
+                    />
+                </div>
+                <div className="pt-4">
+                    <h2 className="text-3xl font-headline font-bold text-slate-900 mb-2">{podcast.title}</h2>
+                    <p className="text-muted-foreground text-sm line-clamp-3">{podcast.description}</p>
+                </div>
+            </div>
+        ) : (sourceType === 'drive' && !isLocked) ? (
+            <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <Badge variant="outline" className="rounded-lg border-blue-200 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase py-0 px-2 h-5">
+                        Google Drive {podcast.category && `• ${podcast.category}`}
+                    </Badge>
+                </div>
+                <div className="w-full aspect-video md:aspect-auto md:h-[400px] rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-slate-50 bg-slate-100">
+                    <iframe 
+                        src={getEmbedUrl(podcast.audioUrl, 'drive')}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
                     />
                 </div>
                 <div className="pt-4">

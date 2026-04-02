@@ -175,17 +175,17 @@ export default function AdminChallengesClient() {
           "activityTitle": "título creativo", 
           "activityDescription": "descripción breve" 
         }
-      - IMPORTANTE: NO uses caracteres de escape como \n o \t dentro del JSON. Retorna el JSON en una sola línea si es necesario para evitar errores de parseo.
-      - Para activityConfig, sigue el esquema de ${type}:
+      - Para activityConfig, sigue el esquema exacto de ${type}:
         flashcard: { cards: [{front, back}] }
         swipe: { deck: [{statement, isTrue}] }
         sortable: { lines: [{id, text}], correctOrder: [ids] }
         quiz: { questions: [{question, options, correctAnswer}] }
         wordsearch: { words: ["PALABRA1", "PALABRA2"] }
         dragdrop: { template: "texto con {{{hueco}}}", snippets: [{id, text}], correctMapping: {hueco: id} }
-      - IMPORTANTE: activityConfig debe ser un objeto, no un string.
-      - NO uses saltos de línea reales dentro de las cadenas del JSON (usa \n en su lugar).
-      - Retorna el JSON MINIFICADO (en una sola línea si es posible) para evitar errores de parseo.
+      - IMPORTANTE: activityConfig debe ser un objeto.
+      - DEBES escapar TODAS las comillas dobles internas usando \\" para no romper el JSON.
+      - Para los saltos de línea dentro de cadenas de texto (como código), DEBES usar \\n y NO saltos de línea reales.
+      - Retorna SOLO el JSON, sin bloques de código Markdown ni texto explicativo.
       - Todo en ESPAÑOL LATINO.`;
 
       // Llamada al nuevo API Route unificado
@@ -215,7 +215,7 @@ export default function AdminChallengesClient() {
         } catch { return "{}"; }
       };
 
-      const resultData = JSON.parse(cleanAIJSON(typeof data.result === 'string' ? data.result : JSON.stringify(data.result)));
+      const resultData = typeof data.result === 'object' ? data.result : JSON.parse(cleanAIJSON(data.result));
       const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
       
       if (type === 'code') {
@@ -268,7 +268,7 @@ export default function AdminChallengesClient() {
           return match ? match[0].replace(/\n/g, " ").replace(/\r/g, "").trim() : "{}";
         };
         
-        const resultData = JSON.parse(cleanAIJSON(rawPuter));
+        const resultData = typeof rawPuter === 'object' ? rawPuter : JSON.parse(cleanAIJSON(rawPuter));
         const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
 
         if (type === 'code') { setInitialCode(config.initialCode || ''); setSolution(config.solution || ''); }

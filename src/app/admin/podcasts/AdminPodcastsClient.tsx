@@ -69,7 +69,7 @@ export default function AdminPodcastsClient() {
   const [price, setPrice] = useState('0');
   const [currency, setCurrency] = useState('COP');
   const [category, setCategory] = useState('Tecnología');
-  const [sourceType, setSourceType] = useState<'url' | 'youtube' | 'anchor'>('url');
+  const [sourceType, setSourceType] = useState<'url' | 'youtube' | 'anchor' | 'drive'>('url');
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -163,6 +163,17 @@ export default function AdminPodcastsClient() {
             .replace('open.spotify.com/episode/', 'open.spotify.com/embed/episode/')
             .replace('/episodes/', '/embed/episodes/');
     }
+    if (type === 'drive' || url.includes('drive.google.com')) {
+        let embedUrl = url;
+        if (url.includes('/view')) embedUrl = url.replace(/\/view.*$/, '/preview');
+        else if (url.includes('uc?export=download&id=')) {
+            const id = url.split('id=')[1]?.split('&')[0];
+            embedUrl = `https://drive.google.com/file/d/${id}/preview`;
+        } else if (!url.endsWith('/preview')) {
+            embedUrl = url.split('?')[0].replace(/\/$/, '') + '/preview';
+        }
+        return embedUrl;
+    }
     return url;
   };
 
@@ -234,6 +245,7 @@ export default function AdminPodcastsClient() {
                                 <SelectItem value="url">Enlace Directo (.mp3, .wav)</SelectItem>
                                 <SelectItem value="youtube">YouTube (Video / Audio)</SelectItem>
                                 <SelectItem value="anchor">Spotify / Anchor (Embed)</SelectItem>
+                                <SelectItem value="drive">Google Drive (Embed)</SelectItem>
                             </SelectContent>
                         </Select>
                         <p className="text-[10px] text-muted-foreground px-1 italic">
@@ -243,7 +255,8 @@ export default function AdminPodcastsClient() {
                     <div className="grid gap-2 pt-2">
                         <Label className="font-bold">
                             {sourceType === 'youtube' ? 'Link de YouTube' : 
-                             sourceType === 'anchor' ? 'Link de Anchor/Spotify' : 'Enlace Directo'}
+                             sourceType === 'anchor' ? 'Link de Anchor/Spotify' : 
+                             sourceType === 'drive' ? 'Link de Google Drive' : 'Enlace Directo'}
                         </Label>
                         <div className="flex flex-col gap-4">
                             <Input 
@@ -252,6 +265,7 @@ export default function AdminPodcastsClient() {
                                 placeholder={
                                     sourceType === 'youtube' ? "https://youtube.com/watch?v=..." : 
                                     sourceType === 'anchor' ? "https://podcasters.spotify.com/..." : 
+                                    sourceType === 'drive' ? "https://drive.google.com/file/d/.../view" : 
                                     "Pega el enlace del audio"
                                 } 
                                 className="rounded-xl h-11" 
@@ -415,7 +429,7 @@ export default function AdminPodcastsClient() {
             </DialogHeader>
             <div className="py-6 flex flex-col items-center">
                 {(() => {
-                    const st = previewPodcast?.sourceType || (previewPodcast?.audioUrl?.toLowerCase().includes('youtube') || previewPodcast?.audioUrl?.toLowerCase().includes('youtu.be') ? 'youtube' : previewPodcast?.audioUrl?.toLowerCase().includes('anchor') || previewPodcast?.audioUrl?.toLowerCase().includes('spotify') ? 'anchor' : 'url');
+                    const st = previewPodcast?.sourceType || (previewPodcast?.audioUrl?.toLowerCase().includes('youtube') || previewPodcast?.audioUrl?.toLowerCase().includes('youtu.be') ? 'youtube' : previewPodcast?.audioUrl?.toLowerCase().includes('anchor') || previewPodcast?.audioUrl?.toLowerCase().includes('spotify') ? 'anchor' : previewPodcast?.audioUrl?.toLowerCase().includes('drive.google') ? 'drive' : 'url');
                     
                     if (st === 'youtube') return (
                         <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border">
@@ -435,6 +449,16 @@ export default function AdminPodcastsClient() {
                                 className="w-full h-full"
                                 frameBorder="0"
                                 scrolling="no"
+                            />
+                        </div>
+                    );
+
+                    if (st === 'drive') return (
+                        <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border">
+                            <iframe 
+                                src={getEmbedUrl(previewPodcast.audioUrl, 'drive')}
+                                className="w-full h-full"
+                                allow="autoplay"
                             />
                         </div>
                     );
