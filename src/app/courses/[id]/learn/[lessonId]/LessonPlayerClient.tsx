@@ -81,7 +81,7 @@ function LessonPlayerContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, profile, isUserLoading } = useUser();
   const { toast } = useToast();
   
   // --- Encuesta de satisfacción ---
@@ -118,12 +118,6 @@ function LessonPlayerContent() {
     return query(collection(db, 'courses', courseId, 'modules'), orderBy('orderIndex', 'asc'));
   }, [db, courseId]);
   const { data: modules, isLoading: isModulesLoading } = useCollection(modulesQuery);
-
-  const profileRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
-  const { data: profile } = useDoc(profileRef);
 
   const progressRef = useMemoFirebase(() => {
     if (!db || !user?.uid || !courseId) return null;
@@ -228,7 +222,7 @@ function LessonPlayerContent() {
     }
   };
 
-  if (isCourseLoading || isLessonLoading || isModulesLoading || isModuleLoading) {
+  if (isCourseLoading || isLessonLoading || isModulesLoading || isModuleLoading || isUserLoading) {
     return <div className="h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-muted-foreground animate-pulse font-medium">Cargando lección...</p></div>;
   }
 
@@ -236,7 +230,6 @@ function LessonPlayerContent() {
 
   const isAcademy = profile?.role === 'academy' || false;
   const isAcademyActive = (isAcademy && profile?.subscription?.status === 'active') || false;
-  const isPremium = profile?.role === 'admin' || !!profile?.isPremiumSubscriber || isAcademyActive || false;
   const isAuthor = (user && course && user.uid === course.instructorId) || false;
   const hasPurchasedCourse = (profile?.purchasedCourses?.includes(courseId)) || false;
   const hasPurchasedModule = (moduleId && profile?.purchasedModules?.includes(moduleId)) || false;
@@ -248,18 +241,33 @@ function LessonPlayerContent() {
   const isModulePremium = !!currentModule?.isPremium;
   const isGuest = !user || user.isAnonymous;
 
-  // Acceso permitido si:
-  // 1. Eres Administrador o el Autor del curso.
-  // 2. Tienes una suscripción Premium activa o ya compraste este curso específico.
-  // 3. Es un curso Gratis Y la lección/módulo NO es Premium.
-  const hasValidAccess = isPremium || isAuthor || hasPurchased || (isFreeCourse && !isLessonPremium && !isModulePremium);
+  const isPremium = useMemo(() => {
+     if (isUserLoading) return false;
+     return profile?.role === 'admin' || profile?.isPremiumSubscriber || profile?.purchasedCourses?.includes(courseId);
+  }, [profile, courseId, isUserLoading]);
 
-  // Bloqueo total si es Premium (lección o módulo) y no tienes acceso especial
-  const finalizedAccess = (isLessonPremium || isModulePremium) ? (isPremium || isAuthor || hasPurchased) : hasValidAccess;
+  const isEnrolled = useMemo(() => {
+    if (isUserLoading) return false;
+    if (!user || !profile) return false;
+    if (profile.role === 'admin') return true;
+    return profile.purchasedCourses?.includes(courseId) || profile.isPremiumSubscriber;
+  }, [user, profile, courseId, isUserLoading]);
+
+  const hasValidAccess = useMemo(() => {
+    if (!course || isUserLoading || isCourseLoading) return false;
+    if (profile?.role === 'admin') return true;
+    return !course.isPaid || isEnrolled || isPremium;
+  }, [course, isEnrolled, isPremium, profile, isUserLoading, isCourseLoading]);
+
+  const finalizedAccess = useMemo(() => {
+    if (isUserLoading || isCourseLoading) return false;
+    if (profile?.role === 'admin') return true;
+    return hasValidAccess;
+  }, [hasValidAccess, isUserLoading, isCourseLoading, profile]);
 
   useEffect(() => {
     async function fetchPremiumData() {
-      if (!db || !finalizedAccess || !courseId || !moduleId || !lessonId) return;
+      if (!db || !finalizedAccess || !courseId || !moduleId || !lessonId || isUserLoading || isCourseLoading || isLessonLoading) return;
       
       setIsLoadingPremium(true);
       try {
@@ -276,7 +284,7 @@ function LessonPlayerContent() {
     }
 
     fetchPremiumData();
-  }, [db, finalizedAccess, courseId, moduleId, lessonId]);
+  }, [db, finalizedAccess, courseId, moduleId, lessonId, isUserLoading, isCourseLoading, isLessonLoading]);
 
   const effectiveVideoUrl = premiumData?.videoUrl || currentLesson?.videoUrl;
   const effectiveDescription = premiumData?.description || currentLesson?.description;

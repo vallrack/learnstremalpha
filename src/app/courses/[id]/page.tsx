@@ -18,7 +18,7 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const id = params.id as string;
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, profile, isUserLoading } = useUser();
   const [showPreview, setShowPreview] = useState(false);
   const [firstLessonPath, setFirstLessonPath] = useState<{ lessonId: string; moduleId: string } | null>(null);
 
@@ -29,11 +29,6 @@ export default function CourseDetailPage() {
 
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
 
-  const profileRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
-  const { data: profile } = useDoc(profileRef);
 
   const progressRef = useMemoFirebase(() => {
     if (!db || !user?.uid || !id) return null;
@@ -57,7 +52,7 @@ export default function CourseDetailPage() {
     loadFirstLesson();
   }, [db, id]);
 
-  if (isCourseLoading) {
+  if (isCourseLoading || isUserLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />

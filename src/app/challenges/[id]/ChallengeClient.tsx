@@ -51,7 +51,7 @@ export default function ChallengeClient() {
   const router = useRouter();
   const challengeId = params.id as string;
   const db = useFirestore();
-  const { user, isUserLoading } = useUser();
+  const { user, profile, isUserLoading } = useUser();
   const { toast } = useToast();
 
   const challengeRef = useMemoFirebase(() => {
@@ -59,12 +59,6 @@ export default function ChallengeClient() {
     return doc(db, 'coding_challenges', challengeId);
   }, [db, challengeId]);
   const { data: challenge, isLoading: isChallengeLoading } = useDoc(challengeRef);
-
-  const profileRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
-  const { data: profile } = useDoc(profileRef);
 
   const [code, setCode] = useState('');
   const [isGameComplete, setIsGameComplete] = useState(false);
@@ -79,7 +73,11 @@ export default function ChallengeClient() {
   }, [challenge]);
 
   const isPremiumLocked = useMemo(() => {
-    if (!challenge || profile?.role === 'admin') return false;
+    // Si los datos base están cargando, no bloqueamos aún para evitar parpadeos
+    if (!challenge || isUserLoading) return false;
+    
+    // Bypass total para administradores
+    if (profile?.role === 'admin') return false;
     
     // Si NO es gratis y NO tienes suscripción ni compra individual, bloqueado.
     const isActuallyFree = challenge.isFree === true;
@@ -87,11 +85,11 @@ export default function ChallengeClient() {
     const hasPurchased = profile?.purchasedChallenges?.includes(challengeId);
 
     return !isActuallyFree && !isSubscriber && !hasPurchased;
-  }, [challenge, profile, challengeId]);
+  }, [challenge, profile, challengeId, isUserLoading]);
 
   useEffect(() => {
     async function fetchPremiumData() {
-      if (!db || isPremiumLocked || !challengeId) return;
+      if (!db || isPremiumLocked || !challengeId || isUserLoading || isChallengeLoading) return;
       
       setIsLoadingPremium(true);
       try {
@@ -109,7 +107,7 @@ export default function ChallengeClient() {
     }
 
     fetchPremiumData();
-  }, [db, isPremiumLocked, challengeId]);
+  }, [db, isPremiumLocked, challengeId, isUserLoading, isChallengeLoading]);
 
   const effectiveSolution = premiumData?.solution || challenge?.solution;
   const effectiveQuestions = premiumData?.questions || challenge?.questions;
@@ -303,7 +301,7 @@ export default function ChallengeClient() {
     }
   };
 
-  if (isUserLoading || isChallengeLoading || (user && !profile)) {
+  if (isUserLoading || isChallengeLoading) {
     return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
