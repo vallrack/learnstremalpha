@@ -30,6 +30,11 @@ export function FirebaseErrorListener() {
         'podcasts', 
         'podcast_comments'
       ];
+      // 3. Silenciar durante el logout activo (algunos listeners tardan en cerrarse)
+      if (typeof window !== 'undefined' && localStorage.getItem('ls_logging_out') === 'true') {
+        return;
+      }
+      
       const errorPath = error.request?.path || '';
       
       if (ignoredPaths.some(p => errorPath.includes(p))) {

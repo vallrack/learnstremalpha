@@ -67,6 +67,7 @@ import { TECH_STACK } from '@/lib/languages';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { VisualH5PBuilder } from './VisualH5PBuilder';
+import { robustJSONParse } from '@/lib/robust-parse';
 import { generateActivities } from '@/ai/flows/generate-activities';
 import { generateWithExternalAI } from '@/app/actions/ai-generation';
 
@@ -204,25 +205,7 @@ export default function AdminChallengesClient() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
 
-      const robustJSONParse = (str: string) => {
-        try {
-          const match = str.match(/\{[\s\S]*\}/);
-          if (!match) return {};
-          let cleanStr = match[0].replace(/\n/g, " ").replace(/\r/g, "").trim();
-          try {
-            return JSON.parse(cleanStr);
-          } catch (e1) {
-            cleanStr = cleanStr.replace(/\\([^"\\\/bfnrtu])/g, '$1'); 
-            return JSON.parse(cleanStr);
-          }
-        } catch (e2) {
-            const match = str.match(/\{[\s\S]*\}/);
-            const rawStr = match ? match[0] : str;
-            return (new Function('return ' + rawStr.replace(/\n/g, " ").replace(/\r/g, "")))();
-        }
-      };
-
-      const resultData = typeof data.result === 'object' ? data.result : robustJSONParse(data.result);
+      const resultData = robustJSONParse(data.result);
       const config = typeof resultData.activityConfig === 'string' ? robustJSONParse(resultData.activityConfig) : resultData.activityConfig || {};
       
       if (type === 'code') {
@@ -270,22 +253,7 @@ export default function AdminChallengesClient() {
         const response = await puter.ai.chat(prompt, { model: 'gpt-4o' }); // Modelo más estable
         const rawPuter = response?.message?.content?.[0]?.text || response?.message?.content || "";
         
-        const robustJSONParse = (str: string) => {
-          try {
-            const match = str.match(/\{[\s\S]*\}/);
-            if (!match) return {};
-            let cleanStr = match[0].replace(/\n/g, " ").replace(/\r/g, "").trim();
-            try { return JSON.parse(cleanStr); } catch (e1) {
-              return JSON.parse(cleanStr.replace(/\\([^"\\\/bfnrtu])/g, '$1'));
-            }
-          } catch (e2) {
-              const match = str.match(/\{[\s\S]*\}/);
-              const rawStr = match ? match[0] : str;
-              return (new Function('return ' + rawStr.replace(/\n/g, " ").replace(/\r/g, "")))();
-          }
-        };
-        
-        const resultData = typeof rawPuter === 'object' ? rawPuter : robustJSONParse(rawPuter);
+        const resultData = robustJSONParse(rawPuter);
         const config = typeof resultData.activityConfig === 'string' ? robustJSONParse(resultData.activityConfig) : resultData.activityConfig || {};
 
         if (type === 'code') { setInitialCode(config.initialCode || ''); setSolution(config.solution || ''); }
@@ -474,14 +442,14 @@ export default function AdminChallengesClient() {
                 Nueva Actividad
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[900px] rounded-[2.5rem] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="lg:max-w-5xl md:max-w-3xl sm:max-w-[900px] w-[95vw] rounded-[2.5rem] max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleFormSubmit}>
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-headline">{editingId ? 'Editar Actividad' : 'Nueva Actividad'}</DialogTitle>
                   <DialogDescription>Configura el formato y los parámetros de acceso.</DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 py-8">
                   <div className="space-y-6">
                     <div className="grid gap-2">
                       <Label className="font-bold">Título</Label>
@@ -639,9 +607,9 @@ export default function AdminChallengesClient() {
                     {['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challengeType) ? (
                       <div className="grid gap-4">
                         <Tabs defaultValue="visual" className="w-full">
-                           <TabsList className="flex flex-col sm:flex-row w-full mb-6 h-auto sm:h-12 bg-slate-200/50 rounded-xl p-1 gap-1">
-                             <TabsTrigger value="visual" className="flex-1 rounded-lg font-bold py-2 sm:py-0 text-[10px] sm:text-xs">🛠️ Editor Visual No-Code</TabsTrigger>
-                             <TabsTrigger value="json" className="flex-1 rounded-lg font-bold py-2 sm:py-0 text-[10px] sm:text-xs truncate px-2">⚙️ Ajustes Avanzados (Opcional)</TabsTrigger>
+                           <TabsList className="flex flex-wrap w-full mb-6 h-auto bg-slate-200/50 rounded-xl p-1 gap-1">
+                             <TabsTrigger value="visual" className="flex-1 min-w-[140px] rounded-lg font-bold py-2 text-[10px] sm:text-xs">🛠️ Editor Visual No-Code</TabsTrigger>
+                             <TabsTrigger value="json" className="flex-1 min-w-[140px] rounded-lg font-bold py-2 text-[10px] sm:text-xs truncate px-2">⚙️ Ajustes Avanzados (Opcional)</TabsTrigger>
                            </TabsList>
                            <TabsContent value="visual" className="bg-white p-6 rounded-[2rem] border shadow-sm">
                                <VisualH5PBuilder type={challengeType} jsonConfig={jsonConfig} setJsonConfig={setJsonConfig} technology={technology} lessonTitle={title} />

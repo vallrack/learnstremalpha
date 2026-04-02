@@ -53,6 +53,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { formatPrice } from '@/lib/currency';
+import { robustJSONParse } from '@/lib/robust-parse';
 
 export default function AdminPodcastsClient() {
   const { user } = useUser();
@@ -213,19 +214,7 @@ export default function AdminPodcastsClient() {
     setIsDialogOpen(true);
   };
 
-  const robustJSONParse = (str: string) => {
-    try {
-      const match = str.match(/\{[\s\S]*\}/);
-      if (!match) return {};
-      let cleanStr = match[0].replace(/\n/g, " ").replace(/\r/g, "").trim();
-      try { return JSON.parse(cleanStr); } catch (e1) {
-        return JSON.parse(cleanStr.replace(/\\([^"\\\/bfnrtu])/g, '$1'));
-      }
-    } catch (e2) {
-        const match = str.match(/\{[\s\S]*\}/);
-        return (new Function('return ' + (match ? match[0] : str)))();
-    }
-  };
+
 
   const handleGenerateAIPodcast = async () => {
     if (!aiPrompt.trim()) {
@@ -257,7 +246,7 @@ export default function AdminPodcastsClient() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
 
-      const resultData = typeof data.result === 'object' ? data.result : robustJSONParse(data.result);
+      const resultData = robustJSONParse(data.result);
       
       if (resultData.title) setTitle(resultData.title);
       if (resultData.description) setDescription(resultData.description);

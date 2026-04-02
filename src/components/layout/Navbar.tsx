@@ -93,10 +93,21 @@ export function Navbar() {
 
   const performFinalLogout = async (signOutPuter: boolean) => {
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ls_logging_out', 'true');
+      }
+
       if (signOutPuter) {
         (window as any).puter?.auth?.signOut();
       }
       await signOut(auth);
+      
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          localStorage.removeItem('ls_logging_out');
+        }, 3000); // 3 segundos de gracia para que se cierren todos los listeners
+      }
+      
       router.push('/');
     } catch (error) {
       console.error("Logout error:", error);
