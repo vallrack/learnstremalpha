@@ -655,11 +655,16 @@ function InstructorPendingDiscussions({ courseIds }: { courseIds: string[] }) {
         const idsToQuery = courseIds.slice(0, 10);
         const snap = await getDocs(query(
           collection(db, 'lesson_discussions'),
-          where('courseId', 'in', idsToQuery),
-          orderBy('createdAt', 'desc'),
-          limit(5)
+          where('courseId', 'in', idsToQuery)
         ));
-        setDiscussions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const sorted = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .sort((a: any, b: any) => {
+            const dateA = a.createdAt?.seconds || 0;
+            const dateB = b.createdAt?.seconds || 0;
+            return dateB - dateA;
+          })
+          .slice(0, 5);
+        setDiscussions(sorted);
       } catch (err) {
         console.error("InstructorPendingDiscussions: Error loading discussions", err);
       } finally {

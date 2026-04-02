@@ -680,8 +680,7 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
     return query(
       collection(db, 'lesson_discussions'),
       where('courseId', '==', courseId),
-      where('lessonId', '==', lessonId),
-      orderBy('createdAt', 'desc')
+      where('lessonId', '==', lessonId)
     );
   }, [db, courseId, lessonId]);
   
@@ -746,7 +745,16 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
     }
   };
 
-  const visibleDiscussions = showAllHistory ? discussions : discussions?.slice(0, 5);
+  const sortedDiscussions = useMemo(() => {
+    if (!discussions) return [];
+    return [...discussions].sort((a, b) => {
+      const dateA = a.createdAt?.seconds || 0;
+      const dateB = b.createdAt?.seconds || 0;
+      return dateB - dateA;
+    });
+  }, [discussions]);
+
+  const visibleDiscussions = showAllHistory ? sortedDiscussions : sortedDiscussions.slice(0, 5);
 
   if (isLoading) return <div className="p-8 text-center animate-pulse"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>;
 
