@@ -14,12 +14,12 @@ import {
   Lock,
   Unlock,
   Video,
-  Link as LinkIcon,
   Upload,
   X,
   Music4,
   Wand2,
-  Sparkles
+  Sparkles,
+  Pencil
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -513,7 +513,7 @@ export default function AdminPodcastsClient() {
                   </TableCell>
                   <TableCell className="text-right pr-8">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9" onClick={() => handleEdit(p)}><Plus className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 text-slate-500 hover:text-primary hover:bg-primary/10" onClick={() => handleEdit(p)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => deleteDocumentNonBlocking(doc(db, 'podcasts', p.id))}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>

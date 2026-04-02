@@ -217,7 +217,8 @@ export default function AdminChallengesClient() {
           }
         } catch (e2) {
             const match = str.match(/\{[\s\S]*\}/);
-            return (new Function('return ' + (match ? match[0] : str)))();
+            const rawStr = match ? match[0] : str;
+            return (new Function('return ' + rawStr.replace(/\n/g, " ").replace(/\r/g, "")))();
         }
       };
 
@@ -279,7 +280,8 @@ export default function AdminChallengesClient() {
             }
           } catch (e2) {
               const match = str.match(/\{[\s\S]*\}/);
-              return (new Function('return ' + (match ? match[0] : str)))();
+              const rawStr = match ? match[0] : str;
+              return (new Function('return ' + rawStr.replace(/\n/g, " ").replace(/\r/g, "")))();
           }
         };
         
@@ -597,7 +599,8 @@ export default function AdminChallengesClient() {
                   
                   <div className="space-y-8 bg-muted/20 p-6 rounded-[2rem] border">
                     {/* AI Wizard Global */}
-                    <div className="mb-6">
+                    {!['quiz', 'dragdrop', 'flashcard', 'swipe'].includes(challengeType) && (
+                      <div className="mb-6">
                        {!isAIOpen ? (
                          <Button type="button" onClick={() => setIsAIOpen(true)} variant="outline" className="w-full h-11 rounded-xl border-orange-200 bg-orange-50/50 text-orange-700 font-bold hover:bg-orange-100 hover:border-orange-300 transition-all gap-2">
                            <Sparkles className="h-4 w-4" />
@@ -605,9 +608,9 @@ export default function AdminChallengesClient() {
                          </Button>
                        ) : (
                          <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5 space-y-3 shadow-lg animate-in zoom-in-95">
-                            <div className="flex items-center justify-between gap-4 mb-2">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 mb-2">
                                 <Label className="text-orange-800 font-bold text-xs uppercase tracking-wider">Instrucciones de la Lección</Label>
-                                <div className="flex bg-orange-100 rounded-lg p-0.5 gap-0.5">
+                                <div className="flex flex-wrap bg-orange-100 rounded-lg p-0.5 gap-0.5">
                                    <button type="button" onClick={() => setAiEngine('gemini')} title="Google Gemini 1.5" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'gemini' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-400 hover:text-orange-600'}`}>GEMINI</button>
                                    <button type="button" onClick={() => setAiEngine('claude')} title="Anthropic Claude (Puter)" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'claude' ? 'bg-white text-indigo-600 shadow-sm' : 'text-orange-400 hover:text-indigo-600'}`}>CLAUDE</button>
                                    <button type="button" onClick={() => setAiEngine('deepseek')} title="DeepSeek V3" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'deepseek' ? 'bg-white text-blue-600 shadow-sm' : 'text-orange-400 hover:text-blue-600'}`}>DEEPSEEK</button>
@@ -631,6 +634,7 @@ export default function AdminChallengesClient() {
                          </div>
                        )}
                     </div>
+                    )}
 
                     {['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challengeType) ? (
                       <div className="grid gap-4">
