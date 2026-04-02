@@ -159,7 +159,7 @@ service cloud.firestore {
 
     // ⭐ FORO DE DISCUSIÓN (Q&A por Lección)
     match /lesson_discussions/{discussionId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
