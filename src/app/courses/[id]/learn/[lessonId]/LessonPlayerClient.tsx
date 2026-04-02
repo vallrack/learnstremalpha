@@ -281,17 +281,25 @@ function LessonPlayerContent() {
     fetchPremiumData();
   }, [db, finalizedAccess, courseId, moduleId, lessonId, isUserLoading, isCourseLoading, isLessonLoading]);
 
+  const effectiveVideoUrl = premiumData?.videoUrl || currentLesson?.videoUrl;
+  const effectiveDescription = premiumData?.description || currentLesson?.description;
+  const effectiveQuestions = premiumData?.questions || currentLesson?.questions;
+  const effectiveChallengeId = premiumData?.challengeId || currentLesson?.challengeId;
+
+  const formatVideoUrl = (url: string) => {
+    if (!url) return '';
+    if (url.includes('youtube.com/watch?v=')) return url.replace('watch?v=', 'embed/');
+    if (url.includes('youtu.be/')) return `https://www.youtube.com/embed/${url.split('/').pop()?.split('?')[0]}`;
+    return url;
+  };
+
+  const videoSource = effectiveVideoUrl || (currentLesson?.title?.startsWith('http') ? currentLesson.title : null);
+
   if (isCourseLoading || isLessonLoading || isModulesLoading || isModuleLoading || isUserLoading) {
     return <div className="h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="text-muted-foreground animate-pulse font-medium">Cargando lección...</p></div>;
   }
 
   if (!course || !currentLesson) return <div className="h-screen flex items-center justify-center">No encontrado</div>;
-
-
-  const effectiveVideoUrl = premiumData?.videoUrl || currentLesson?.videoUrl;
-  const effectiveDescription = premiumData?.description || currentLesson?.description;
-  const effectiveQuestions = premiumData?.questions || currentLesson?.questions;
-  const effectiveChallengeId = premiumData?.challengeId || currentLesson?.challengeId;
 
   if (!finalizedAccess) {
     return (
@@ -351,15 +359,6 @@ function LessonPlayerContent() {
       </div>
     );
   }
-
-  const videoSource = effectiveVideoUrl || (currentLesson.title.startsWith('http') ? currentLesson.title : null);
-
-  const formatVideoUrl = (url: string) => {
-    if (!url) return '';
-    if (url.includes('youtube.com/watch?v=')) return url.replace('watch?v=', 'embed/');
-    if (url.includes('youtu.be/')) return `https://www.youtube.com/embed/${url.split('/').pop()?.split('?')[0]}`;
-    return url;
-  };
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden relative">

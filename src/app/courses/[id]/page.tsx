@@ -60,6 +60,8 @@ function CourseDetailContent() {
     loadFirstLesson();
   }, [db, id]);
 
+  // --- FINAL RENDER DECISION ---
+  
   if (isCourseLoading || isUserLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
