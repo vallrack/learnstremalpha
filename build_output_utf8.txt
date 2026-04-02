@@ -1,0 +1,68 @@
+﻿
+> nextn@0.1.0 build
+> cross-env NODE_ENV=production next build
+
+   ▲ Next.js 15.5.9
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 14.3s
+   Linting and checking validity of types ...
+node.exe : Failed to 
+compile.
+En línea: 1 Carácter: 1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (F  
+  ailed to compile.:Str   
+ ing) [], RemoteExcept    
+ion
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+
+./src/app/checkout/page.ts
+x:240:38
+Type error: 'user' is 
+possibly 'null'.
+
+[0m [90m 238 |[39m     
+                courseId 
+[33m?[39m [32m"Acceso 
+de por vida al 
+curso"[39m [33m:[39m 
+ [90m 239 |[39m         
+            [32m"Acceso 
+vitalicio a cursos y 
+desafíos 
+IA"[39m[33m,[39m
+[31m[1m>[22m[39m[90m 
+240 |[39m         
+invoice[33m:[39m [32m`L
+S-${Date.now()}-${user.uid
+.substring(0, 
+5)}`[39m[33m,[39m
+ [90m     |[39m         
+                          
+   [31m[1m^[22m[39m
+ [90m 241 |[39m         
+currency[33m:[39m finali
+zedCurrency[33m.[39mtoLo
+werCase()[33m,[39m
+ [90m 242 |[39m         
+amount[33m:[39m finalPri
+ce[33m.[39mtoString()[3
+3m,[39m
+ [90m 243 |[39m         
+tax_base[33m:[39m [32m"
+0"[39m[33m,[39m[0m
+Next.js build worker 
+exited with code: 1 and 
+signal: null

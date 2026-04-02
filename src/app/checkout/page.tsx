@@ -237,7 +237,7 @@ function CheckoutContent() {
                     moduleId ? "Acceso completo al módulo premium" :
                     courseId ? "Acceso de por vida al curso" : 
                     "Acceso vitalicio a cursos y desafíos IA",
-        invoice: `LS-${Date.now()}-${user.uid.substring(0, 5)}`,
+        invoice: `LS-${Date.now()}-${finalUserId.substring(0, 5)}`,
         currency: finalizedCurrency.toLowerCase(),
         amount: finalPrice.toString(),
         tax_base: "0",
