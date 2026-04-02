@@ -133,9 +133,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config) => {
-    config.resolve.alias['react'] = path.resolve('./node_modules/react');
-    config.resolve.alias['react-dom'] = path.resolve('./node_modules/react-dom');
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.alias['react'] = path.resolve('./node_modules/react');
+      config.resolve.alias['react-dom'] = path.resolve('./node_modules/react-dom');
+    }
     return config;
   },
 };

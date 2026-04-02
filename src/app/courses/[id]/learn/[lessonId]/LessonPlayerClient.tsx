@@ -69,11 +69,7 @@ import { DragDropSnippets } from '@/components/challenges/DragDropSnippets';
 import { SwipeCards } from '@/components/challenges/SwipeCards';
 
 export default function LessonPlayerClient() {
-  return (
-    <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
-      <LessonPlayerContent />
-    </Suspense>
-  );
+  return <LessonPlayerContent />;
 }
 
 function LessonPlayerContent() {
@@ -93,7 +89,7 @@ function LessonPlayerContent() {
 
   const courseId = params.id as string;
   const lessonId = params.lessonId as string;
-  const moduleId = searchParams.get('moduleId');
+  const moduleId = searchParams.get('moduleId') ?? '';
 
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -103,12 +99,14 @@ function LessonPlayerContent() {
 
   const lessonRef = useMemoFirebase(() => {
     if (!db || !courseId || !moduleId || !lessonId) return null;
+    if (moduleId.length === 0) return null;
     return doc(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId);
   }, [db, courseId, moduleId, lessonId]);
   const { data: currentLesson, isLoading: isLessonLoading } = useDoc(lessonRef);
   
   const moduleRef = useMemoFirebase(() => {
     if (!db || !courseId || !moduleId) return null;
+    if (moduleId.length === 0) return null;
     return doc(db, 'courses', courseId, 'modules', moduleId);
   }, [db, courseId, moduleId]);
   const { data: currentModule, isLoading: isModuleLoading } = useDoc(moduleRef);
