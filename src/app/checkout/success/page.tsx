@@ -36,26 +36,39 @@ function SuccessContent() {
       }
 
       try {
-        if (user?.uid) {
-          const result = await verifyEpaycoTransaction(ref_payco, user.uid, 'premium');
-          if (result.success) {
+        // Obtenemos la referencia de ePayco primero para ver qué userId tiene
+        const response = await fetch(`https://secure.epayco.co/validation/v1/reference/${ref_payco}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          const userIdFromTransaction = result.data.x_extra1; // extra1 es donde guardamos finalUserId
+          
+          const resultVerify = await verifyEpaycoTransaction(ref_payco, userIdFromTransaction, 'premium');
+          
+          if (resultVerify.success) {
             setStatus('success');
+            if (userIdFromTransaction.startsWith('guest:')) {
+               localStorage.setItem('guest_email', userIdFromTransaction.split(':')[1]);
+            }
           } else {
             setStatus('error');
-            setErrorMessage(result.message || 'La transacción no fue aprobada.');
+            setErrorMessage(resultVerify.message || 'La transacción no fue aprobada.');
           }
+        } else {
+          setStatus('error');
+          setErrorMessage('No se pudo validar la referencia con ePayco.');
         }
       } catch (error) {
-        console.error('Error in Server Action invocation:', error);
+        console.error('Error in verification:', error);
         setStatus('error');
         setErrorMessage('Hubo un problema al comunicar con el servidor para verificar el pago.');
       }
     }
 
-    if (!isUserLoading && user) {
+    if (!isUserLoading) {
       verifyPayment();
     }
-  }, [user, isUserLoading, ref_payco]);
+  }, [isUserLoading, ref_payco]);
 
   if (status === 'loading') {
     return (

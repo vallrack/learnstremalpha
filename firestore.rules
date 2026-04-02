@@ -30,13 +30,13 @@ service cloud.firestore {
     }
 
     function hasPurchased(collectionName, docId) {
-      if (!isSignedIn()) return false;
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return (collectionName == 'courses' && docId in (userData.purchasedCourses || [])) ||
-             (collectionName == 'modules' && docId in (userData.purchasedModules || [])) ||
-             (collectionName == 'lessons' && docId in (userData.purchasedLessons || [])) ||
-             (collectionName == 'podcasts' && docId in (userData.purchasedPodcasts || [])) ||
-             (collectionName == 'coding_challenges' && docId in (userData.purchasedChallenges || []));
+      return isSignedIn() && (
+        (collectionName == 'courses' && docId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('purchasedCourses', [])) ||
+        (collectionName == 'modules' && docId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('purchasedModules', [])) ||
+        (collectionName == 'lessons' && docId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('purchasedLessons', [])) ||
+        (collectionName == 'podcasts' && docId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('purchasedPodcasts', [])) ||
+        (collectionName == 'coding_challenges' && docId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('purchasedChallenges', []))
+      );
     }
 
     // ⭐ CONFIGURACIÓN GLOBAL (Público Lectura)

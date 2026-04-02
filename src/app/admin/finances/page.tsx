@@ -37,6 +37,7 @@ export default function FinancesPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'paid'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'course' | 'podcast' | 'challenge' | 'premium'>('all');
 
   // --- Pagination ---
   const [currentPage, setCurrentPage] = useState(0);
@@ -138,6 +139,8 @@ export default function FinancesPage() {
       const q = searchQuery.toLowerCase();
       const matchSearch = !q || (t.courseTitle || '').toLowerCase().includes(q) ||
         (instructorNames[t.instructorId] || '').toLowerCase().includes(q) ||
+        (t.type || '').toLowerCase().includes(q) ||
+        (t.userEmail || '').toLowerCase().includes(q) ||
         (t.instructorId || '').toLowerCase().includes(q);
 
       let matchDate = true;
@@ -150,9 +153,10 @@ export default function FinancesPage() {
       }
 
       const matchStatus = statusFilter === 'all' || (statusFilter === 'paid' ? t.paidOut : !t.paidOut);
-      return matchSearch && matchDate && matchStatus;
+      const matchType = typeFilter === 'all' || t.type === typeFilter;
+      return matchSearch && matchDate && matchStatus && matchType;
     });
-  }, [transactions, searchQuery, dateFrom, dateTo, statusFilter, instructorNames]);
+  }, [transactions, searchQuery, dateFrom, dateTo, statusFilter, typeFilter, instructorNames]);
 
   // --- Pagination ---
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
@@ -329,16 +333,18 @@ export default function FinancesPage() {
                       <Input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(0); }} className="pl-8 rounded-xl h-10 text-xs w-36" />
                     </div>
                     <Input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(0); }} className="rounded-xl h-10 text-xs w-36" />
-                    <Select value={statusFilter} onValueChange={(v: any) => { setStatusFilter(v); setCurrentPage(0); }}>
-                      <SelectTrigger className="rounded-xl h-10 w-32"><SelectValue /></SelectTrigger>
+                    <Select value={typeFilter} onValueChange={(v: any) => { setTypeFilter(v); setCurrentPage(0); }}>
+                      <SelectTrigger className="rounded-xl h-10 w-32"><SelectValue placeholder="Tipo" /></SelectTrigger>
                       <SelectContent className="rounded-xl">
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="pending">Pendiente</SelectItem>
-                        <SelectItem value="paid">Transferido</SelectItem>
+                        <SelectItem value="all">Todos Tipos</SelectItem>
+                        <SelectItem value="course">Cursos</SelectItem>
+                        <SelectItem value="podcast">Podcasts</SelectItem>
+                        <SelectItem value="challenge">Retos</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
                       </SelectContent>
                     </Select>
-                    {(searchQuery || dateFrom || dateTo || statusFilter !== 'all') && (
-                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => { setSearchQuery(''); setDateFrom(''); setDateTo(''); setStatusFilter('all'); setCurrentPage(0); }}>
+                    {(searchQuery || dateFrom || dateTo || statusFilter !== 'all' || typeFilter !== 'all') && (
+                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => { setSearchQuery(''); setDateFrom(''); setDateTo(''); setStatusFilter('all'); setTypeFilter('all'); setCurrentPage(0); }}>
                         <X className="h-4 w-4" />
                       </Button>
                     )}
@@ -362,7 +368,8 @@ export default function FinancesPage() {
                       <TableHeader className="bg-slate-50/50">
                         <TableRow>
                           <TableHead className="pl-4">Fecha</TableHead>
-                          <TableHead>Curso</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Concepto</TableHead>
                           {isAdmin && <TableHead>Instructor</TableHead>}
                           <TableHead className="text-right">Bruto</TableHead>
                           <TableHead className="text-right">Plataforma</TableHead>
@@ -382,7 +389,18 @@ export default function FinancesPage() {
 
                           return (
                             <TableRow key={t.id} className="border-slate-100 hover:bg-slate-50/50">
-                              <TableCell className="font-medium text-xs whitespace-nowrap pl-4 text-muted-foreground">{dateStr}</TableCell>
+                              <TableCell className="font-medium text-[10px] whitespace-nowrap pl-4 text-muted-foreground">{dateStr}</TableCell>
+                              <TableCell>
+                                {t.type === 'podcast' ? (
+                                  <Badge className="bg-blue-50 text-blue-700 border-blue-200 border text-[10px] rounded-lg">Podcast</Badge>
+                                ) : t.type === 'challenge' ? (
+                                  <Badge className="bg-purple-50 text-purple-700 border-purple-200 border text-[10px] rounded-lg">Reto</Badge>
+                                ) : t.type === 'premium' ? (
+                                  <Badge className="bg-amber-50 text-amber-700 border-amber-200 border text-[10px] rounded-lg">Premium</Badge>
+                                ) : (
+                                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 border text-[10px] rounded-lg">Curso</Badge>
+                                )}
+                              </TableCell>
                               <TableCell className="max-w-[130px] truncate text-sm font-medium" title={t.courseTitle}>{t.courseTitle || 'Desconocido'}</TableCell>
                               {isAdmin && (
                                 <TableCell>

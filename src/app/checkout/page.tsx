@@ -62,6 +62,7 @@ function CheckoutContent() {
     return doc(db, 'users', user.uid);
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
+  const [guestEmail, setGuestEmail] = useState('');
 
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -114,15 +115,15 @@ function CheckoutContent() {
   const finalizedBasePrice = Number(BASE_PRICE) || 0;
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    // Solo redirigir si NO es un podcast y no hay usuario
+    if (!isUserLoading && !user && !podcastId) {
       router.push('/login');
     }
-    // Only redirect if they are trying to buy Premium, but they already have it.
-    // If they are buying a specific course, we shouldn't redirect them unless they already own this course (which we'll check on the success page or elsewhere).
-    if (!courseId && profile?.isPremiumSubscriber) {
+    // Si ya es premium, redirigir al dashboard (a menos que compre un curso/podcast específico)
+    if (!courseId && !podcastId && !challengeId && profile?.isPremiumSubscriber) {
       router.push('/dashboard');
     }
-  }, [user, isUserLoading, router, profile, courseId]);
+  }, [user, isUserLoading, router, profile, courseId, podcastId, challengeId]);
 
   // Safety check to avoid ePayco script stuck loading
   useEffect(() => {
@@ -178,8 +179,16 @@ function CheckoutContent() {
   };
 
   const handleStartPayment = () => {
-    if (!user?.uid || !user.email) {
-      toast({ variant: "destructive", title: "Error de usuario", description: "Debes tener un correo asociado para pagar." });
+    const finalEmail = user?.email || guestEmail;
+    const finalUserId = user?.uid || `guest:${guestEmail}`;
+
+    if (!finalEmail) {
+      toast({ variant: "destructive", title: "Email requerido", description: "Por favor ingresa tu correo para recibir el acceso." });
+      return;
+    }
+
+    if (!finalEmail.includes('@')) {
+      toast({ variant: "destructive", title: "Email inválido", description: "Ingresa un correo electrónico válido." });
       return;
     }
     
@@ -237,9 +246,9 @@ function CheckoutContent() {
         lang: "es",
         external: "false",
         response: `${window.location.origin}/checkout/success`,
-        name_billing: user.displayName || `Estudiante ${name}`,
-        email_billing: user.email,
-        extra1: user.uid, 
+        name_billing: user?.displayName || (guestEmail && guestEmail.includes('@') ? guestEmail.split('@')[0] : `Estudiante ${name}`),
+        email_billing: finalEmail,
+        extra1: finalUserId, 
         extra2: appliedCoupon?.id || "none",
         extra3: `${courseId || 'none'}|${moduleId || 'none'}|${lessonId || 'none'}|${challengeId || 'none'}|${podcastId || 'none'}`,
       };
@@ -357,6 +366,27 @@ function CheckoutContent() {
               </div>
               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Un solo pago para siempre</p>
             </div>
+
+            {!user && (
+              <div className="p-8 bg-white rounded-[2.5rem] border-2 border-primary/20 shadow-xl space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex items-center gap-3 text-primary">
+                  <div className="p-2 bg-primary/10 rounded-xl"><CheckCircle2 className="h-5 w-5" /></div>
+                  <h3 className="font-bold">Compra como invitado</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">No necesitas registrarte. Ingresa tu email para recibir el acceso instantáneo tras el pago.</p>
+                <div className="space-y-2">
+                  <Label htmlFor="guestEmail" className="font-bold ml-1">Tu Correo Electrónico</Label>
+                  <Input 
+                    id="guestEmail"
+                    type="email" 
+                    placeholder="tu@email.com" 
+                    value={guestEmail} 
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    className="rounded-xl h-12 border-slate-200 focus:border-primary transition-all"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white">

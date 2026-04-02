@@ -12,13 +12,17 @@ export async function verifyEpaycoTransaction(
     return { success: false, message: 'Faltan parámetros requeridos.' };
   }
 
+  const isGuest = userId.startsWith('guest:');
+  const guestEmail = isGuest ? userId.split(':')[1] : null;
+  const actualUserId = isGuest ? null : userId;
+
   try {
     const response = await fetch(`https://secure.epayco.co/validation/v1/reference/${ref_payco}`);
     const result = await response.json();
 
     if (result.success && result.data.x_cod_response === 1) {
       // Transacción Aceptada
-      const userRef = adminDb.collection('users').doc(userId);
+      const userRef = actualUserId ? adminDb.collection('users').doc(actualUserId) : null;
       
       const updateData: any = {
         lastEpaycoRef: ref_payco
@@ -28,7 +32,7 @@ export async function verifyEpaycoTransaction(
         const extra3 = result.data.x_extra3;
         
         if (extra3 && extra3 !== 'none' && extra3 !== 'premium') {
-          // Nueva lógica: extra3 puede ser "courseId|moduleId|lessonId|challengeId"
+          // Nueva lógica: extra3 puede ser "courseId|moduleId|lessonId|challengeId|podcastId"
           const parts = extra3.split('|');
           const isComplex = parts.length >= 3;
           
@@ -39,6 +43,7 @@ export async function verifyEpaycoTransaction(
           const podcastId = parts.length === 5 ? parts[4] : 'none';
 
           const amount = Number(result.data.x_amount);
+          const finalEmail = extraData?.userEmail || result.data.x_customer_email || guestEmail || '';
           
           if (challengeId !== 'none') {
             // COMPRA DE DESAFÍO INDEPENDIENTE
@@ -46,15 +51,17 @@ export async function verifyEpaycoTransaction(
             if (challengeDoc.exists) {
               const challengeData = challengeDoc.data();
               const instructorId = challengeData?.instructorId;
-              const revenueShare = 70; // Por defecto para desafíos externos
+              const revenueShare = 70;
               
               const instructorCut = Math.floor(amount * (revenueShare / 100));
               const adminCut = amount - instructorCut;
 
               await adminDb.collection('transactions').add({
-                userId,
-                userEmail: extraData?.userEmail || result.data.x_customer_email || '',
+                userId: actualUserId,
+                isGuest,
+                userEmail: finalEmail,
                 challengeId,
+                type: 'challenge', // Diferenciación de tipo
                 courseTitle: `Desafío: ${challengeData?.title || 'Sin título'}`,
                 instructorId,
                 amount,
@@ -65,11 +72,21 @@ export async function verifyEpaycoTransaction(
                 status: 'completed'
               });
 
-              const userSnap = await userRef.get();
-              const userData = userSnap.data();
-              const currentChallenges = userData?.purchasedChallenges || [];
-              if (!currentChallenges.includes(challengeId)) {
-                updateData.purchasedChallenges = [...currentChallenges, challengeId];
+              if (userRef) {
+                const userSnap = await userRef.get();
+                const userData = userSnap.data();
+                const currentChallenges = userData?.purchasedChallenges || [];
+                if (!currentChallenges.includes(challengeId)) {
+                  updateData.purchasedChallenges = [...currentChallenges, challengeId];
+                }
+              } else if (isGuest) {
+                // Registrar acceso de invitado
+                await adminDb.collection('guest_access').add({
+                  email: finalEmail,
+                  challengeId,
+                  createdAt: new Date(),
+                  ref_payco
+                });
               }
             }
           } else if (podcastId !== 'none') {
@@ -78,15 +95,17 @@ export async function verifyEpaycoTransaction(
             if (podcastDoc.exists) {
               const podcastData = podcastDoc.data();
               const instructorId = podcastData?.instructorId;
-              const revenueShare = 70; // Por defecto para podcasts
+              const revenueShare = 70;
               
               const instructorCut = Math.floor(amount * (revenueShare / 100));
               const adminCut = amount - instructorCut;
 
               await adminDb.collection('transactions').add({
-                userId,
-                userEmail: extraData?.userEmail || result.data.x_customer_email || '',
+                userId: actualUserId,
+                isGuest,
+                userEmail: finalEmail,
                 podcastId,
+                type: 'podcast', // Diferenciación de tipo
                 courseTitle: `Podcast: ${podcastData?.title || 'Sin título'}`,
                 instructorId,
                 amount,
@@ -97,11 +116,21 @@ export async function verifyEpaycoTransaction(
                 status: 'completed'
               });
 
-              const userSnap = await userRef.get();
-              const userData = userSnap.data();
-              const currentPodcasts = userData?.purchasedPodcasts || [];
-              if (!currentPodcasts.includes(podcastId)) {
-                updateData.purchasedPodcasts = [...currentPodcasts, podcastId];
+              if (userRef) {
+                const userSnap = await userRef.get();
+                const userData = userSnap.data();
+                const currentPodcasts = userData?.purchasedPodcasts || [];
+                if (!currentPodcasts.includes(podcastId)) {
+                  updateData.purchasedPodcasts = [...currentPodcasts, podcastId];
+                }
+              } else if (isGuest) {
+                // Registrar acceso de invitado para Podcast
+                await adminDb.collection('guest_access').add({
+                  email: finalEmail,
+                  podcastId,
+                  createdAt: new Date(),
+                  ref_payco
+                });
               }
             }
           } else {
@@ -121,9 +150,11 @@ export async function verifyEpaycoTransaction(
               else if (moduleId !== 'none') itemName = `Módulo vinculado a: ${itemName}`;
 
               await adminDb.collection('transactions').add({
-                userId,
-                userEmail: extraData?.userEmail || result.data.x_customer_email || '',
+                userId: actualUserId,
+                isGuest,
+                userEmail: finalEmail,
                 courseId,
+                type: 'course', // Diferenciación de tipo
                 moduleId: moduleId !== 'none' ? moduleId : null,
                 lessonId: lessonId !== 'none' ? lessonId : null,
                 courseTitle: itemName,
@@ -136,35 +167,48 @@ export async function verifyEpaycoTransaction(
                 status: 'completed'
               });
 
-              const userSnap = await userRef.get();
-              const userData = userSnap.data();
-              
-              if (lessonId !== 'none') {
-                const currentLessons = userData?.purchasedLessons || [];
-                if (!currentLessons.includes(lessonId)) {
-                  updateData.purchasedLessons = [...currentLessons, lessonId];
+              if (userRef) {
+                const userSnap = await userRef.get();
+                const userData = userSnap.data();
+                
+                if (lessonId !== 'none') {
+                  const currentLessons = userData?.purchasedLessons || [];
+                  if (!currentLessons.includes(lessonId)) {
+                    updateData.purchasedLessons = [...currentLessons, lessonId];
+                  }
+                } else if (moduleId !== 'none') {
+                  const currentModules = userData?.purchasedModules || [];
+                  if (!currentModules.includes(moduleId)) {
+                    updateData.purchasedModules = [...currentModules, moduleId];
+                  }
+                } else {
+                  const currentPurchased = userData?.purchasedCourses || [];
+                  if (!currentPurchased.includes(courseId)) {
+                    updateData.purchasedCourses = [...currentPurchased, courseId];
+                  }
                 }
-              } else if (moduleId !== 'none') {
-                const currentModules = userData?.purchasedModules || [];
-                if (!currentModules.includes(moduleId)) {
-                  updateData.purchasedModules = [...currentModules, moduleId];
-                }
-              } else {
-                const currentPurchased = userData?.purchasedCourses || [];
-                if (!currentPurchased.includes(courseId)) {
-                  updateData.purchasedCourses = [...currentPurchased, courseId];
-                }
+              } else if (isGuest) {
+                 await adminDb.collection('guest_access').add({
+                    email: finalEmail,
+                    courseId,
+                    moduleId: moduleId !== 'none' ? moduleId : null,
+                    lessonId: lessonId !== 'none' ? lessonId : null,
+                    createdAt: new Date(),
+                    ref_payco
+                 });
               }
             }
           }
-          await userRef.update(updateData);
+          if (userRef) await userRef.update(updateData);
         } else {
           // Suscripción Premium Global Vitalicia
-          updateData.isPremiumSubscriber = true;
-          updateData.premiumUpdatedAt = new Date().toISOString();
-          await userRef.update(updateData);
+          if (userRef) {
+            updateData.isPremiumSubscriber = true;
+            updateData.premiumUpdatedAt = new Date().toISOString();
+            await userRef.update(updateData);
+          }
         }
-      } else if (type === 'instructor') {
+      } else if (type === 'instructor' && userRef) {
         updateData.instructorStatus = 'pending';
         // Creación segura de solicitud de instructor
         const applicationData = {

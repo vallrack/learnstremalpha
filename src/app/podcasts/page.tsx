@@ -37,6 +37,7 @@ export default function PodcastsPage() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [selectedPodcast, setSelectedPodcast] = useState<any>(null);
+  const [guestPurchases, setGuestPurchases] = useState<string[]>([]);
 
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -72,6 +73,26 @@ export default function PodcastsPage() {
     }
   }, [podcasts]);
 
+  // Chequeo de acceso para invitados (Guest Access)
+  useEffect(() => {
+    async function checkGuestAccess() {
+      if (user || !db) return;
+      const guestEmail = localStorage.getItem('guest_email');
+      if (!guestEmail) return;
+
+      try {
+        const { getDocs, query, where, collection } = await import('firebase/firestore');
+        const q = query(collection(db, 'guest_access'), where('email', '==', guestEmail));
+        const snap = await getDocs(q);
+        const purchasedIds = snap.docs.map(d => d.data().podcastId).filter(Boolean);
+        setGuestPurchases(purchasedIds);
+      } catch (err) {
+        console.error("Error checking guest access:", err);
+      }
+    }
+    checkGuestAccess();
+  }, [user, db]);
+
   const categories = ['Todas', 'Tecnología', 'Carrera', 'Englishtech', 'Mentalidad'];
 
   const filteredPodcasts = (podcasts || []).filter(p => {
@@ -86,7 +107,11 @@ export default function PodcastsPage() {
   const hasAccess = (podcast: any) => {
     if (!podcast) return false;
     if (podcast.isFree || profile?.role === 'admin' || profile?.isPremiumSubscriber) return true;
-    return profile?.purchasedPodcasts?.includes(podcast.id);
+    
+    const userHasIt = profile?.purchasedPodcasts?.includes(podcast.id);
+    const guestHasIt = guestPurchases.includes(podcast.id);
+    
+    return userHasIt || guestHasIt;
   };
 
   return (
