@@ -426,10 +426,17 @@ export default function AdminPodcastsClient() {
                 <DialogTitle className="text-xl font-headline flex items-center gap-2">
                     <Play className="h-5 w-5 text-primary" /> Vista Previa: {previewPodcast?.title}
                 </DialogTitle>
+                <DialogDescription className="sr-only">
+                    Reproductor embebido de la vista previa del podcast.
+                </DialogDescription>
             </DialogHeader>
             <div className="py-6 flex flex-col items-center">
                 {(() => {
-                    const st = previewPodcast?.sourceType || (previewPodcast?.audioUrl?.toLowerCase().includes('youtube') || previewPodcast?.audioUrl?.toLowerCase().includes('youtu.be') ? 'youtube' : previewPodcast?.audioUrl?.toLowerCase().includes('anchor') || previewPodcast?.audioUrl?.toLowerCase().includes('spotify') ? 'anchor' : previewPodcast?.audioUrl?.toLowerCase().includes('drive.google') ? 'drive' : 'url');
+                    let st = previewPodcast?.sourceType || 'url';
+                    const url = previewPodcast?.audioUrl?.toLowerCase() || '';
+                    if (url.includes('drive.google.com')) st = 'drive';
+                    else if (url.includes('youtube.com') || url.includes('youtu.be')) st = 'youtube';
+                    else if (url.includes('anchor.fm') || url.includes('spotify.com')) st = 'anchor';
                     
                     if (st === 'youtube') return (
                         <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border">
