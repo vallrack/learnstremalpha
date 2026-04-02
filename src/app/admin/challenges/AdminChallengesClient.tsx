@@ -175,6 +175,7 @@ export default function AdminChallengesClient() {
           "activityTitle": "título creativo", 
           "activityDescription": "descripción breve" 
         }
+      - IMPORTANTE: NO uses caracteres de escape como \n o \t dentro del JSON. Retorna el JSON en una sola línea si es necesario para evitar errores de parseo.
       - Para activityConfig, sigue el esquema de ${type}:
         flashcard: { cards: [{front, back}] }
         swipe: { deck: [{statement, isTrue}] }
@@ -182,9 +183,9 @@ export default function AdminChallengesClient() {
         quiz: { questions: [{question, options, correctAnswer}] }
         wordsearch: { words: ["PALABRA1", "PALABRA2"] }
         dragdrop: { template: "texto con {{{hueco}}}", snippets: [{id, text}], correctMapping: {hueco: id} }
-        code: { initialCode, solution }
-        interview: { targetRole, targetLanguage, solution }
       - IMPORTANTE: activityConfig debe ser un objeto, no un string.
+      - NO uses saltos de línea reales dentro de las cadenas del JSON (usa \n en su lugar).
+      - Retorna el JSON MINIFICADO (en una sola línea si es posible) para evitar errores de parseo.
       - Todo en ESPAÑOL LATINO.`;
 
       // Llamada al nuevo API Route unificado
@@ -203,8 +204,26 @@ export default function AdminChallengesClient() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
 
-      // Parsear resultado
-      const resultData = typeof data.result === 'string' ? JSON.parse(data.result.match(/\{[\s\S]*\}/)?.[0] || '{}') : data.result;
+      const cleanJSON = (str: string) => {
+        try {
+          // 1. Extraer bloque que parece JSON
+          const match = str.match(/\{[\s\S]*\}/);
+          if (!match) return "{}";
+          let json = match[0];
+          
+          // 2. Limpieza agresiva de caracteres invisibles y saltos de línea reales dentro de strings
+          json = json
+            .replace(/[\x00-\x1F\x7F]/g, "") // Elimina caracteres de control ASCII
+            .replace(/\n/g, " ")             // Convierte saltos de línea reales en espacios
+            .replace(/\r/g, "")              // Elimina retornos de carro
+            .replace(/\\+"/g, '"')           // Arregla comillas doblemente escapadas
+            .replace(/\\'/g, "'");           // Arregla comillas simples escapadas
+            
+          return json;
+        } catch { return "{}"; }
+      };
+
+      const resultData = JSON.parse(cleanJSON(typeof data.result === 'string' ? data.result : JSON.stringify(data.result)));
       const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
       
       if (type === 'code') {
@@ -226,7 +245,7 @@ export default function AdminChallengesClient() {
         setQuestions(mappedQuestions);
       } else if (type === 'wordsearch') {
         const rawWords = config.words || [];
-        setWords(rawWords.map((w: string) => w.toUpperCase()));
+        setWords(rawWords.map((w: string) => (w || '').toString().toUpperCase()));
       }
 
       if (resultData.activityTitle) setTitle(resultData.activityTitle);
@@ -249,12 +268,15 @@ export default function AdminChallengesClient() {
         CONTENIDO: ${aiLessonContent}
         REGLAS: Retorna UNICAMENTE un objeto JSON con estructura: { "activityConfig": {objeto}, "activityTitle": "...", "activityDescription": "..." }`;
 
-        const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet-20240620' });
-        const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("Puter fallback failed to return JSON.");
+        const response = await puter.ai.chat(prompt, { model: 'claude-3-5-sonnet' }); // Modelo más estable
+        const rawPuter = response?.message?.content?.[0]?.text || response?.message?.content || "";
         
-        const resultData = JSON.parse(jsonMatch[0]);
+        const cleanJSON = (str: string) => {
+          const match = str.match(/\{[\s\S]*\}/);
+          return match ? match[0].replace(/[\x00-\x1F\x7F]/g, "").replace(/\n/g, " ").replace(/\r/g, "") : "{}";
+        };
+        
+        const resultData = JSON.parse(cleanJSON(rawPuter));
         const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
 
         if (type === 'code') { setInitialCode(config.initialCode || ''); setSolution(config.solution || ''); }
@@ -268,7 +290,7 @@ export default function AdminChallengesClient() {
           }));
           setQuestions(mapped);
         }
-        else if (type === 'wordsearch') { setWords((config.words || []).map((w: any) => String(w).toUpperCase())); }
+        else if (type === 'wordsearch') { setWords((config.words || []).map((w: any) => (w || '').toString().toUpperCase())); }
         
         if (resultData.activityTitle) setTitle(resultData.activityTitle);
         if (resultData.activityDescription) setDescription(resultData.activityDescription);

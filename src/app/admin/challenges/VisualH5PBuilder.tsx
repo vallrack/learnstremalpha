@@ -56,50 +56,7 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
     setJsonConfig(JSON.stringify(newData, null, 2));
   };
 
-  // AI Generation Panel (rendered at the top for supported types)
-  const AIPanel = supportedAITypes.includes(type) ? (
-    <div className="mb-6">
-      {!isAIOpen ? (
-        <Button type="button" onClick={() => setIsAIOpen(true)} variant="outline" className="w-full h-12 rounded-2xl border-2 border-dashed border-purple-300 bg-purple-50/50 text-purple-700 font-bold hover:bg-purple-100 hover:border-purple-400 transition-all gap-3">
-          <Wand2 className="h-4 w-4" />
-          🪄 Generar Contenido con IA
-        </Button>
-      ) : (
-        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-2xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-purple-600" />
-              <Label className="font-bold text-purple-800 text-sm">Generador con IA</Label>
-            </div>
-            <Button type="button" size="sm" variant="ghost" className="h-7 text-[10px] text-purple-500" onClick={() => { setIsAIOpen(false); setAiError(''); }}>Cerrar</Button>
-          </div>
-          <p className="text-[11px] text-purple-600/80">Pega el contenido de la lección que quieras estudiar. La IA generará el contenido de la actividad automáticamente.</p>
-          <Textarea
-            value={aiLessonContent}
-            onChange={(e) => setAiLessonContent(e.target.value)}
-            className="min-h-[120px] rounded-xl border-purple-200 bg-white text-xs resize-none focus-visible:ring-purple-400"
-            placeholder="Pega aquí el texto de tu lección, apuntes o documentación técnica..."
-          />
-          {aiError && <p className="text-xs text-rose-600 font-medium bg-rose-50 px-3 py-2 rounded-lg">{aiError}</p>}
-          <Button 
-            type="button" 
-            onClick={handleAIGenerate} 
-            disabled={isGenerating || !aiLessonContent.trim()} 
-            className="w-full h-10 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg shadow-purple-200 gap-2"
-          >
-            {isGenerating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando con Gemini...</> : <><Wand2 className="h-4 w-4" /> Generar {
-              type === 'flashcard' ? 'Tarjetas' : 
-              type === 'swipe' ? 'Declaraciones' : 
-              type === 'sortable' ? 'Código' : 
-              type === 'quiz' ? 'Preguntas' :
-              type === 'dragdrop' ? 'Huecos de Código' :
-              'Interacciones de Video'
-            }</>}
-          </Button>
-        </div>
-      )}
-    </div>
-  ) : null;
+  const AIPanel = null;
 
   if (type === 'flashcard') {
     const cards = data.cards || [];
