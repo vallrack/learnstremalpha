@@ -17,7 +17,9 @@ import {
   Link as LinkIcon,
   Upload,
   X,
-  Music4
+  Music4,
+  Wand2,
+  Sparkles
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +73,10 @@ export default function AdminPodcastsClient() {
   const [category, setCategory] = useState('Tecnología');
   const [sourceType, setSourceType] = useState<'url' | 'youtube' | 'anchor' | 'drive'>('url');
 
+  // AI State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAIGenerating, setIsAIGenerating] = useState(false);
+
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
@@ -97,6 +103,7 @@ export default function AdminPodcastsClient() {
     setCurrency('COP');
     setCategory('Tecnología');
     setSourceType('url');
+    setAiPrompt('');
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -147,6 +154,69 @@ export default function AdminPodcastsClient() {
     setCategory(podcast.category || 'Tecnología');
     setSourceType(podcast.sourceType || 'url');
     setIsDialogOpen(true);
+  };
+
+  const robustJSONParse = (str: string) => {
+    try {
+      const match = str.match(/\{[\s\S]*\}/);
+      if (!match) return {};
+      let cleanStr = match[0].replace(/\n/g, " ").replace(/\r/g, "").trim();
+      try { return JSON.parse(cleanStr); } catch (e1) {
+        return JSON.parse(cleanStr.replace(/\\([^"\\\/bfnrtu])/g, '$1'));
+      }
+    } catch (e2) {
+        const match = str.match(/\{[\s\S]*\}/);
+        return (new Function('return ' + (match ? match[0] : str)))();
+    }
+  };
+
+  const handleGenerateAIPodcast = async () => {
+    if (!aiPrompt.trim()) {
+      toast({ title: "Falta temática", description: "Escribe de qué tratará el podcast para que el Genio IA trabaje.", variant: "destructive" });
+      return;
+    }
+    
+    setIsAIGenerating(true);
+    try {
+      const prompt = `Actúa como un experto productor de podcasts educativos. Me diste la temática: "${aiPrompt}".
+      Genera los metadatos para este nuevo episodio de podcast.
+      Retorna ÚNICAMENTE un objeto JSON con la siguiente estructura y nada más:
+      {
+        "title": "Un título extremadamente atractivo y SEO-optimizado",
+        "description": "Una descripción persuasiva de 2 a 3 párrafos que invite a escucharlo. Usa emojis.",
+        "category": "Debe ser EXACTAMENTE una de estas opciones: 'Tecnología', 'Carrera', 'Englishtech', 'Mentalidad'",
+        "duration": "Una duración estimada razonable (ej: '45 min', '1 hora', '30 min')"
+      }
+      DEBES escapar TODAS las comillas dobles internas usando \\" para no romper el JSON.
+      Usa \\n para los saltos de línea, nunca saltos reales de línea.
+      Todo en ESPAÑOL LATINO.`;
+
+      const res = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, provider: 'auto' }) // Usa la lógica unificada
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      const resultData = typeof data.result === 'object' ? data.result : robustJSONParse(data.result);
+      
+      if (resultData.title) setTitle(resultData.title);
+      if (resultData.description) setDescription(resultData.description);
+      if (resultData.category && ['Tecnología', 'Carrera', 'Englishtech', 'Mentalidad', 'Entrevista', 'Inglés Tech'].includes(resultData.category)) {
+          setCategory(resultData.category); // Map specific options if needed, but the prompt restricts it.
+      }
+      if (resultData.duration) setDuration(resultData.duration);
+      
+      toast({ title: "¡Magia Completada! 🎙️✨", description: "El Genio IA ha llenado tu formulario." });
+      setAiPrompt('');
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error del Genio", description: "No se pudo generar la predicción. Intenta de nuevo.", variant: "destructive" });
+    } finally {
+      setIsAIGenerating(false);
+    }
   };
 
   const getEmbedUrl = (url: string, type: string) => {
@@ -210,7 +280,42 @@ export default function AdminPodcastsClient() {
                   <DialogDescription>Configura los detalles del podcast y el archivo de origen.</DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid grid-cols-1 gap-6 py-8">
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-orange-100 rounded-2xl p-6 mt-6 mb-2 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-5">
+                       <Wand2 className="w-32 h-32 text-orange-500 transform group-hover:rotate-12 transition-transform duration-500" />
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-4 relative z-10">
+                        <div className="flex-1 space-y-2">
+                           <Label className="font-bold text-orange-900 flex items-center gap-2">
+                               <Sparkles className="h-4 w-4 text-orange-500" />
+                               Genio IA de Podcasts
+                           </Label>
+                           <Input 
+                               value={aiPrompt} 
+                               onChange={(e) => setAiPrompt(e.target.value)} 
+                               placeholder="Ej: Podcast sobre los fundamentos de GraphQL en 2026..." 
+                               className="bg-white/60 border-orange-200"
+                           />
+                           <p className="text-[10px] text-orange-600/80 font-medium">
+                               Describe la temática y el Genio redactará un título SEO y portada.
+                           </p>
+                        </div>
+                        <Button 
+                            type="button" 
+                            disabled={isAIGenerating || !aiPrompt.trim()}
+                            onClick={handleGenerateAIPodcast}
+                            className="h-11 md:mt-6 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-orange-500/20 rounded-xl"
+                        >
+                            {isAIGenerating ? (
+                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generando Magia...</>
+                            ) : (
+                                <><Wand2 className="mr-2 h-4 w-4" /> Autocompletar Formulario</>
+                            )}
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 py-4">
                   <div className="grid gap-2">
                     <Label className="font-bold">Título del Episodio</Label>
                     <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Episodio 1: El futuro de la IA" className="rounded-xl h-11" />

@@ -204,19 +204,25 @@ export default function AdminChallengesClient() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
 
-      const cleanAIJSON = (str: string) => {
+      const robustJSONParse = (str: string) => {
         try {
           const match = str.match(/\{[\s\S]*\}/);
-          if (!match) return "{}";
-          return match[0]
-            .replace(/\n/g, " ") // Solo quita saltos de linea reales
-            .replace(/\r/g, "")
-            .trim();
-        } catch { return "{}"; }
+          if (!match) return {};
+          let cleanStr = match[0].replace(/\n/g, " ").replace(/\r/g, "").trim();
+          try {
+            return JSON.parse(cleanStr);
+          } catch (e1) {
+            cleanStr = cleanStr.replace(/\\([^"\\\/bfnrtu])/g, '$1'); 
+            return JSON.parse(cleanStr);
+          }
+        } catch (e2) {
+            const match = str.match(/\{[\s\S]*\}/);
+            return (new Function('return ' + (match ? match[0] : str)))();
+        }
       };
 
-      const resultData = typeof data.result === 'object' ? data.result : JSON.parse(cleanAIJSON(data.result));
-      const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
+      const resultData = typeof data.result === 'object' ? data.result : robustJSONParse(data.result);
+      const config = typeof resultData.activityConfig === 'string' ? robustJSONParse(resultData.activityConfig) : resultData.activityConfig || {};
       
       if (type === 'code') {
         setInitialCode(config.initialCode || '');
@@ -263,13 +269,22 @@ export default function AdminChallengesClient() {
         const response = await puter.ai.chat(prompt, { model: 'gpt-4o' }); // Modelo más estable
         const rawPuter = response?.message?.content?.[0]?.text || response?.message?.content || "";
         
-        const cleanAIJSON = (str: string) => {
-          const match = str.match(/\{[\s\S]*\}/);
-          return match ? match[0].replace(/\n/g, " ").replace(/\r/g, "").trim() : "{}";
+        const robustJSONParse = (str: string) => {
+          try {
+            const match = str.match(/\{[\s\S]*\}/);
+            if (!match) return {};
+            let cleanStr = match[0].replace(/\n/g, " ").replace(/\r/g, "").trim();
+            try { return JSON.parse(cleanStr); } catch (e1) {
+              return JSON.parse(cleanStr.replace(/\\([^"\\\/bfnrtu])/g, '$1'));
+            }
+          } catch (e2) {
+              const match = str.match(/\{[\s\S]*\}/);
+              return (new Function('return ' + (match ? match[0] : str)))();
+          }
         };
         
-        const resultData = typeof rawPuter === 'object' ? rawPuter : JSON.parse(cleanAIJSON(rawPuter));
-        const config = typeof resultData.activityConfig === 'string' ? JSON.parse(resultData.activityConfig) : resultData.activityConfig;
+        const resultData = typeof rawPuter === 'object' ? rawPuter : robustJSONParse(rawPuter);
+        const config = typeof resultData.activityConfig === 'string' ? robustJSONParse(resultData.activityConfig) : resultData.activityConfig || {};
 
         if (type === 'code') { setInitialCode(config.initialCode || ''); setSolution(config.solution || ''); }
         else if (type === 'interview') { setTargetRole(config.targetRole || ''); setTargetLanguage(config.targetLanguage || 'es'); setSolution(config.solution || ''); }
