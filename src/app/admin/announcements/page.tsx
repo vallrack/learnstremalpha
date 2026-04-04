@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { 
@@ -92,11 +92,41 @@ export default function AdminAnnouncementsPage() {
   const [targetPages, setTargetPages] = useState<string[]>(['home']);
   const [targetRoles, setTargetRoles] = useState<string[]>(['student']);
 
+  // Selection Logic for CTA Link
+  const [linkType, setLinkType] = useState<'section' | 'course' | 'challenge' | 'external'>('section');
+  const [selectedSection, setSelectedSection] = useState('/');
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedChallenge, setSelectedChallenge] = useState('');
+
+  // Fetching content for selectors
+  const coursesRawQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'courses'), orderBy('title', 'asc'));
+  }, [db]);
+  const { data: allCourses } = useCollection(coursesRawQuery);
+
+  const challengesRawQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'challenges'), orderBy('title', 'asc'));
+  }, [db]);
+  const { data: allChallenges } = useCollection(challengesRawQuery);
+
   const announcementsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
   }, [db]);
   const { data: announcements, isLoading } = useCollection(announcementsQuery);
+
+  // Sync ctaLink with selectors
+  useEffect(() => {
+    if (linkType === 'section') {
+      setCtaLink(selectedSection);
+    } else if (linkType === 'course' && selectedCourse) {
+      setCtaLink(`/courses/${selectedCourse}`);
+    } else if (linkType === 'challenge' && selectedChallenge) {
+      setCtaLink(`/challenges/${selectedChallenge}`);
+    }
+  }, [linkType, selectedSection, selectedCourse, selectedChallenge]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -109,6 +139,10 @@ export default function AdminAnnouncementsPage() {
     setIsActive(true);
     setTargetPages(['home']);
     setTargetRoles(['student']);
+    setLinkType('section');
+    setSelectedSection('/');
+    setSelectedCourse('');
+    setSelectedChallenge('');
   };
 
   const handleEditClick = (ann: any) => {
@@ -121,6 +155,21 @@ export default function AdminAnnouncementsPage() {
     setIsActive(ann.isActive ?? true);
     setTargetPages(ann.targetPages || ['home']);
     setTargetRoles(ann.targetRoles || ['student']);
+
+    // Detect link type from ctaLink
+    const link = ann.ctaLink || '';
+    if (link === '/' || link === '/courses' || link === '/challenges' || link === '/dashboard' || link === '/paths' || link === '/leaderboard' || link === '/podcasts') {
+      setLinkType('section');
+      setSelectedSection(link);
+    } else if (link.startsWith('/courses/')) {
+      setLinkType('course');
+      setSelectedCourse(link.replace('/courses/', ''));
+    } else if (link.startsWith('/challenges/')) {
+      setLinkType('challenge');
+      setSelectedChallenge(link.replace('/challenges/', ''));
+    } else {
+      setLinkType('external');
+    }
     
     if (ann.expiresAt) {
       const date = ann.expiresAt instanceof Timestamp ? ann.expiresAt.toDate() : new Date(ann.expiresAt);
@@ -240,25 +289,89 @@ export default function AdminAnnouncementsPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label className="font-bold">Texto del Botón (CTA)</Label>
+                    <Input 
+                      value={ctaText} 
+                      onChange={(e) => setCtaText(e.target.value)} 
+                      required 
+                      placeholder="Ej: Ver Oferta"
+                      className="rounded-xl h-11" 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-2xl bg-amber-50/30">
                     <div className="grid gap-2">
-                      <Label className="font-bold">Texto del Botón (CTA)</Label>
-                      <Input 
-                        value={ctaText} 
-                        onChange={(e) => setCtaText(e.target.value)} 
-                        required 
-                        className="rounded-xl h-11" 
-                      />
+                      <Label className="font-bold flex items-center gap-2">
+                        <Megaphone className="h-4 w-4 text-primary" />
+                        Tipo de Enlace
+                      </Label>
+                      <Select value={linkType} onValueChange={(val: any) => setLinkType(val)}>
+                        <SelectTrigger className="rounded-xl h-11 bg-white">
+                          <SelectValue placeholder="Seleccionar tipo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="section">Sección del Sitio</SelectItem>
+                          <SelectItem value="course">Curso Específico</SelectItem>
+                          <SelectItem value="challenge">Desafío Específico</SelectItem>
+                          <SelectItem value="external">Enlace Personalizado</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+
                     <div className="grid gap-2">
-                      <Label className="font-bold">Enlace del Botón</Label>
-                      <Input 
-                        value={ctaLink} 
-                        onChange={(e) => setCtaLink(e.target.value)} 
-                        required 
-                        placeholder="/courses/premium"
-                        className="rounded-xl h-11" 
-                      />
+                      <Label className="font-bold">Destino del Botón</Label>
+                      {linkType === 'section' && (
+                        <Select value={selectedSection} onValueChange={setSelectedSection}>
+                          <SelectTrigger className="rounded-xl h-11 bg-white uppercase text-[10px] font-bold">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="/">Inicio / Portada</SelectItem>
+                            <SelectItem value="/courses">Catálogo de Cursos</SelectItem>
+                            <SelectItem value="/challenges">Explorar Desafíos</SelectItem>
+                            <SelectItem value="/dashboard">Mi Panel (Estudiante)</SelectItem>
+                            <SelectItem value="/paths">Rutas de Aprendizaje</SelectItem>
+                            <SelectItem value="/leaderboard">Ranking Global</SelectItem>
+                            <SelectItem value="/podcasts">Podcasts</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {linkType === 'course' && (
+                        <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                          <SelectTrigger className="rounded-xl h-11 bg-white truncate">
+                            <SelectValue placeholder="Seleccionar curso..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {allCourses?.map(c => (
+                              <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {linkType === 'challenge' && (
+                        <Select value={selectedChallenge} onValueChange={setSelectedChallenge}>
+                          <SelectTrigger className="rounded-xl h-11 bg-white truncate">
+                            <SelectValue placeholder="Seleccionar desafío..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {allChallenges?.map(c => (
+                              <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {linkType === 'external' && (
+                        <Input 
+                          value={ctaLink} 
+                          onChange={(e) => setCtaLink(e.target.value)} 
+                          placeholder="https://..."
+                          className="rounded-xl h-11 bg-white" 
+                        />
+                      )}
                     </div>
                   </div>
 
