@@ -91,12 +91,30 @@ export function VoiceInterview({
 
   const startInterview = async () => {
     setIsInterviewing(true);
-    const initialGreeting = language === 'en' 
-      ? `Hello! Ready to start? Tell me about yourself.` 
-      : `¡Hola! ¿Listo para comenzar? Cuéntame sobre ti.`;
     
-    setMessages([{ role: 'model', content: [{ text: initialGreeting }] }]);
-    speak(initialGreeting);
+    // If we have custom instructions, let the AI generate the first message
+    if (instructions && instructions.length > 50) {
+      setIsGenerating(true);
+      try {
+        const firstMessage = await getAIResponse("INICIO DE ENTREVISTA: Por favor, saluda al estudiante según tus instrucciones y realiza la primera pregunta.");
+        const aiResponse = { role: 'model', content: [{ text: firstMessage }] };
+        setMessages([aiResponse]);
+        speak(firstMessage);
+      } catch (err) {
+        const fallback = language === 'en' ? "Hello! Let's start the interview." : "¡Hola! Comencemos la entrevista.";
+        setMessages([{ role: 'model', content: [{ text: fallback }] }]);
+        speak(fallback);
+      } finally {
+        setIsGenerating(false);
+      }
+    } else {
+      const initialGreeting = language === 'en' 
+        ? `Hello! Ready to start? Tell me about yourself.` 
+        : `¡Hola! ¿Listo para comenzar? Cuéntame sobre ti.`;
+      
+      setMessages([{ role: 'model', content: [{ text: initialGreeting }] }]);
+      speak(initialGreeting);
+    }
   };
 
   const stopInterview = () => {
@@ -129,19 +147,17 @@ export function VoiceInterview({
     
     synthRef.current.cancel();
     
-    // Clean markdown symbols for a more natural speech
     const cleanText = text
-      .replace(/\*\*/g, '') // bold
-      .replace(/__/g, '')   // underline
-      .replace(/#/g, '')    // headers
-      .replace(/`/g, '')    // code
-      .replace(/\[|\]/g, '') // brackets
-      .replace(/\(|\)/g, ''); // parentheses (optional, but can help)
+      .replace(/\*\*/g, '')
+      .replace(/__/g, '')
+      .replace(/#/g, '')
+      .replace(/`/g, '')
+      .replace(/\[|\]/g, '')
+      .replace(/\(|\)/g, '');
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = language === 'en' ? 'en-US' : 'es-ES';
     
-    // Attempt to pick a natural voice if available
     const voices = synthRef.current.getVoices();
     const preferredVoice = voices.find((v: any) => 
       v.lang.includes(language === 'en' ? 'en' : 'es') && (v.name.includes('Google') || v.name.includes('Natural'))
@@ -151,18 +167,94 @@ export function VoiceInterview({
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => {
       setIsSpeaking(false);
-      // Auto-start listening after AI finishes speaking
       toggleListening();
     };
 
     synthRef.current.speak(utterance);
   };
 
+  const getAIResponse = async (text: string, currentMessages: any[] = []) => {
+    let reply = '';
+    const isComplex = instructions && instructions.length > 300;
+    const limitConstraint = isComplex ? "" : (language === 'en' ? "Keep responses concise (max 3 sentences)." : "Mantén tus respuestas concisas (máximo 3 frases).");
+    
+    const systemPrompt = language === 'en' 
+      ? `You are a world-class technical interviewer for a ${role} position. ${instructions}. ${limitConstraint}` 
+      : `Eres un entrevistador técnico experto para la posición de ${role}. ${instructions}. ${limitConstraint}`;
+
+    if (aiProvider === 'gemini') {
+      const response = await mockInterview({
+        message: text,
+        language,
+        role,
+        instructions,
+        history: currentMessages.map(m => ({
+          role: m.role,
+          content: m.content
+        }))
+      });
+      reply = response.reply;
+    } else if (aiProvider === 'gemini-direct') {
+      const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_GENERATIVE_AI_API_KEY || ""; 
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+      
+      const historyGemini = currentMessages
+        .filter((m, idx) => !(idx === 0 && m.role === 'model'))
+        .map(m => ({
+          role: m.role === 'model' ? 'model' : 'user',
+          parts: [{ text: m.content[0].text }]
+        }));
+      
+      if (text !== "INICIO DE ENTREVISTA: Por favor, saluda al estudiante según tus instrucciones y realiza la primera pregunta.") {
+        historyGemini.push({ role: 'user', parts: [{ text }] });
+      } else {
+        // For initial message, we just send the system prompt and an empty user message if needed or just system
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: historyGemini.length > 0 ? historyGemini : [{ role: 'user', parts: [{ text: "Hello" }] }],
+          generationConfig: { maxOutputTokens: 1024, temperature: 0.7, topP: 0.9 },
+          safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+          ]
+        })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response content.";
+    } else {
+      const puter = (window as any).puter;
+      if (!puter) throw new Error("Puter.js not loaded.");
+      
+      const puterMessages = [
+        { role: 'system', content: systemPrompt },
+        ...currentMessages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content[0].text })),
+      ];
+      
+      if (text !== "INICIO DE ENTREVISTA: Por favor, saluda al estudiante según tus instrucciones y realiza la primera pregunta.") {
+        puterMessages.push({ role: 'user', content: text });
+      } else {
+        puterMessages.push({ role: 'user', content: "Hello, I am ready to start the interview." });
+      }
+
+      const response = await puter.ai.chat(puterMessages, { model: puterModel });
+      reply = response?.message?.content?.[0]?.text || response?.message?.content || "No response content.";
+    }
+    return reply;
+  };
+
   const handleUserMessage = async (text: string) => {
     if (!text.trim() || isProcessingRef.current) return;
     
     isProcessingRef.current = true;
-    // Stop listening while AI works
     recognitionRef.current?.stop();
     setIsListening(false);
 
@@ -170,106 +262,18 @@ export function VoiceInterview({
     setMessages(prev => [...prev, newUserMessage]);
     setIsGenerating(true);
 
-    console.log(`[VoiceInterview] Starting AI call with provider: ${aiProvider}`);
-
     try {
-      let reply = '';
-      if (aiProvider === 'gemini') {
-        const response = await mockInterview({
-          message: text,
-          language,
-          role,
-          instructions,
-          history: messages.map(m => ({
-            role: m.role,
-            content: m.content
-          }))
-        });
-        reply = response.reply;
-      } else if (aiProvider === 'gemini-direct') {
-        const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_GENERATIVE_AI_API_KEY || ""; 
-        // Use 2.0-flash as requested by the user
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-        
-        const systemPrompt = language === 'en' 
-          ? `You are a world-class technical interviewer for a ${role} position. ${instructions}. Keep responses concise (max 3 sentences).` 
-          : `Eres un entrevistador técnico experto para la posición de ${role}. ${instructions}. Mantén tus respuestas concisas (máximo 3 frases).`;
-
-        // Match the user's working structure exactly: HISTORY MUST START WITH USER
-        // We skip the first message if it's the 'model' greeting to ensure compliance.
-        const historyGemini = messages
-          .filter((m, idx) => !(idx === 0 && m.role === 'model'))
-          .map(m => ({
-            role: m.role === 'model' ? 'model' : 'user',
-            parts: [{ text: m.content[0].text }]
-          }));
-        
-        // Add current message
-        historyGemini.push({ role: 'user', parts: [{ text }] });
-
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: historyGemini,
-            generationConfig: { maxOutputTokens: 512, temperature: 0.7, topP: 0.9 },
-            safetySettings: [
-              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-            ]
-          })
-        });
-
-        if (!res.ok) {
-           const err = await res.json().catch(() => ({}));
-           throw new Error(err?.error?.message || `HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-        reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response content.";
-      } else {
-        // PUTER.JS INTEGRATION (v2 - No API keys or registrations required)
-        const puter = (window as any).puter;
-        if (!puter) throw new Error("Puter.js not loaded. Please check your internet connection and refresh.");
-        
-        // Premium Enforcement: If it's a premium challenge, require Puter Sign-in (Admins bypass this)
-        const isSignedIn = await puter.auth.isSignedIn();
-        if (isPremiumChallenge && !isSignedIn && !isAdmin) {
-           throw new Error("Puter Authorization Required: This is a premium challenge. Please use the 'Sign In to Puter' button above to authorize AI usage with your Claude account.");
-        }
-        
-        console.log(`[VoiceInterview] Puter session active: ${isSignedIn}`);
-
-        const systemPrompt = language === 'en' 
-          ? `You are a world-class technical interviewer for a ${role} position. ${instructions}. Keep responses concise (max 3 sentences).` 
-          : `Eres un entrevistador técnico experto para la posición de ${role}. ${instructions}. Mantén tus respuestas concisas (máximo 3 frases).`;
-
-        const puterMessages = [
-          { role: 'system', content: systemPrompt },
-          ...messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content[0].text })),
-          { role: 'user', content: text }
-        ];
-
-        // Map UI model names to Puter actual model strings (using direct value for v2)
-        let actualModel = puterModel;
-        
-        const response = await puter.ai.chat(puterMessages, { model: actualModel });
-        reply = response?.message?.content?.[0]?.text || response?.message?.content || "No response content from Puter.";
-      }
-
+      const reply = await getAIResponse(text, [...messages, newUserMessage]);
       const aiResponse = { role: 'model', content: [{ text: reply }] };
       setMessages(prev => [...prev, aiResponse]);
       speak(reply);
     } catch (error: any) {
-      console.error(`[VoiceInterview] Error with provider ${aiProvider}:`, error);
+      console.error(`[VoiceInterview] Error:`, error);
       const errorMsg = language === 'en' 
-        ? `I'm sorry, I'm having trouble connecting (${aiProvider}: ${error.message || "Unknown error"}). Could you repeat that?` 
-        : `Lo siento, tengo problemas de conexión (${aiProvider}: ${error.message || "Error desconocido"}). ¿Podrías repetirlo?`;
+        ? `I'm sorry, I'm having trouble connecting. Could you repeat that?` 
+        : `Lo siento, tengo problemas de conexión. ¿Podrías repetirlo?`;
       setMessages(prev => [...prev, { role: 'model', content: [{ text: errorMsg }] }]);
-      speak(language === 'en' ? "I'm sorry, I'm having trouble connecting." : "Lo siento, tengo problemas de conexión.");
+      speak(errorMsg);
     } finally {
       setIsGenerating(false);
       isProcessingRef.current = false;

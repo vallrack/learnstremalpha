@@ -183,11 +183,17 @@ export default function AdminChallengesClient() {
         quiz: { questions: [{question, options, correctAnswer}] }
         wordsearch: { words: ["PALABRA1", "PALABRA2"] }
         dragdrop: { template: "texto con {{{hueco}}}", snippets: [{id, text}], correctMapping: {hueco: id} }
+        interview: { 
+          targetRole: "título del rol o persona", 
+          targetLanguage: "en" o "es", 
+          solution: "la guía completa e instrucciones internas para la IA tutor" 
+        }
+      - CASO ESPECIAL ENTREVISTA: Si el CONTENIDO parece ser una PERSONA o GUÍA DE ENTREVISTA (ej: "Actúa como...", "Eres un..."), usa ese texto TAL CUAL para el campo "solution" y extrae el rol y lenguaje correspondientes.
       - IMPORTANTE: activityConfig debe ser un objeto.
       - DEBES escapar TODAS las comillas dobles internas usando \\" para no romper el JSON.
       - Para los saltos de línea dentro de cadenas de texto (como código), DEBES usar \\n y NO saltos de línea reales.
       - Retorna SOLO el JSON, sin bloques de código Markdown ni texto explicativo.
-      - Todo en ESPAÑOL LATINO.`;
+      - Todo en ESPAÑOL LATINO salvo que el contenido sea explícitamente en inglés.`;
 
       // Llamada al nuevo API Route unificado
       const res = await fetch('/api/ai/generate', {
