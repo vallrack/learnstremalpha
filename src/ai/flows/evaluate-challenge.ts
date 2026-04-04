@@ -157,9 +157,10 @@ CRITERIOS DE EVALUACIÓN SEGÚN EL CASO:
 
 OBLIGATORIO:
 - Calificación: 0.0 a 5.0. (Menos de 3.0 es reprobado).
+- IMPORTANTE: La calificación NUNCA debe superar los 5.0 puntos. Si tu razonamiento interno es sobre 10, divídelo por 2 antes de asignar el valor 'score'.
 - Sé específico: No digas "Buen trabajo", di "Excelente uso de async/await y manejo de errores...".
 - Si la calidad es superior (4.5+), otorga una insignia de maestría técnica que sea muy motivadora.
-- IMPORTANTE: Si es un reporte de desempeño interactivo, asigna el puntaje indicado en el reporte (ej: si dice 5.0/5.0, pon score: 5.0).`,
+- REPORTE INTERACTIVO: Si es un reporte de desempeño interactivo, asigna el puntaje indicado en el reporte (ej: si dice 5.0/5.0, pon score: 5.0).`,
 });
 
 const evaluateChallengeFlow = ai.defineFlow(
@@ -171,6 +172,11 @@ const evaluateChallengeFlow = ai.defineFlow(
   async (input) => {
     const {output} = await prompt(input);
     if (!output) throw new Error('La evaluación falló.');
-    return output;
+    
+    // Clamp the score to [0, 5] just in case the AI deviates
+    return {
+      ...output,
+      score: Math.min(Math.max(output.score, 0), 5)
+    };
   }
 );
