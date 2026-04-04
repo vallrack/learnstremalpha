@@ -186,6 +186,7 @@ export default function AdminChallengesClient() {
         interview: { 
           targetRole: "título del rol o persona", 
           targetLanguage: "en" o "es", 
+          initialCode: "palabras clave o puntos que el estudiante DEBE mencionar (separados por coma)",
           solution: "la guía completa e instrucciones internas para la IA tutor" 
         }
       - CASO ESPECIAL ENTREVISTA: Si el CONTENIDO parece ser una PERSONA o GUÍA DE ENTREVISTA (ej: "Actúa como...", "Eres un..."), usa ese texto TAL CUAL para el campo "solution" y extrae el rol y lenguaje correspondientes.
@@ -220,6 +221,7 @@ export default function AdminChallengesClient() {
       } else if (type === 'interview') {
         setTargetRole(config.targetRole || '');
         setTargetLanguage(config.targetLanguage || 'es');
+        setInitialCode(config.initialCode || '');
         setSolution(config.solution || '');
       } else if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(type)) {
         setJsonConfig(JSON.stringify(config, null, 2));
@@ -263,7 +265,7 @@ export default function AdminChallengesClient() {
         const config = typeof resultData.activityConfig === 'string' ? robustJSONParse(resultData.activityConfig) : resultData.activityConfig || {};
 
         if (type === 'code') { setInitialCode(config.initialCode || ''); setSolution(config.solution || ''); }
-        else if (type === 'interview') { setTargetRole(config.targetRole || ''); setTargetLanguage(config.targetLanguage || 'es'); setSolution(config.solution || ''); }
+        else if (type === 'interview') { setTargetRole(config.targetRole || ''); setTargetLanguage(config.targetLanguage || 'es'); setInitialCode(config.initialCode || ''); setSolution(config.solution || ''); }
         else if (['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(type)) { setJsonConfig(JSON.stringify(config, null, 2)); }
         else if (type === 'quiz') {
           const mapped = (config.questions || []).map((q: any) => ({
