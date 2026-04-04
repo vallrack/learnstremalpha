@@ -73,6 +73,8 @@ export default function AdminAnnouncementsPage() {
   const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -83,7 +85,7 @@ export default function AdminAnnouncementsPage() {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
   }, [db, user?.uid]);
-  const { data: profile } = useDoc(profileRef);
+  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
   const isAdmin = profile?.role === 'admin' || isDemoAccount;
 
   // Form State
@@ -235,7 +237,24 @@ export default function AdminAnnouncementsPage() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !user || !isAdmin) return;
+    if (!db || !user) return;
+
+    if (isProfileLoading) {
+      toast({
+        title: "Cargando perfil",
+        description: "Espera un momento mientras verificamos tus permisos...",
+      });
+      return;
+    }
+
+    if (!isAdmin) {
+      toast({
+        title: "Sin permisos",
+        description: "No tienes permisos de administrador para crear anuncios.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
