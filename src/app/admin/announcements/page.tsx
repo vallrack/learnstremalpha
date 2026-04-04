@@ -16,7 +16,11 @@ import {
   XCircle,
   Layout,
   UserCheck,
-  Users
+  Users,
+  Upload,
+  X,
+  Image as ImageIcon,
+  Link as LinkIcon
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +75,7 @@ export default function AdminAnnouncementsPage() {
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Auth checking
   const isDemoAccount = user?.email === 'demo@learnstream.ai';
@@ -179,6 +184,53 @@ export default function AdminAnnouncementsPage() {
     }
     
     setIsDialogOpen(true);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 450;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) { height = Math.round(height * MAX_WIDTH / width); width = MAX_WIDTH; }
+        if (height > MAX_HEIGHT) { width = Math.round(width * MAX_HEIGHT / height); height = MAX_HEIGHT; }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/webp', 0.8);
+        setImageUrl(dataUrl);
+        setUploadingImage(false);
+      };
+      img.onerror = () => setUploadingImage(false);
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => setUploadingImage(false);
+    reader.readAsDataURL(file);
+  };
+
+  const handleUrlChange = (val: string) => {
+    let finalUrl = val;
+    if (val.includes('drive.google.com')) {
+      const dMatch = val.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      const idMatch = val.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+      const driveId = (dMatch && dMatch[1]) || (idMatch && idMatch[1]);
+      if (driveId) {
+        finalUrl = `https://drive.google.com/uc?export=view&id=${driveId}`;
+      }
+    }
+    setImageUrl(finalUrl);
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -376,13 +428,55 @@ export default function AdminAnnouncementsPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label className="font-bold">URL de la Imagen (Opcional)</Label>
-                    <Input 
-                      value={imageUrl} 
-                      onChange={(e) => setImageUrl(e.target.value)} 
-                      placeholder="https://example.com/banner.png"
-                      className="rounded-xl h-11" 
-                    />
+                    <Label className="font-bold">Imagen del Anuncio</Label>
+                    <div className="relative group">
+                      <div className={`aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-colors ${imageUrl ? 'border-primary/20 bg-primary/5' : 'border-slate-200 bg-slate-50'}`}>
+                        {uploadingImage ? (
+                          <div className="flex flex-col items-center gap-3 text-primary">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                            <p className="text-xs font-bold">Comprimiendo imagen...</p>
+                          </div>
+                        ) : imageUrl ? (
+                          <>
+                            <img 
+                              src={imageUrl} 
+                              alt="Preview" 
+                              className="w-full h-full object-cover" 
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <Label htmlFor="ann-image" className="cursor-pointer bg-white text-slate-900 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center gap-2">
+                                <Upload className="h-3 w-3" /> Cambiar
+                              </Label>
+                              <Button type="button" variant="destructive" size="sm" className="rounded-xl h-8 px-3" onClick={() => setImageUrl('')}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 p-6 text-center">
+                            <div className="bg-white p-3 rounded-2xl shadow-sm"><ImageIcon className="h-6 w-6 text-slate-400" /></div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-600">Sube imagen o pega URL</p>
+                              <p className="text-[10px] text-muted-foreground">Formato 16:9 recomendado</p>
+                            </div>
+                            <Label htmlFor="ann-image" className="mt-2 cursor-pointer bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/90">
+                              Subir Archivo
+                            </Label>
+                          </div>
+                        )}
+                      </div>
+                      <input id="ann-image" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                    </div>
+                    
+                    <div className="relative mt-2">
+                      <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                      <Input 
+                        placeholder="O pega URL de Internet o Google Drive..." 
+                        value={imageUrl.startsWith('data:') ? '' : imageUrl}
+                        onChange={(e) => handleUrlChange(e.target.value)}
+                        className="rounded-xl h-9 text-[10px] pl-8 bg-slate-50"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
