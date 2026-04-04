@@ -34,16 +34,54 @@ export type SafeEvaluateChallengeOutput =
 
 import { adminDb as db } from '@/lib/firebase-admin';
 
+// Helper to unwrap Firestore REST API fields
+function unwrap(fields: any) {
+  const result: any = {};
+  for (const key in fields) {
+    const val = fields[key];
+    if (val.stringValue !== undefined) result[key] = val.stringValue;
+    else if (val.booleanValue !== undefined) result[key] = val.booleanValue;
+    else if (val.integerValue !== undefined) result[key] = parseInt(val.integerValue);
+    else if (val.doubleValue !== undefined) result[key] = parseFloat(val.doubleValue);
+    else if (val.arrayValue !== undefined) result[key] = (val.arrayValue.values || []).map((v: any) => unwrap({item: v}).item);
+    else if (val.mapValue !== undefined) result[key] = unwrap(val.mapValue.fields);
+    else if (val.timestampValue !== undefined) result[key] = val.timestampValue;
+  }
+  return result;
+}
+
+async function fetchFirestoreDocument(path: string) {
+  const projectID = 'devforge-academy';
+  const url = `https://firestore.googleapis.com/v1/projects/${projectID}/databases/(default)/documents/${path}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return unwrap(data.fields);
+}
+
 export async function evaluateChallenge(input: EvaluateChallengeInput): Promise<SafeEvaluateChallengeOutput> {
   try {
     // 1. Fetch challenge and premium data securely
-    const challengeSnap = await db.collection('coding_challenges').doc(input.challengeId).get();
-    if (!challengeSnap.exists) throw new Error("Reto no encontrado.");
-    
-    const challengeData = challengeSnap.data()!;
-    const premiumSnap = await db.collection('coding_challenges').doc(input.challengeId).collection('premium').doc('data').get();
-    const premiumData = premiumSnap.exists ? premiumSnap.data()! : {};
+    let challengeData: any = null;
+    let premiumData: any = {};
 
+    try {
+      const challengeSnap = await db.collection('coding_challenges').doc(input.challengeId).get();
+      if (challengeSnap.exists) challengeData = challengeSnap.data();
+      
+      const premiumSnap = await db.collection('coding_challenges').doc(input.challengeId).collection('premium').doc('data').get();
+      if (premiumSnap.exists) premiumData = premiumSnap.data();
+    } catch (e) {
+      console.warn("Firebase Admin fallback to REST API for public data due to:", (e as any).message);
+    }
+
+    // REST Fallback for public challenges if Admin SDK failed or data is missing
+    if (!challengeData) {
+      challengeData = await fetchFirestoreDocument(`coding_challenges/${input.challengeId}`);
+    }
+
+    if (!challengeData) throw new Error("Reto no encontrado o no accesible.");
+    
     // 2. Prepare full input for AI
     const fullInput = {
       challengeId: input.challengeId,
@@ -51,8 +89,8 @@ export async function evaluateChallenge(input: EvaluateChallengeInput): Promise<
       challengeDescription: challengeData.description || "",
       technology: challengeData.technology || "General",
       studentCode: input.studentCode,
-      solutionReference: premiumData.solution || challengeData.solution || "", // Fallback for old data
-      ...premiumData // Include other sensitive context if needed
+      solutionReference: premiumData?.solution || challengeData.solution || "", 
+      ...premiumData 
     };
 
     const data = await evaluateChallengeFlow(fullInput);
