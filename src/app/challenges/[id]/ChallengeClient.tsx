@@ -146,11 +146,13 @@ function ChallengeContent() {
     
     ESTRUCTURA JSON:
     {
-      "score": 0.0,
+      "score": 0.0 a 5.0,
       "passed": true/false,
       "feedback": "español",
       "awardedBadge": { "title": "...", "description": "...", "iconType": "logic/style/data/architecture/speed/communication" } 
-    }`;
+    }
+    
+    IMPORTANTE: La calificación NUNCA debe superar los 5.0 puntos. Si crees que merece un 8.5/10, pon 4.25.`;
 
     // Asegurarse que Puter esté inicializado
     if (puter.init) await puter.init();
@@ -159,7 +161,13 @@ function ChallengeContent() {
     const content = response?.message?.content?.[0]?.text || response?.message?.content || "";
     
     const cleanedContent = content.match(/\{[\s\S]*\}/)?.[0] || content;
-    return robustJSONParse(cleanedContent) as EvaluateChallengeOutput;
+    const result = robustJSONParse(cleanedContent) as EvaluateChallengeOutput;
+    
+    // Clamp result
+    if (result && typeof result.score === 'number') {
+      result.score = Math.min(Math.max(result.score, 0), 5);
+    }
+    return result;
   };
 
   const handleSubmit = async (quizScore?: number) => {
@@ -243,10 +251,14 @@ function ChallengeContent() {
         DESCRIPCIÓN: ${challenge.description}
         ENTREGA: ${submissionCode}
         
-        Responde estrictamente en JSON: { "score": 0-5, "passed": bool, "feedback": "español", "awardedBadge": { "title": "...", "description": "...", "iconType": "logic/style/data/architecture/speed/communication" } }`;
+        Responde estrictamente en JSON: { "score": 0-5, "passed": bool, "feedback": "español", "awardedBadge": { "title": "...", "description": "...", "iconType": "logic/style/data/architecture/speed/communication" } }
+        REGLA: El score es de 0.0 a 5.0 máximo.`;
 
         const dsResult = await evaluateWithExternalAI(prompt, 'deepseek');
         if (dsResult.success) {
+          if (typeof dsResult.data.score === 'number') {
+            dsResult.data.score = Math.min(Math.max(dsResult.data.score, 0), 5);
+          }
           processResult(dsResult.data);
           return;
         }
