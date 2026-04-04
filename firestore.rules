@@ -211,5 +211,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // 📢 ANUNCIOS (Público lectura para popups)
+    match /announcements/{annId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

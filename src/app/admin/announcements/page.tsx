@@ -30,12 +30,10 @@ import {
   useFirestore, 
   useUser, 
   useDoc, 
-  useMemoFirebase, 
-  addDocumentNonBlocking, 
-  updateDocumentNonBlocking, 
-  deleteDocumentNonBlocking 
+  useMemoFirebase 
 } from '@/firebase';
-import { collection, serverTimestamp, doc, Timestamp, query, orderBy } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, Timestamp, query, orderBy, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Dialog, 
   DialogContent, 
@@ -75,9 +73,9 @@ export default function AdminAnnouncementsPage() {
   const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   // Auth checking
   const isDemoAccount = user?.email === 'demo@learnstream.ai';
@@ -235,45 +233,77 @@ export default function AdminAnnouncementsPage() {
     setImageUrl(finalUrl);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db || !user || !isAdmin) return;
 
-    const annData: any = {
-      title: title.trim(),
-      description: description.trim(),
-      imageUrl: imageUrl.trim(),
-      ctaText: ctaText.trim(),
-      ctaLink: ctaLink.trim(),
-      isActive,
-      targetPages,
-      targetRoles,
-      updatedAt: serverTimestamp(),
-    };
+    setIsSubmitting(true);
+    try {
+      const annData: any = {
+        title: title.trim(),
+        description: description.trim(),
+        imageUrl: imageUrl.trim(),
+        ctaText: ctaText.trim(),
+        ctaLink: ctaLink.trim(),
+        isActive,
+        targetPages,
+        targetRoles,
+        updatedAt: serverTimestamp(),
+      };
 
-    if (expiresAt) {
-      annData.expiresAt = Timestamp.fromDate(new Date(expiresAt));
-    } else {
-      annData.expiresAt = null;
-    }
+      if (expiresAt) {
+        annData.expiresAt = Timestamp.fromDate(new Date(expiresAt));
+      } else {
+        annData.expiresAt = null;
+      }
 
-    if (editingId) {
-      updateDocumentNonBlocking(doc(db, 'announcements', editingId), annData);
-    } else {
-      annData.createdAt = serverTimestamp();
-      addDocumentNonBlocking(collection(db, 'announcements'), annData);
+      if (editingId) {
+        await updateDoc(doc(db, 'announcements', editingId), annData);
+        toast({
+          title: "Anuncio actualizado",
+          description: "Los cambios se han guardado correctamente.",
+        });
+      } else {
+        annData.createdAt = serverTimestamp();
+        await addDoc(collection(db, 'announcements'), annData);
+        toast({
+          title: "Anuncio publicado",
+          description: "El nuevo anuncio ya está activo según tu segmentación.",
+        });
+      }
+      
+      setIsDialogOpen(false);
+      resetForm();
+      router.refresh();
+    } catch (error: any) {
+      console.error("Error saving announcement:", error);
+      toast({
+        title: "Error al guardar",
+        description: error.message || "No se pudo guardar el anuncio. Verifica tus permisos.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsDialogOpen(false);
-    resetForm();
-    router.refresh();
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!db || !isAdmin) return;
     if (confirm('¿Eliminar este anuncio permanentemente?')) {
-      deleteDocumentNonBlocking(doc(db, 'announcements', id));
-      router.refresh();
+      try {
+        await deleteDoc(doc(db, 'announcements', id));
+        toast({
+          title: "Anuncio eliminado",
+          description: "El anuncio ha sido removido del sistema.",
+        });
+        router.refresh();
+      } catch (error: any) {
+        toast({
+          title: "Error al eliminar",
+          description: error.message || "No se pudo eliminar el anuncio.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -549,8 +579,19 @@ export default function AdminAnnouncementsPage() {
                 </div>
                 
                 <DialogFooter>
-                  <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-lg shadow-primary/20">
-                    {editingId ? 'Actualizar Anuncio' : 'Publicar Anuncio'}
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="w-full rounded-2xl h-14 text-lg font-bold shadow-lg shadow-primary/20"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        Procesando...
+                      </>
+                    ) : (
+                      editingId ? 'Actualizar Anuncio' : 'Publicar Anuncio'
+                    )}
                   </Button>
                 </DialogFooter>
               </form>
