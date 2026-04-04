@@ -97,7 +97,11 @@ function ChallengeContent() {
 
   useEffect(() => {
     async function fetchPremiumData() {
-      if (!db || isPremiumLocked || !challengeId || isUserLoading || isChallengeLoading) return;
+      // Solo intentamos descargar datos premium si el usuario tiene los permisos rígidamente (Admin, Suscriptor o Compra)
+      // Esto evita errores de "Permission Denied" en la consola para usuarios gratuitos o invitados.
+      const isAuthorized = profile?.role === 'admin' || profile?.isPremiumSubscriber || profile?.purchasedChallenges?.includes(challengeId);
+      
+      if (!db || !isAuthorized || !challengeId || isUserLoading || isChallengeLoading || !user) return;
       
       setIsLoadingPremium(true);
       try {
