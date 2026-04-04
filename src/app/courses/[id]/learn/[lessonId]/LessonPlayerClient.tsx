@@ -252,8 +252,8 @@ function LessonPlayerContent() {
     if (isUserLoading || isCourseLoading) return true;
     if (profile?.role === 'admin') return true;
     if (!course) return false;
-    return !course.isPaid || isEnrolled || isPremium;
-  }, [course, isEnrolled, isPremium, profile, isUserLoading, isCourseLoading]);
+    return isFreeCourse || isEnrolled || isPremium;
+  }, [course, isEnrolled, isPremium, profile, isUserLoading, isCourseLoading, isFreeCourse]);
 
   const finalizedAccess = useMemo(() => {
     if (isUserLoading || isCourseLoading) return true; // Mantener true durante carga

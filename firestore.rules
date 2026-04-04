@@ -134,7 +134,8 @@ service cloud.firestore {
                     allow read: if isPremium() || 
                                   hasPurchased('courses', courseId) || 
                                   hasPurchased('modules', moduleId) || 
-                                  hasPurchased('lessons', lessonId);
+                                  hasPurchased('lessons', lessonId) ||
+                                  get(/databases/$(database)/documents/courses/$(courseId)).data.isFree == true;
                 }
 
                 match /resources/{resourceId} {
@@ -199,7 +200,9 @@ service cloud.firestore {
       allow write: if isAdmin();
 
       match /premium/data {
-        allow read: if isPremium() || hasPurchased('podcasts', podcastId);
+        allow read: if isPremium() || 
+                      hasPurchased('podcasts', podcastId) ||
+                      get(/databases/$(database)/documents/podcasts/$(podcastId)).data.isFree == true;
       }
     }
 
