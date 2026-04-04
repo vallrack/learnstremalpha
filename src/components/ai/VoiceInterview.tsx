@@ -46,6 +46,7 @@ export function VoiceInterview({
   const [transcript, setTranscript] = useState('');
   const [aiProvider, setAiProvider] = useState<'gemini' | 'puter' | 'gemini-direct'>('puter');
   const [puterModel, setPuterModel] = useState('claude-sonnet-4-6');
+  const [manualText, setManualText] = useState('');
   
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<any>(null);
@@ -280,6 +281,15 @@ export function VoiceInterview({
     }
   };
 
+  const handleManualSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!manualText.trim() || isGenerating) return;
+    
+    const text = manualText;
+    setManualText('');
+    handleUserMessage(text);
+  };
+
   return (
     <Card className="rounded-[2.5rem] border-none shadow-2xl bg-white overflow-hidden max-w-6xl mx-auto w-full transition-all duration-500">
       <CardHeader className="bg-slate-900 text-white p-6 sm:p-8">
@@ -408,29 +418,55 @@ export function VoiceInterview({
                  </div>
              </div>
 
-             <div className="flex items-center justify-center gap-4 pt-8">
-               {isInterviewing && (
-                 <>
-                   <Button 
-                     variant="outline" 
-                     onClick={toggleListening}
-                     disabled={isSpeaking || isGenerating}
-                     className={`h-16 w-16 rounded-full shadow-lg transition-all ${
-                       isListening ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-white border-slate-200'
-                     }`}
-                   >
-                     {isListening ? <Square className="h-6 w-6 fill-current" /> : <Mic className="h-6 w-6" />}
-                   </Button>
-                   <Button 
-                     variant="ghost" 
-                     onClick={stopInterview}
-                     className="text-slate-400 font-bold hover:text-slate-900"
-                   >
-                     {language === 'en' ? 'End Session' : 'Finalizar Sesión'}
-                   </Button>
-                 </>
-               )}
-             </div>
+             <div className="flex items-center justify-center pt-8">
+                {isInterviewing && (
+                  <div className="flex flex-col w-full max-w-2xl gap-6">
+                    <div className="flex items-center justify-center gap-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={toggleListening}
+                        disabled={isSpeaking || isGenerating}
+                        className={`h-16 w-16 rounded-full shadow-lg transition-all shrink-0 ${
+                          isListening ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        {isListening ? <Square className="h-6 w-6 fill-current" /> : <Mic className="h-6 w-6" />}
+                      </Button>
+                      
+                      <form 
+                        onSubmit={handleManualSubmit}
+                        className="flex-1 relative flex items-center"
+                      >
+                        <input 
+                          type="text"
+                          value={manualText}
+                          onChange={(e) => setManualText(e.target.value)}
+                          placeholder={language === 'en' ? "Type your answer..." : "Escribe tu respuesta..."}
+                          className="w-full h-14 pl-6 pr-14 rounded-2xl border-2 border-slate-100 bg-slate-50/50 focus:bg-white focus:border-primary transition-all outline-none font-medium text-slate-700 font-sans"
+                        />
+                        <Button 
+                          type="submit"
+                          disabled={!manualText.trim() || isGenerating}
+                          size="icon"
+                          className="absolute right-2 h-10 w-10 rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                        </Button>
+                      </form>
+                    </div>
+
+                    <div className="flex justify-center">
+                      <Button 
+                        variant="ghost" 
+                        onClick={stopInterview}
+                        className="text-slate-400 font-bold hover:text-slate-900 h-8 text-xs underline underline-offset-4"
+                      >
+                        {language === 'en' ? 'End Session' : 'Finalizar Sesión'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
           </div>
 
           {/* Transcript / Progress Sidebar */}

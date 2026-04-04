@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { 
@@ -56,6 +57,7 @@ import { formatPrice } from '@/lib/currency';
 import { robustJSONParse } from '@/lib/robust-parse';
 
 export default function AdminPodcastsClient() {
+  const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -153,6 +155,7 @@ export default function AdminPodcastsClient() {
 
       setIsDialogOpen(false);
       resetForm();
+      router.refresh();
       toast({ title: editingId ? "Podcast actualizado" : "Podcast publicado", description: "La arquitectura de seguridad ha sido aplicada." });
     } catch (err: any) {
       console.error("Error saving podcast:", err);
@@ -643,7 +646,7 @@ export default function AdminPodcastsClient() {
                   <TableCell className="text-right pr-8">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 text-slate-500 hover:text-primary hover:bg-primary/10" onClick={() => handleEdit(p)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => deleteDocumentNonBlocking(doc(db, 'podcasts', p.id))}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => { if(confirm('¿Eliminar esta actividad permanentemente?')) { deleteDocumentNonBlocking(doc(db, 'podcasts', p.id)); router.refresh(); } }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>

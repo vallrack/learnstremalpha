@@ -162,6 +162,7 @@ function LessonPlayerContent() {
       }, { merge: true });
       
       toast({ title: "¡Lección completada!", description: "Tu progreso se ha guardado." });
+      router.refresh();
     }
   };
 
@@ -192,6 +193,7 @@ function LessonPlayerContent() {
       await sendCertificateAction(user!.uid, courseId);
 
       setShowSurvey(true);
+      router.refresh();
       toast({ title: "¡Felicidades!", description: "Has finalizado el curso. Revisa tu correo para el diploma." });
   };
 
@@ -210,6 +212,7 @@ function LessonPlayerContent() {
         createdAt: serverTimestamp(),
       });
       toast({ title: '¡Gracias por tu reseña!', description: 'Tu opinión ayuda a mejorar la calidad del curso.' });
+      router.refresh();
     } catch {
       toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar tu reseña. Intenta más tarde.' });
     } finally {

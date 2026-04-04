@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { WaitingHall } from '@/components/instructor/WaitingHall';
@@ -23,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
 export default function AdminCoursesPage() {
+  const router = useRouter();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const auth = useAuth();
@@ -233,6 +235,7 @@ export default function AdminCoursesPage() {
       
       setIsDialogOpen(false);
       resetForm();
+      router.refresh();
     } catch (error: any) {
       console.error("DEBUG: Error in handleFormSubmit", error);
       toast({
@@ -247,6 +250,7 @@ export default function AdminCoursesPage() {
     if (!db || !isAdmin) return; 
     if (confirm('¿Eliminar curso permanentemente?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', courseId));
+      router.refresh();
     }
   };
 

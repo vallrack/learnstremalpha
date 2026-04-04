@@ -118,6 +118,7 @@ export default function CourseContentAdminPage() {
     }
     setIsModuleDialogOpen(false);
     resetModuleForm();
+    router.refresh();
   };
 
   const resetModuleForm = () => {
@@ -133,6 +134,7 @@ export default function CourseContentAdminPage() {
     if (!db || !isAuthorized) return;
     if (confirm('¿Estás seguro de eliminar este módulo y todo su contenido?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', courseId, 'modules', moduleId));
+      router.refresh();
     }
   };
 
@@ -284,6 +286,7 @@ export default function CourseContentAdminPage() {
 }
 
 function LessonManager({ course, moduleId, isAuthorized }: { course: any, moduleId: string, isAuthorized: boolean }) {
+  const router = useRouter();
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
@@ -387,6 +390,7 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
 
       setIsDialogOpen(false);
       resetForm();
+      router.refresh();
     } catch (err: any) {
       console.error("Error saving lesson:", err);
     }
@@ -432,6 +436,7 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     if (!db || !isAuthorized) return;
     if (confirm('¿Eliminar lección?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lessonId));
+      router.refresh();
     }
   };
 
@@ -590,6 +595,7 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
 }
 
 function ResourceManager({ course, moduleId, lesson, isAuthorized }: { course: any, moduleId: string, lesson: any, isAuthorized: boolean }) {
+  const router = useRouter();
   const db = useFirestore();
   const storage = useStorage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -671,6 +677,7 @@ function ResourceManager({ course, moduleId, lesson, isAuthorized }: { course: a
     
     setIsDialogOpen(false);
     resetForm();
+    router.refresh();
   };
 
   const resetForm = () => {
@@ -685,6 +692,7 @@ function ResourceManager({ course, moduleId, lesson, isAuthorized }: { course: a
     if (!db || !isAuthorized) return;
     if (confirm('¿Eliminar recurso?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lesson.id, 'resources', resourceId));
+      router.refresh();
     }
   };
 

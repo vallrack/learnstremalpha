@@ -59,6 +59,7 @@ export default function ProfilePage() {
     if (!db || !user?.uid) return;
     updateDocumentNonBlocking(doc(db, 'users', user.uid), { profileImageUrl: url });
     setIsAvatarDialogOpen(false);
+    router.refresh();
     toast({ title: 'Avatar actualizado', description: 'Tu foto de perfil se ha actualizado correctamente.' });
   };
 
@@ -124,6 +125,7 @@ export default function ProfilePage() {
     
     setTimeout(() => {
       setSaving(false);
+      router.refresh();
       toast({ title: "Perfil actualizado", description: "Tu nombre ha sido guardado correctamente." });
     }, 500);
   };

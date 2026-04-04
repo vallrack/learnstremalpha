@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { 
@@ -34,6 +35,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminStudentsPage() {
+  const router = useRouter();
   const db = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -185,6 +187,7 @@ export default function AdminStudentsPage() {
 }
 
 function StudentDetailView({ studentId, allCourses, onBack }: { studentId: string, allCourses: any[], onBack: () => void }) {
+  const router = useRouter();
   const db = useFirestore();
   
   const studentRef = useMemoFirebase(() => {
@@ -204,6 +207,7 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
     updateDocumentNonBlocking(doc(db, 'users', studentId), {
       isActive: active
     });
+    router.refresh();
   };
 
   const handleRoleChange = (newRole: string) => {
@@ -211,6 +215,7 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
     updateDocumentNonBlocking(doc(db, 'users', studentId), {
       role: newRole
     });
+    router.refresh();
   };
 
   const enrichedEnrollments = enrollments?.map(enr => {

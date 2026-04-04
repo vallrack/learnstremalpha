@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { WaitingHall } from '@/components/instructor/WaitingHall';
@@ -72,6 +73,7 @@ import { generateActivities } from '@/ai/flows/generate-activities';
 import { generateWithExternalAI } from '@/app/actions/ai-generation';
 
 export default function AdminChallengesClient() {
+  const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -409,6 +411,7 @@ export default function AdminChallengesClient() {
 
       setIsDialogOpen(false);
       resetForm();
+      router.refresh();
       toast({ 
         title: editingId ? "Reto actualizado" : "Reto publicado", 
         description: "La estructura de seguridad (decoupled) ha sido aplicada correctamente." 

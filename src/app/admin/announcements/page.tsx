@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { 
@@ -71,6 +72,7 @@ const ROLES_OPTIONS = [
 ];
 
 export default function AdminAnnouncementsPage() {
+  const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -264,12 +266,14 @@ export default function AdminAnnouncementsPage() {
     
     setIsDialogOpen(false);
     resetForm();
+    router.refresh();
   };
 
   const handleDelete = (id: string) => {
     if (!db || !isAdmin) return;
     if (confirm('¿Eliminar este anuncio permanentemente?')) {
       deleteDocumentNonBlocking(doc(db, 'announcements', id));
+      router.refresh();
     }
   };
 
