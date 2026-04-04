@@ -6,6 +6,7 @@ import { TranslationProvider } from '@/lib/i18n/use-translation';
 import { InactivityLogout } from '@/components/auth/InactivityLogout';
 import { Toaster } from '@/components/ui/toaster';
 import { FloatingWhatsApp } from '@/components/layout/FloatingWhatsApp';
+import { AnnouncementPopup } from '@/components/announcements/AnnouncementPopup';
 
 import { BrandingProvider } from '@/lib/branding/BrandingProvider';
 import { headers } from 'next/headers';
@@ -42,6 +43,7 @@ export default function RootLayout({
               <InactivityLogout />
               {children}
               <FloatingWhatsApp />
+              <AnnouncementPopup />
               <Toaster />
             </BrandingProvider>
           </FirebaseClientProvider>
