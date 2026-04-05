@@ -35,6 +35,7 @@ import {
   Mic2,
   ExternalLink as ExternalLinkIcon
 } from 'lucide-react';
+import { PodcastPlayer } from "@/components/podcasts/PodcastPlayer";
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, orderBy, serverTimestamp, setDoc, where, updateDoc, arrayUnion, getDoc, getDocs, addDoc, increment, deleteDoc } from 'firebase/firestore';
@@ -283,10 +284,18 @@ function LessonPlayerContent() {
     fetchPremiumData();
   }, [db, finalizedAccess, courseId, moduleId, lessonId, isUserLoading, isCourseLoading, isLessonLoading]);
 
-  const effectiveVideoUrl = premiumData?.videoUrl || currentLesson?.videoUrl;
   const effectiveDescription = premiumData?.description || currentLesson?.description;
-  const effectiveQuestions = premiumData?.questions || currentLesson?.questions;
   const effectiveChallengeId = premiumData?.challengeId || currentLesson?.challengeId;
+  const effectivePodcastId = premiumData?.podcastId || currentLesson?.podcastId;
+  const effectiveQuestions = premiumData?.questions || currentLesson?.questions;
+
+  const podcastRef = useMemoFirebase(() => {
+    if (!db || !effectivePodcastId || currentLesson?.type !== 'podcast') return null;
+    return doc(db, 'podcasts', effectivePodcastId);
+  }, [db, effectivePodcastId, currentLesson?.type]);
+  const { data: podcastData } = useDoc(podcastRef);
+
+  const effectiveVideoUrl = premiumData?.videoUrl || currentLesson?.videoUrl;
 
   const formatVideoUrl = (url: string) => {
     if (!url) return '';
@@ -443,6 +452,31 @@ function LessonPlayerContent() {
                  />
               ) : currentLesson.type === 'quiz' ? (
                 <div className="max-w-2xl mx-auto"><QuizPlayer questions={effectiveQuestions || []} onComplete={handleMarkAsCompleted} /></div>
+              ) : currentLesson.type === 'podcast' ? (
+                <div className="max-w-4xl mx-auto">
+                    {podcastData ? (
+                        <PodcastPlayer 
+                            podcast={{...podcastData, id: effectivePodcastId}} 
+                            hasAccess={true} 
+                        />
+                    ) : (
+                        <div className="h-64 flex items-center justify-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
+                            <div className="flex flex-col items-center gap-3">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Cargando Podcast...</p>
+                            </div>
+                        </div>
+                    )}
+                    <div className="mt-8 flex justify-center">
+                        <Button 
+                            onClick={handleMarkAsCompleted}
+                            className="rounded-2xl h-14 px-8 font-bold gap-2 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-100"
+                        >
+                            <CheckCircle className="h-5 w-5" />
+                            Marcar como Completada
+                        </Button>
+                    </div>
+                </div>
               ) : (
                 <>
                   {videoSource ? (

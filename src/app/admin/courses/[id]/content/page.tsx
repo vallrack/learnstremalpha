@@ -292,17 +292,17 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
 
-  const [type, setType] = useState<'video' | 'challenge' | 'quiz'>('video');
+  const [type, setType] = useState<'video' | 'challenge' | 'quiz' | 'podcast'>('video');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
-  const [challengeId, setChallengeId] = useState('');
   const [duration, setDuration] = useState('10');
   const [order, setOrder] = useState('0');
   const [isPremium, setIsPremium] = useState(false);
   const [price, setPrice] = useState('0');
   const [currency, setCurrency] = useState('COP');
-
+  const [challengeId, setChallengeId] = useState('');
+  const [podcastId, setPodcastId] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
 
   const challengesQuery = useMemoFirebase(() => {
@@ -311,6 +311,13 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
   }, [db]);
   const { data: allChallenges } = useCollection(challengesQuery);
   const compatibleChallenges = allChallenges || [];
+
+  const podcastsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, 'podcasts');
+  }, [db]);
+  const { data: allPodcasts } = useCollection(podcastsQuery);
+  const availablePodcasts = allPodcasts || [];
 
   const lessonsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -336,6 +343,7 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     setDescription('');
     setVideoUrl('');
     setChallengeId('');
+    setPodcastId('');
     setDuration('10');
     setOrder('0');
     setIsPremium(false);
@@ -381,6 +389,8 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
         sensitiveData.questions = questions;
       } else if (type === 'challenge') {
         sensitiveData.challengeId = challengeId;
+      } else if (type === 'podcast') {
+        sensitiveData.podcastId = podcastId;
       }
 
       const premiumRef = doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lId, 'premium', 'data');
@@ -418,12 +428,14 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
           setVideoUrl(pData.videoUrl || '');
           setQuestions(pData.questions || []);
           setChallengeId(pData.challengeId || lesson.challengeId || '');
+          setPodcastId(pData.podcastId || lesson.podcastId || '');
         } else {
           // Fallback a campos legacy
           setDescription(lesson.description || '');
           setVideoUrl(lesson.videoUrl || '');
           setQuestions(lesson.questions || []);
           setChallengeId(lesson.challengeId || '');
+          setPodcastId(lesson.podcastId || '');
         }
       } catch (err) {
         console.error("Error loading lesson premium data:", err);
@@ -488,7 +500,8 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
                     <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="video">Clase de Video / Texto</SelectItem>
-                      <SelectItem value="challenge">Actividad H5P / Desafío de Código / Entrevista</SelectItem>
+                      <SelectItem value="challenge">Actividad H5P / Desafío / Entrevista</SelectItem>
+                      <SelectItem value="podcast">Podcast de la Biblioteca</SelectItem>
                       <SelectItem value="quiz">Cuestionario Teórico Local</SelectItem>
                     </SelectContent>
                   </Select>
@@ -504,13 +517,40 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
                 {type === 'challenge' && (
                   <div className="grid gap-2"><Label>Vincular Desafío o Actividad Global</Label>
                     <Select value={challengeId} onValueChange={setChallengeId} required>
-                      <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Elige un reto o actividad de la biblioteca..." /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger className="rounded-xl h-14 border-2 transition-all hover:border-primary/50"><SelectValue placeholder="Elige un reto o actividad de la biblioteca..." /></SelectTrigger>
+                      <SelectContent className="rounded-2xl max-h-[300px]">
                         {compatibleChallenges.map(c => (
-                          <SelectItem key={c.id} value={c.id}>
-                            <div className="flex flex-col items-start gap-1">
-                              <span className="font-bold flex items-center gap-2">{['swipe', 'flashcard', 'interactive-video', 'dragdrop', 'sortable', 'wordsearch'].includes(c.type) ? '🎮' : '💻'} {c.title}</span>
-                              <span className="text-[10px] opacity-60 uppercase">{c.technology || 'General'} • {c.difficulty} • {c.type}</span>
+                          <SelectItem key={c.id} value={c.id} className="rounded-xl my-1 p-3">
+                            <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                                  {['swipe', 'flashcard', 'interactive-video', 'dragdrop', 'sortable', 'wordsearch'].includes(c.type) ? '🎮' : '💻'}
+                               </div>
+                               <div className="flex flex-col items-start">
+                                  <span className="font-bold text-sm leading-tight">{c.title}</span>
+                                  <span className="text-[10px] opacity-60 uppercase font-medium tracking-wider">{c.technology || 'General'} • {c.difficulty} • {c.type}</span>
+                               </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {type === 'podcast' && (
+                  <div className="grid gap-2"><Label>Seleccionar Podcast de la Biblioteca</Label>
+                    <Select value={podcastId} onValueChange={setPodcastId} required>
+                      <SelectTrigger className="rounded-xl h-14 border-2 transition-all hover:border-primary/50"><SelectValue placeholder="Elige un podcast para esta lección..." /></SelectTrigger>
+                      <SelectContent className="rounded-2xl max-h-[300px]">
+                        {availablePodcasts.map(p => (
+                          <SelectItem key={p.id} value={p.id} className="rounded-xl my-1 p-3">
+                             <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                  <Mic2 className="h-5 w-5" />
+                               </div>
+                               <div className="flex flex-col items-start">
+                                  <span className="font-bold text-sm leading-tight">{p.title}</span>
+                                  <span className="text-[10px] opacity-60 uppercase font-medium tracking-wider">{p.category || 'Podcast'} • {p.duration || '00:00'}</span>
+                               </div>
                             </div>
                           </SelectItem>
                         ))}
@@ -579,8 +619,18 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
           <div key={lesson.id} className="bg-slate-50 p-4 rounded-2xl border flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${lesson.type === 'challenge' ? 'bg-primary/10 text-primary' : lesson.type === 'quiz' ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-600'}`}>{lesson.type === 'challenge' ? <Code2 className="h-5 w-5" /> : lesson.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}</div>
-                <div><div className="flex items-center gap-2"><p className="font-bold text-sm">{lesson.title}</p>{lesson.isPremium && <Badge variant="outline" className="text-[10px] py-0 h-4 bg-amber-50 text-amber-600 border-amber-200">Premium</Badge>}</div><p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{lesson.type === 'challenge' ? 'Actividad / Reto' : lesson.type === 'quiz' ? 'Cuestionario Local' : 'Lección de Contenido'}</p></div>
+                <div className={`p-2 rounded-xl ${
+                  lesson.type === 'challenge' ? 'bg-primary/10 text-primary' : 
+                  lesson.type === 'quiz' ? 'bg-amber-100 text-amber-600' : 
+                  lesson.type === 'podcast' ? 'bg-indigo-100 text-indigo-600' :
+                  'bg-slate-200 text-slate-600'
+                }`}>
+                  {lesson.type === 'challenge' ? <Code2 className="h-5 w-5" /> : 
+                   lesson.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : 
+                   lesson.type === 'podcast' ? <Mic2 className="h-5 w-5" /> :
+                   <PlayCircle className="h-5 w-5" />}
+                </div>
+                <div><div className="flex items-center gap-2"><p className="font-bold text-sm">{lesson.title}</p>{lesson.isPremium && <Badge variant="outline" className="text-[10px] py-0 h-4 bg-amber-50 text-amber-600 border-amber-200">Premium</Badge>}</div><p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{lesson.type === 'challenge' ? 'Actividad / Reto' : lesson.type === 'quiz' ? 'Cuestionario Local' : lesson.type === 'podcast' ? 'Podcast de la Biblioteca' : 'Lección de Contenido'}</p></div>
               </div>
               <div className="flex gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(lesson)}><Edit className="h-4 w-4" /></Button>
                 {isAuthorized && <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-4 w-4" /></Button>}
