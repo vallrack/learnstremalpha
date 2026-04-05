@@ -45,6 +45,15 @@ import Editor from '@monaco-editor/react';
 import { XPRewardAnimation } from '@/components/gamification/XPRewardAnimation';
 import { formatPrice } from '@/lib/currency';
 import { robustJSONParse } from '@/lib/robust-parse';
+import { simulatePythonGUI } from '@/app/actions/gui-simulator';
+import { GUIMimicWindow } from '@/components/challenges/GUIMimicWindow';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from '@/components/ui/dialog';
 
 export default function ChallengeClient() {
   return (
@@ -75,6 +84,12 @@ function ChallengeContent() {
   const [showXPReward, setShowXPReward] = useState<{ xpGained: number; newTotalXP: number; badge?: { title: string; description: string } | null } | null>(null);
   const [premiumData, setPremiumData] = useState<any>(null);
   const [isLoadingPremium, setIsLoadingPremium] = useState(false);
+  
+  // GUI Simulation State
+  const [isGUIPortalOpen, setIsGUIPortalOpen] = useState(false);
+  const [isSimulatingGUI, setIsSimulatingGUI] = useState(false);
+  const [guiData, setGUIData] = useState<{ components: any[], windowTitle: string } | null>(null);
+  const [guiTheme, setGUITheme] = useState<'retro' | 'modern'>('modern');
 
   useEffect(() => {
     if (challenge) setCode(challenge.initialCode || '');
@@ -493,12 +508,35 @@ function ChallengeContent() {
               </div>
             ) : (
               <div className="h-full bg-[#1e1e1e] rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-4 border-[#1e1e1e]">
-                <div className="bg-[#1e1e1e] px-6 py-4 flex items-center gap-2 border-b border-white/5 shrink-0">
-                  <div className="w-3 h-3 rounded-full bg-rose-500" />
-                  <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className="ml-4 text-[10px] font-mono text-slate-500 uppercase font-bold tracking-widest">learnstream_ide_v2.0</span>
-                </div>
+                 <div className="bg-[#1e1e1e] px-6 py-4 flex items-center justify-between border-b border-white/5 shrink-0">
+                   <div className="flex items-center gap-2">
+                     <div className="w-3 h-3 rounded-full bg-rose-500" />
+                     <div className="w-3 h-3 rounded-full bg-amber-500" />
+                     <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                     <span className="ml-4 text-[10px] font-mono text-slate-500 uppercase font-bold tracking-widest">learnstream_ide_v3.0</span>
+                   </div>
+                   
+                   {/* GUI Preview Button for Python */}
+                   {challenge.technology?.toLowerCase() === 'python' && (
+                     <Button 
+                       onClick={async () => {
+                         setIsSimulatingGUI(true);
+                         setIsGUIPortalOpen(true);
+                         const res = await simulatePythonGUI(code);
+                         if (res.success) setGUIData(res.data);
+                         else toast({ title: 'Simulación Fallida', description: res.error, variant: 'destructive' });
+                         setIsSimulatingGUI(false);
+                       }}
+                       disabled={isSimulatingGUI}
+                       variant="ghost" 
+                       size="sm" 
+                       className="h-8 rounded-lg bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 border border-orange-500/20 gap-2 px-3 transition-all"
+                     >
+                        {isSimulatingGUI ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        <span className="text-[10px] font-bold uppercase tracking-tighter">Preview GUI IA</span>
+                     </Button>
+                   )}
+                 </div>
                 <div className="flex-1 min-h-[400px] relative">
                   <Editor
                     height="100%"
@@ -567,6 +605,65 @@ function ChallengeContent() {
           onDismiss={() => setShowXPReward(null)}
         />
       )}
+       
+       {/* GUI Simulation Portal */}
+       <Dialog open={isGUIPortalOpen} onOpenChange={setIsGUIPortalOpen}>
+         <DialogContent className="max-w-4xl bg-slate-900/40 backdrop-blur-3xl border-white/10 p-0 overflow-hidden rounded-[3rem] shadow-2xl">
+            <div className="p-8 space-y-6">
+               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-headline font-bold text-white flex items-center gap-3">
+                      <Sparkles className="h-6 w-6 text-orange-400" />
+                      Simulador Visual de Python
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-1">Interpretación por IA de tu código gráfico.</p>
+                  </div>
+                  
+                  {/* Theme Switcher Toggle */}
+                  <div className="flex bg-slate-800/50 p-1 rounded-2xl border border-white/5">
+                     <button 
+                        onClick={() => setGUITheme('retro')}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all ${guiTheme === 'retro' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                     >
+                        📜 RETO 95
+                     </button>
+                     <button 
+                        onClick={() => setGUITheme('modern')}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all ${guiTheme === 'modern' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                     >
+                        ✨ MODERN LS
+                     </button>
+                  </div>
+               </div>
+               
+               <div className="min-h-[450px] flex items-center justify-center bg-black/20 rounded-[2rem] border border-white/5 p-4 md:p-8">
+                  {isSimulatingGUI ? (
+                    <div className="flex flex-col items-center gap-4 animate-pulse">
+                       <Loader2 className="h-12 w-12 text-orange-500 animate-spin" />
+                       <span className="text-orange-200 font-bold text-xs uppercase tracking-widest">El Genio está interpretando...</span>
+                    </div>
+                  ) : guiData ? (
+                    <div className="w-full animate-in zoom-in-95 duration-500">
+                       <GUIMimicWindow 
+                          components={guiData.components} 
+                          title={guiData.windowTitle} 
+                          theme={guiTheme} 
+                          onClose={() => setIsGUIPortalOpen(false)}
+                       />
+                       <p className="mt-8 text-center text-slate-500 text-[10px] font-medium uppercase tracking-[0.2em]">
+                          Nota: Esta es una representación visual basada en IA. No ejecuta la lógica real de los clics.
+                       </p>
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-4 opacity-50">
+                       <ShieldAlert className="h-16 w-16 text-slate-400 mx-auto" />
+                       <p className="text-slate-400 text-sm max-w-sm">No pudimos detectar elementos gráficos en tu código. Asegúrate de usar Tkinter o librerías similares.</p>
+                    </div>
+                  )}
+               </div>
+            </div>
+         </DialogContent>
+       </Dialog>
     </div>
   );
 }
