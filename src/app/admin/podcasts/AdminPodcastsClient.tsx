@@ -142,6 +142,10 @@ export default function AdminPodcastsClient() {
         ...podcastData,
         instructorId: user.uid,
         instructorName: profile?.displayName || user.displayName || 'Admin',
+        // Si es gratis, guardamos la URL en el principal para facilidad de acceso
+        ...(isFree ? { audioUrl, videoUrl } : { audioUrl: "", videoUrl: "" }),
+        hasAudio: !!audioUrl,
+        hasVideo: !!videoUrl,
         ...(editingId ? {} : { createdAt: serverTimestamp() })
       }, { merge: true });
       
@@ -641,19 +645,38 @@ export default function AdminPodcastsClient() {
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                        {p.audioUrl ? (
+                        {p.audioUrl || p.hasAudio ? (
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
-                                onClick={() => setPreviewPodcast(p)}
+                                onClick={async () => {
+                                    if (p.audioUrl) {
+                                        setPreviewPodcast(p);
+                                    } else {
+                                        // Si es premium y no tiene URL en el principal, la buscamos
+                                        try {
+                                            const premiumRef = doc(db, 'podcasts', p.id, 'premium', 'data');
+                                            const snap = await getDoc(premiumRef);
+                                            if (snap.exists()) {
+                                                const pData = snap.data();
+                                                setPreviewPodcast({ ...p, audioUrl: pData.audioUrl, videoUrl: pData.videoUrl });
+                                            } else {
+                                                setPreviewPodcast(p);
+                                            }
+                                        } catch (e) {
+                                            console.error(e);
+                                            setPreviewPodcast(p);
+                                        }
+                                    }
+                                }}
                             >
                                 <Play className="h-4 w-4" />
                             </Button>
                         ) : (
                             <X className="h-4 w-4 text-rose-500" />
                         )}
-                        {p.videoUrl && <Video className="h-4 w-4 text-indigo-500" />}
+                        {(p.videoUrl || p.hasVideo) && <Video className="h-4 w-4 text-indigo-500" />}
                     </div>
                   </TableCell>
                   <TableCell className="text-right pr-8">
