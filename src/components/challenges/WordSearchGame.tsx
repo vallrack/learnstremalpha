@@ -13,7 +13,7 @@ interface WordSearchGameProps {
 }
 
 export function WordSearchGame({ words, onComplete }: WordSearchGameProps) {
-  const GRID_SIZE = 12;
+  const GRID_SIZE = 15;
   const [grid, setGrid] = useState<string[][]>([]);
   const [foundWords, setFoundWords] = useState<string[]>([]);
   const [selection, setSelection] = useState<{ start: { r: number, c: number }, end: { r: number, c: number } } | null>(null);

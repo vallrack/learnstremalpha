@@ -56,7 +56,52 @@ export function VisualH5PBuilder({ type, jsonConfig, setJsonConfig, technology, 
     setJsonConfig(JSON.stringify(newData, null, 2));
   };
 
-  const AIPanel = null;
+  const AIPanel = (
+    <div className="mb-6">
+      {!isAIOpen ? (
+        <Button 
+          type="button" 
+          onClick={() => setIsAIOpen(true)} 
+          variant="outline" 
+          className="w-full h-10 rounded-xl border-orange-200 bg-orange-50/50 text-orange-700 font-bold hover:bg-orange-100 hover:border-orange-300 transition-all gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          Usar Genio IA para estas {type}s
+        </Button>
+      ) : (
+        <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-4 space-y-3 animate-in zoom-in-95">
+          <Label className="text-orange-800 font-bold text-[10px] uppercase tracking-wider">Contenido de la Lección</Label>
+          <Textarea 
+            value={aiLessonContent} 
+            onChange={(e) => setAiLessonContent(e.target.value)}
+            placeholder="Pega el contenido base de la lección aquí..."
+            className="min-h-[100px] text-xs bg-white border-orange-100 rounded-xl"
+          />
+          {aiError && <p className="text-[10px] text-rose-500 font-bold">{aiError}</p>}
+          <div className="flex gap-2">
+            <Button 
+              type="button" 
+              onClick={handleAIGenerate} 
+              disabled={isGenerating} 
+              className="flex-1 bg-orange-600 hover:bg-orange-700 h-9 text-xs font-bold rounded-xl"
+            >
+              {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
+              Generar Contenido Visual
+            </Button>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {setIsAIOpen(false); setAiError('')}} 
+              className="text-orange-600 hover:bg-orange-100 h-9 rounded-xl px-4"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   if (type === 'flashcard') {
     const cards = data.cards || [];

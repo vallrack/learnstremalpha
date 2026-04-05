@@ -10,7 +10,7 @@ const GenerateActivitiesInputSchema = z.object({
   lessonTitle: z.string().describe('Título de la lección.'),
   lessonContent: z.string().describe('El texto completo de la lección de la cual se generarán actividades.'),
   technology: z.string().describe('Tecnología principal de la lección, ej: JavaScript, Python, React.'),
-  activityType: z.enum(['flashcard', 'swipe', 'sortable', 'quiz', 'dragdrop', 'interactive-video', 'code', 'interview']).describe('El tipo de actividad a generar.'),
+  activityType: z.enum(['flashcard', 'swipe', 'sortable', 'quiz', 'dragdrop', 'interactive-video', 'code', 'interview', 'wordsearch']).describe('El tipo de actividad a generar.'),
 });
 export type GenerateActivitiesInput = z.infer<typeof GenerateActivitiesInputSchema>;
 
@@ -134,29 +134,36 @@ REGLAS POR TIPO:
    - Proporciona el mapping correcto.
    - Ejemplo: "const [state, setState] = {{{s1}}}({{{s2}}});" con snippets id:s1 text:useState y id:s2 text:initialValue.
 
-6. SI activityType = "interactive-video":
-   - Analiza la lección y propón 3-5 puntos de pausa lógicos (en segundos progresivos, ej: 10, 45, 120).
-   - Genera una pregunta desafiante para cada punto.
-   - Usa un videoUrl de YouTube genérico de la tecnología si no se provee uno (ej: de un canal oficial).
-
-7. SI activityType = "code":
-   - Genera un ejercicio de programación desafiante basado en la lección.
-   - Proporciona una descripción clara del reto.
-   - IMPORTANTE: "initialCode" debe ser el "esquema base" o scaffolding (ej: definición de función vacía, comentarios de ayuda, o estructura de tabla SQL) para que el estudiante sepa dónde escribir.
-   - "solution" debe ser el código completo y funcional.
-   - El JSON debe tener la forma: { "initialCode": "...", "solution": "..." }
-
-8. SI activityType = "interview":
-   - Define un rol de entrevistador y un tema (ej: "Senior React Dev").
-   - El JSON debe tener la forma: { "targetRole": "...", "targetLanguage": "es/en", "solution": "Instrucciones para la IA sobre en qué profundizar..." }
-
-IMPORTANTE:
-- El campo "activityConfig" DEBE ser un STRING de JSON válido (usa JSON.stringify).  
-- Todo el contenido debe estar en ESPAÑOL LATINOAMERICANO, con un tono motivador y profesional.
-- Genera un título creativo e impactante.
-- El contenido debe ser educativamente valioso, profundo y basado rigurosamente en la lección.
-- En las actividades de "swipe" (Verdad/Falso), asegúrate de que las afirmaciones falsas sean 'trampas' inteligentes basadas en confusiones comunes en la tecnología, no errores obvios.
-- En "code", el reto debe ser de un nivel que desafíe al estudiante a aplicar lo aprendido estructuralmente.`,
+  // 6. SI activityType = "interactive-video":
+  //    - Analiza la lección y propón 3-5 puntos de pausa lógicos (en segundos progresivos, ej: 10, 45, 120).
+  //    - Genera una pregunta desafiante para cada punto.
+  //    - Usa un videoUrl de YouTube genérico de la tecnología si no se provee uno (ej: de un canal oficial).
+  //
+  // 7. SI activityType = "code":
+  //    - Genera un ejercicio de programación de NIVEL AVANZADO/DESAFIANTE basado en la lección.
+  //    - "initialCode" debe ser el "esquema base" o scaffolding sofisticado.
+  //    - "solution" debe ser el código completo, funcional e ideal (Clean Code).
+  //
+  // 8. SI activityType = "interview":
+  //    - Define un rol de entrevistador senior y un lenguaje.
+  //
+  // 9. SI activityType = "sortable":
+  //    - Genera un bloque de código completo (ej: una función completa) dividido en 4-8 líneas lógicas.
+  //    - El reto debe ser reordenar el algoritmo para que sea funcional.
+  //
+  // 10. SI activityType = "wordsearch":
+  //    - Genera una lista de 10-15 palabras clave sobre la lección.
+  //    - El JSON debe tener la forma: { "words": ["PALABRA1", "PALABRA2", ...] }
+  //
+  // REGLAS CRÍTICAS:
+  // - Si el CONTENIDO de la lección parece estar compuesto por INSTRUCCIONES específicas de un profesor (Meta-Prompt), PRIORIZA esas instrucciones para el contenido generado, pero mantén SIEMPRE el formato JSON solicitado.
+  // - Todo el contenido debe estar en ESPAÑOL LATINOAMERICANO fluido y profesional.
+  // - No incluyas grids de texto para la sopa de letras, solo el array de palabras.
+  // - En "code", el reto debe ser arquitectónicamente valioso.
+  // - En "sortable", evita líneas triviales; prefiere fragmentos de lógica de control o algoritmos.
+  // - El campo "activityConfig" DEBE ser un STRING de JSON válido (usa JSON.stringify).  
+  // - Genera un título creativo e impactante.
+  // - En las actividades de "swipe" (Verdad/Falso), las afirmaciones falsas deben ser errores conceptuales comunes.`,
 });
 
 const generateActivitiesFlow = ai.defineFlow(

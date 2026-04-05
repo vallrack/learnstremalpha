@@ -236,8 +236,13 @@ export default function AdminChallengesClient() {
         }));
         setQuestions(mappedQuestions);
       } else if (type === 'wordsearch') {
-        const rawWords = config.words || [];
-        setWords(rawWords.map((w: string) => (w || '').toString().toUpperCase()));
+        let rawWords = config.words || [];
+        if (!Array.isArray(rawWords)) {
+          const text = JSON.stringify(config);
+          const matches = text.match(/[A-Z]{3,}/g);
+          rawWords = matches ? [...new Set(matches)] : [];
+        }
+        setWords(rawWords.map((w: any) => (w || '').toString().toUpperCase()));
       }
 
       if (resultData.activityTitle) setTitle(resultData.activityTitle);
@@ -277,7 +282,14 @@ export default function AdminChallengesClient() {
           }));
           setQuestions(mapped);
         }
-        else if (type === 'wordsearch') { setWords((config.words || []).map((w: any) => (w || '').toString().toUpperCase())); }
+        else if (type === 'wordsearch') { 
+          let rawWords = config.words || [];
+          if (!Array.isArray(rawWords)) {
+            const matches = JSON.stringify(config).match(/[A-Z]{3,}/g);
+            rawWords = matches ? [...new Set(matches)] : [];
+          }
+          setWords(rawWords.map((w: any) => (w || '').toString().toUpperCase())); 
+        }
         
         if (resultData.activityTitle) setTitle(resultData.activityTitle);
         if (resultData.activityDescription) setDescription(resultData.activityDescription);
@@ -620,9 +632,8 @@ export default function AdminChallengesClient() {
                   </div>
                   
                   <div className="space-y-8 bg-muted/20 p-6 rounded-[2rem] border">
-                    {/* AI Wizard Global */}
-                    {!['quiz', 'dragdrop', 'flashcard', 'swipe'].includes(challengeType) && (
-                      <div className="mb-6">
+                    {/* AI Wizard Global - Habilitado para TODOS los tipos */}
+                    <div className="mb-6">
                        {!isAIOpen ? (
                          <Button type="button" onClick={() => setIsAIOpen(true)} variant="outline" className="w-full h-11 rounded-xl border-orange-200 bg-orange-50/50 text-orange-700 font-bold hover:bg-orange-100 hover:border-orange-300 transition-all gap-2">
                            <Sparkles className="h-4 w-4" />
@@ -656,7 +667,6 @@ export default function AdminChallengesClient() {
                          </div>
                        )}
                     </div>
-                    )}
 
                     {['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challengeType) ? (
                       <div className="grid gap-4">
