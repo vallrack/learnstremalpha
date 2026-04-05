@@ -608,59 +608,72 @@ function ChallengeContent() {
        
        {/* GUI Simulation Portal */}
        <Dialog open={isGUIPortalOpen} onOpenChange={setIsGUIPortalOpen}>
-         <DialogContent className="max-w-4xl bg-slate-900/40 backdrop-blur-3xl border-white/10 p-0 overflow-hidden rounded-[3rem] shadow-2xl">
-            <div className="p-8 space-y-6">
-               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-2xl font-headline font-bold text-white flex items-center gap-3">
-                      <Sparkles className="h-6 w-6 text-orange-400" />
-                      Simulador Visual de Python
+         <DialogContent className="max-w-[95vw] sm:max-w-5xl h-[90vh] sm:h-auto bg-slate-900/60 backdrop-blur-3xl border-white/10 p-0 overflow-hidden rounded-[2.5rem] sm:rounded-[4rem] shadow-2xl flex flex-col">
+            <div className="p-6 sm:p-10 space-y-6 sm:space-y-8 flex-1 flex flex-col overflow-y-auto">
+               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  <div className="space-y-1">
+                    <h2 className="text-2xl sm:text-3xl font-headline font-bold text-white flex items-center gap-3">
+                      <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-orange-400" />
+                      Visual Laboratory
                     </h2>
-                    <p className="text-slate-400 text-sm mt-1">Interpretación por IA de tu código gráfico.</p>
+                    <p className="text-slate-400 text-xs sm:text-sm font-medium">InterpretaciÃ³n inteligente de interfaces Python.</p>
                   </div>
                   
-                  {/* Theme Switcher Toggle */}
-                  <div className="flex bg-slate-800/50 p-1 rounded-2xl border border-white/5">
+                  {/* Theme Switcher Toggle - Responsive Layout */}
+                  <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 self-start lg:self-center">
                      <button 
                         onClick={() => setGUITheme('retro')}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all ${guiTheme === 'retro' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                        className={`px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black tracking-widest uppercase transition-all ${guiTheme === 'retro' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                      >
                         📜 RETO 95
                      </button>
                      <button 
                         onClick={() => setGUITheme('modern')}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all ${guiTheme === 'modern' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                        className={`px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-black tracking-widest uppercase transition-all ${guiTheme === 'modern' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                      >
                         ✨ MODERN LS
                      </button>
                   </div>
                </div>
                
-               <div className="min-h-[450px] flex items-center justify-center bg-black/20 rounded-[2rem] border border-white/5 p-4 md:p-8">
+               <div className="flex-1 min-h-[400px] flex items-center justify-center bg-black/40 rounded-[2.5rem] border border-white/5 p-4 sm:p-10 relative overflow-hidden">
+                  {/* Decorative background for the simulator area */}
+                  <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.03),transparent)] pointer-events-none" />
+                  
                   {isSimulatingGUI ? (
-                    <div className="flex flex-col items-center gap-4 animate-pulse">
-                       <Loader2 className="h-12 w-12 text-orange-500 animate-spin" />
-                       <span className="text-orange-200 font-bold text-xs uppercase tracking-widest">El Genio está interpretando...</span>
+                    <div className="flex flex-col items-center gap-6 animate-pulse">
+                       <div className="relative">
+                          <Loader2 className="h-14 w-14 text-orange-500 animate-spin" />
+                          <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-orange-300" />
+                       </div>
+                       <span className="text-orange-200 font-black text-[10px] uppercase tracking-[0.3em] text-center">El Genio estÃ¡ interpretando el cÃ³digo...</span>
                     </div>
                   ) : guiData ? (
-                    <div className="w-full animate-in zoom-in-95 duration-500">
+                    <div className="w-full flex justify-center items-center">
                        <GUIMimicWindow 
                           components={guiData.components} 
                           title={guiData.windowTitle} 
                           theme={guiTheme} 
                           onClose={() => setIsGUIPortalOpen(false)}
                        />
-                       <p className="mt-8 text-center text-slate-500 text-[10px] font-medium uppercase tracking-[0.2em]">
-                          Nota: Esta es una representación visual basada en IA. No ejecuta la lógica real de los clics.
-                       </p>
                     </div>
                   ) : (
-                    <div className="text-center space-y-4 opacity-50">
-                       <ShieldAlert className="h-16 w-16 text-slate-400 mx-auto" />
-                       <p className="text-slate-400 text-sm max-w-sm">No pudimos detectar elementos gráficos en tu código. Asegúrate de usar Tkinter o librerías similares.</p>
+                    <div className="text-center space-y-6 opacity-40 py-20">
+                       <ShieldAlert className="h-20 w-20 text-slate-500 mx-auto" />
+                       <div className="space-y-2">
+                          <p className="text-white font-bold text-lg uppercase tracking-wider">No se detectÃ³ GUI</p>
+                          <p className="text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">AsegÃºrate de usar librerÃ­as como Tkinter o Pygame para que el simulador pueda visualizar tu creaciÃ³n.</p>
+                       </div>
                     </div>
                   )}
                </div>
+               
+               {/* Footer Warning */}
+               {guiData && !isSimulatingGUI && (
+                  <p className="text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] opacity-50 pb-2">
+                     Simulation Mode - Non Executable UI
+                  </p>
+               )}
             </div>
          </DialogContent>
        </Dialog>
