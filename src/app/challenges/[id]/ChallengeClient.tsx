@@ -88,7 +88,7 @@ function ChallengeContent() {
   // GUI Simulation State
   const [isGUIPortalOpen, setIsGUIPortalOpen] = useState(false);
   const [isSimulatingGUI, setIsSimulatingGUI] = useState(false);
-  const [guiData, setGUIData] = useState<{ components: any[], windowTitle: string } | null>(null);
+  const [guiData, setGUIData] = useState<{ components: any[], windowTitle: string, width?: number, height?: number } | null>(null);
   const [guiTheme, setGUITheme] = useState<'retro' | 'modern'>('modern');
 
   useEffect(() => {
@@ -608,15 +608,15 @@ function ChallengeContent() {
        
        {/* GUI Simulation Portal */}
        <Dialog open={isGUIPortalOpen} onOpenChange={setIsGUIPortalOpen}>
-         <DialogContent className="max-w-[95vw] sm:max-w-5xl h-[90vh] sm:h-auto bg-slate-900/60 backdrop-blur-3xl border-white/10 p-0 overflow-hidden rounded-[2.5rem] sm:rounded-[4rem] shadow-2xl flex flex-col">
+         <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[85vh] bg-slate-900/80 backdrop-blur-3xl border-white/10 p-0 overflow-hidden rounded-[2rem] sm:rounded-[3rem] shadow-2xl flex flex-col transition-all duration-300">
             <div className="p-6 sm:p-10 space-y-6 sm:space-y-8 flex-1 flex flex-col overflow-y-auto">
                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                   <div className="space-y-1">
-                    <h2 className="text-2xl sm:text-3xl font-headline font-bold text-white flex items-center gap-3">
-                      <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-orange-400" />
+                    <DialogTitle className="text-xl sm:text-2xl font-headline font-bold text-white flex items-center gap-3">
+                      <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400" />
                       Visual Laboratory
-                    </h2>
-                    <p className="text-slate-400 text-xs sm:text-sm font-medium">InterpretaciÃ³n inteligente de interfaces Python.</p>
+                    </DialogTitle>
+                    <DialogDescription className="text-slate-400 text-[10px] sm:text-xs font-medium uppercase tracking-widest">Interpretación inteligente de interfaces Python</DialogDescription>
                   </div>
                   
                   {/* Theme Switcher Toggle - Responsive Layout */}
@@ -643,10 +643,10 @@ function ChallengeContent() {
                   {isSimulatingGUI ? (
                     <div className="flex flex-col items-center gap-6 animate-pulse">
                        <div className="relative">
-                          <Loader2 className="h-14 w-14 text-orange-500 animate-spin" />
-                          <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-orange-300" />
+                          <Loader2 className="h-10 w-10 text-orange-500 animate-spin" />
+                          <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-orange-300" />
                        </div>
-                       <span className="text-orange-200 font-black text-[10px] uppercase tracking-[0.3em] text-center">El Genio estÃ¡ interpretando el cÃ³digo...</span>
+                       <span className="text-orange-200 font-bold text-[9px] uppercase tracking-[0.4em] text-center">El Genio está interpretando el código...</span>
                     </div>
                   ) : guiData ? (
                     <div className="w-full flex justify-center items-center">
@@ -655,14 +655,16 @@ function ChallengeContent() {
                           title={guiData.windowTitle} 
                           theme={guiTheme} 
                           onClose={() => setIsGUIPortalOpen(false)}
+                          width={guiData.width}
+                          height={guiData.height}
                        />
                     </div>
                   ) : (
-                    <div className="text-center space-y-6 opacity-40 py-20">
-                       <ShieldAlert className="h-20 w-20 text-slate-500 mx-auto" />
-                       <div className="space-y-2">
-                          <p className="text-white font-bold text-lg uppercase tracking-wider">No se detectÃ³ GUI</p>
-                          <p className="text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">AsegÃºrate de usar librerÃ­as como Tkinter o Pygame para que el simulador pueda visualizar tu creaciÃ³n.</p>
+                    <div className="text-center space-y-4 opacity-40 py-10">
+                       <ShieldAlert className="h-12 w-12 text-slate-500 mx-auto" />
+                       <div className="space-y-1">
+                          <p className="text-white font-bold text-sm uppercase tracking-wider">No se detectó GUI</p>
+                          <p className="text-slate-400 text-[10px] max-w-[200px] mx-auto leading-relaxed">Usa librerías como Tkinter o Pygame para previsualizar tu creación.</p>
                        </div>
                     </div>
                   )}
