@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   PlayCircle,
   HelpCircle,
-  CheckCircle2
+  CheckCircle2,
+  Mic2
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
@@ -716,6 +717,7 @@ function ResourceManager({ course, moduleId, lesson, isAuthorized }: { course: a
                       <SelectItem value="pdf">Documento PDF</SelectItem>
                       <SelectItem value="word">Documento Word</SelectItem>
                       <SelectItem value="ppt">PowerPoint</SelectItem>
+                      <SelectItem value="podcast">Podcast / Audio (Drive/Spotify)</SelectItem>
                       <SelectItem value="link">Enlace Externo (Web/Notion)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -770,10 +772,10 @@ function ResourceManager({ course, moduleId, lesson, isAuthorized }: { course: a
                     {isGoogleDrive && (
                       <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
                         <div className="flex items-center gap-2 text-amber-700 font-bold text-[10px] uppercase">
-                          <AlertTriangle className="h-3 w-3" /> ¡Importante! Google Drive
+                          <AlertTriangle className="h-3 w-3" /> ¡Importante! Google Drive / Spotify
                         </div>
                         <p className="text-[10px] text-amber-800 leading-tight">
-                          Asegúrate de que el archivo esté compartido como <b>"Cualquier persona con el enlace puede ver"</b> para que los estudiantes puedan visualizarlo.
+                          Asegúrate de que el archivo esté compartido como <b>"Cualquier persona con el enlace puede ver"</b>. Para podcasts, pega el enlace directo del episodio.
                         </p>
                       </div>
                     )}
@@ -796,7 +798,7 @@ function ResourceManager({ course, moduleId, lesson, isAuthorized }: { course: a
         {resources?.map((res) => (
           <div key={res.id} className="text-[10px] p-2 bg-white border rounded-xl flex items-center justify-between group">
             <span className="truncate pr-2 flex items-center gap-2">
-              {res.type === 'link' ? <LinkIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+              {res.type === 'link' ? <LinkIcon className="h-3 w-3" /> : res.type === 'podcast' ? <Mic2 className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
               {res.title}
             </span>
             {isAuthorized && (

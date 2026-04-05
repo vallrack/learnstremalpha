@@ -210,6 +210,19 @@ export default function AdminPodcastsClient() {
     setThumbnailUrl(finalUrl);
   };
 
+  const handleAudioUrlChange = (val: string) => {
+    let finalUrl = val;
+    if (val.includes('drive.google.com')) {
+      const dMatch = val.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      const idMatch = val.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+      const driveId = (dMatch && dMatch[1]) || (idMatch && idMatch[1]);
+      if (driveId) {
+        finalUrl = `https://drive.google.com/file/d/${driveId}/view`;
+      }
+    }
+    setAudioUrl(finalUrl);
+  };
+
   const handleEdit = async (podcast: any) => {
     setEditingId(podcast.id);
     setTitle(podcast.title || '');
@@ -498,7 +511,7 @@ export default function AdminPodcastsClient() {
                         <div className="flex flex-col gap-4">
                             <Input 
                                 value={audioUrl} 
-                                onChange={(e) => setAudioUrl(e.target.value)} 
+                                onChange={(e) => handleAudioUrlChange(e.target.value)} 
                                 placeholder={
                                     sourceType === 'youtube' ? "https://youtube.com/watch?v=..." : 
                                     sourceType === 'anchor' ? "https://podcasters.spotify.com/..." : 
@@ -702,7 +715,8 @@ export default function AdminPodcastsClient() {
                             <iframe 
                                 src={getEmbedUrl(previewPodcast.audioUrl, 'drive')}
                                 className="w-full h-full"
-                                allow="autoplay"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
                             />
                         </div>
                     );

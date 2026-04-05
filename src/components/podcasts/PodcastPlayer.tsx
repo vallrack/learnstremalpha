@@ -46,7 +46,8 @@ export function PodcastPlayer({ podcast, hasAccess, onPurchaseClick }: PodcastPl
 
   useEffect(() => {
     async function fetchPremiumContent() {
-      if (!db || !hasAccess || !podcast.id || podcast.isFree) return;
+      if (!db || !podcast.id) return;
+      if (!hasAccess && !podcast.isFree) return;
       
       setIsLoadingPremium(true);
       try {

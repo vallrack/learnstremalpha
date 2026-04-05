@@ -32,6 +32,7 @@ import {
   UserCircle2, 
   Map as MapIcon,
   ShieldAlert,
+  Mic2,
   ExternalLink as ExternalLinkIcon
 } from 'lucide-react';
 import Link from 'next/link';
@@ -602,10 +603,19 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
       let embedUrl = url;
       if (url.includes('/view')) embedUrl = url.replace(/\/view.*$/, '/preview');
       else if (url.includes('/edit')) embedUrl = url.replace(/\/edit.*$/, '/preview');
-      else if (!url.endsWith('/preview')) {
+      else if (url.includes('uc?export=download&id=')) {
+          const id = url.split('id=')[1]?.split('&')[0];
+          embedUrl = `https://drive.google.com/file/d/${id}/preview`;
+      } else if (!url.endsWith('/preview')) {
         embedUrl = url.split('?')[0].replace(/\/$/, '') + '/preview';
       }
       return embedUrl;
+    }
+    if (type === 'podcast' || url.includes('spotify.com') || url.includes('anchor.fm')) {
+        if (url.includes('embed')) return url;
+        return url
+            .replace('open.spotify.com/episode/', 'open.spotify.com/embed/episode/')
+            .replace('/episodes/', '/embed/episodes/');
     }
     if (type === 'word' || type === 'ppt') {
       return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
@@ -624,7 +634,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
             <div key={res.id} className={`flex items-center justify-between p-3 rounded-2xl border border-transparent cursor-pointer ${!isGuest ? 'hover:bg-muted/50 hover:border-border' : 'opacity-60 grayscale'}`} onClick={() => !isGuest ? setPreviewResource(res) : toast({ variant: "destructive", title: "Acceso denegado", description: "Inicia sesión para descargar material." })}>
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="bg-background p-2 rounded-xl shadow-sm border">
-                    {res.type === 'pdf' ? <FileDown className="h-4 w-4 text-red-500" /> : res.type === 'ppt' ? <Presentation className="h-4 w-4 text-amber-500" /> : res.type === 'word' ? <FileText className="h-4 w-4 text-blue-500" /> : <LinkIcon className="h-4 w-4 text-slate-500" />}
+                    {res.type === 'pdf' ? <FileDown className="h-4 w-4 text-red-500" /> : res.type === 'ppt' ? <Presentation className="h-4 w-4 text-amber-500" /> : res.type === 'word' ? <FileText className="h-4 w-4 text-blue-500" /> : res.type === 'podcast' ? <Mic2 className="h-4 w-4 text-indigo-500" /> : <LinkIcon className="h-4 w-4 text-slate-500" />}
                 </div>
                 <p className="text-xs font-semibold truncate">{res.title}</p>
               </div>
@@ -648,7 +658,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
                 src={getEmbedUrl(previewResource?.contentUrl, previewResource?.type)} 
                 className="w-full h-full border-none bg-white shadow-inner" 
                 title={previewResource?.title} 
-                allow="autoplay"
+                allow="autoplay; encrypted-media"
             />
           </div>
         </DialogContent>
