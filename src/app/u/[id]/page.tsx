@@ -145,6 +145,17 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
                 </div>
               </div>
             </div>
+            
+            {profile.bio && (
+              <div className="mt-8 bg-slate-50 p-6 rounded-2xl border border-slate-100 relative max-w-3xl">
+                <div className="absolute -top-3 left-6 px-3 py-1 bg-white border border-slate-100 rounded-lg text-[10px] font-black uppercase tracking-widest text-primary shadow-sm">
+                  Trayectoria Profesional
+                </div>
+                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                  {profile.bio}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

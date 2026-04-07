@@ -17,10 +17,14 @@ interface Message {
 export function FloatingAITutor({ 
   lessonTitle, 
   lessonContent,
+  instructorName,
+  instructorBio,
   isDisabled = false 
 }: { 
   lessonTitle: string, 
   lessonContent: string,
+  instructorName?: string,
+  instructorBio?: string,
   isDisabled?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,7 +51,9 @@ export function FloatingAITutor({
     try {
       const result = await askLessonQuestions({
         question: input,
-        lessonContent: lessonContent
+        lessonContent: lessonContent,
+        instructorName: instructorName,
+        instructorBio: instructorBio
       });
       
       if (result.success) {

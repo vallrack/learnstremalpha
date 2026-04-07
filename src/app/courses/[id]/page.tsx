@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert, Code2 } from 'lucide-react';
+import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert, Code2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
@@ -43,6 +43,12 @@ function CourseDetailContent() {
     return doc(db, 'users', user.uid, 'courseProgress', id);
   }, [db, user?.uid, id]);
   const { data: progress } = useDoc(progressRef);
+  
+  const instructorRef = useMemoFirebase(() => {
+    if (!db || !course?.instructorId) return null;
+    return doc(db, 'users', course.instructorId);
+  }, [db, course?.instructorId]);
+  const { data: instructorProfile } = useDoc(instructorRef);
 
   // Cargar la primera lección del curso para el botón "Continuar Aprendiendo"
   useEffect(() => {
@@ -251,6 +257,8 @@ function CourseDetailContent() {
                     ))}
                   </div>
                 </section>
+
+                <InstructorBioSection profile={instructorProfile} />
 
                 <section>
                   <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Contenido del Curso</h2>
@@ -558,5 +566,50 @@ function HeroCourseRating({ courseId }: { courseId: string }) {
       <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
       <span>{stats.avg.toFixed(1)} ({stats.count} reseña{stats.count !== 1 ? 's' : ''})</span>
     </div>
+  );
+}
+function InstructorBioSection({ profile }: { profile: any }) {
+  if (!profile) return null;
+
+  return (
+    <section className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden p-8 md:p-10">
+      <div className="flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left">
+        <div className="relative shrink-0">
+          <div className="w-32 h-32 rounded-[2rem] border-4 border-slate-50 shadow-xl overflow-hidden bg-slate-100 flex items-center justify-center">
+             {profile.profileImageUrl || profile.photoURL ? (
+               <img src={profile.profileImageUrl || profile.photoURL} alt={profile.displayName} className="w-full h-full object-cover" />
+             ) : (
+               <span className="text-4xl font-bold text-slate-300">{(profile.displayName || 'U')[0].toUpperCase()}</span>
+             )}
+          </div>
+          <div className="absolute -bottom-2 -right-2 bg-primary text-white p-2 rounded-xl shadow-lg ring-4 ring-white">
+            <Award className="h-4 w-4" />
+          </div>
+        </div>
+        <div className="flex-1 space-y-4">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1">Instructor del Curso</div>
+            <h3 className="text-3xl font-headline font-bold text-slate-900">{profile.displayName || 'Experto LearnStream'}</h3>
+          </div>
+          
+          {profile.bio ? (
+            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap italic opacity-80 line-clamp-4">
+              "{profile.bio}"
+            </p>
+          ) : (
+            <p className="text-slate-400 text-sm italic">Este instructor aún no ha completado su biografía.</p>
+          )}
+
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2">
+             <Link href={`/u/${profile.uid || profile.id}`}>
+               <Button variant="outline" size="sm" className="rounded-xl font-bold gap-2 text-xs border-2">
+                 Ver Perfil Completo
+                 <ArrowRight className="h-3 w-3" />
+               </Button>
+             </Link>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

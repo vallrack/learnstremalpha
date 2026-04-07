@@ -4,7 +4,7 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { CourseCard } from '@/components/courses/CourseCard';
-import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, BookOpen, GraduationCap, CheckCircle2, ArrowRight, Star, Check, Mic2 } from 'lucide-react';
+import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, BookOpen, GraduationCap, CheckCircle2, ArrowRight, Star, Check, Mic2, Award, Quote } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
@@ -391,6 +391,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+        
+        {/* Admin/Founder Profile Section */}
+        <AdminProfileBanner />
 
         {/* FAQ Section */}
         <LandingFAQ />
@@ -615,6 +618,91 @@ function LandingFAQ() {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+      </div>
+    </section>
+  );
+}
+function AdminProfileBanner() {
+  const db = useFirestore();
+  const [adminProfile, setAdminProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db) return;
+    const fetchAdmin = async () => {
+      try {
+        const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
+        const q = query(collection(db, 'users'), where('role', '==', 'admin'), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          setAdminProfile({ id: snap.docs[0].id, ...snap.docs[0].data() });
+        }
+      } catch (err) {
+        console.warn("AdminProfileBanner: Error fetching admin", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAdmin();
+  }, [db]);
+
+  if (loading || !adminProfile || !adminProfile.bio) return null;
+
+  return (
+    <section className="py-24 px-6 bg-[#F8FAFC]">
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white rounded-[4rem] p-8 md:p-16 shadow-2xl border border-slate-100 flex flex-col lg:flex-row items-center gap-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+            <Quote className="h-64 w-64 text-primary" />
+          </div>
+          
+          <div className="relative shrink-0">
+             <div className="w-56 h-56 md:w-72 md:h-72 rounded-[3.5rem] border-8 border-slate-50 shadow-2xl overflow-hidden bg-slate-200">
+                {adminProfile.profileImageUrl || adminProfile.photoURL ? (
+                  <img 
+                    src={adminProfile.profileImageUrl || adminProfile.photoURL} 
+                    alt={adminProfile.displayName} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-6xl font-bold text-slate-400">
+                    {adminProfile.displayName?.[0]?.toUpperCase() || 'A'}
+                  </div>
+                )}
+             </div>
+             <div className="absolute -bottom-4 -right-4 bg-primary text-white p-4 rounded-3xl shadow-2xl ring-8 ring-white animate-bounce-slow">
+                <Award className="h-8 w-8" />
+             </div>
+          </div>
+
+          <div className="flex-1 space-y-8 relative z-10 text-center lg:text-left">
+            <div className="space-y-2">
+              <Badge className="bg-primary/10 text-primary border-none rounded-lg px-4 py-1 font-black text-[10px] uppercase tracking-widest">Liderazgo & Visión</Badge>
+              <h2 className="text-4xl md:text-6xl font-headline font-bold text-slate-900 leading-tight">
+                Impulsando la <span className="text-primary">Edu-Tech</span>
+              </h2>
+            </div>
+
+            <div className="space-y-6">
+               <p className="text-xl md:text-2xl text-slate-600 font-medium leading-relaxed italic border-l-4 border-primary/20 pl-6">
+                 "{adminProfile.bio}"
+               </p>
+               <div>
+                  <h4 className="text-2xl font-headline font-bold text-slate-900">{adminProfile.displayName}</h4>
+                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-1">Fundador & CEO de LearnStream</p>
+               </div>
+            </div>
+
+            <div className="pt-4 flex flex-wrap justify-center lg:justify-start gap-4">
+               <Link href={`/u/${adminProfile.id}`}>
+                 <Button className="rounded-2xl h-14 px-8 font-bold gap-3 shadow-xl shadow-primary/20 transition-transform hover:scale-105">
+                   Ver Trayectoria Completa
+                   <ArrowRight className="h-5 w-5" />
+                 </Button>
+               </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

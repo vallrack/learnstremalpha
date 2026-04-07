@@ -6,6 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,7 @@ export default function ProfilePage() {
   const { data: submissions } = useCollection(submissionsQuery);
   
   const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
   const [saving, setSaving] = useState(false);
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -112,6 +114,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.displayName || '');
+      setBio(profile.bio || '');
     }
   }, [profile]);
 
@@ -120,7 +123,8 @@ export default function ProfilePage() {
     
     setSaving(true);
     updateDocumentNonBlocking(doc(db, 'users', user.uid), {
-      displayName: displayName.trim()
+      displayName: displayName.trim(),
+      bio: bio.trim()
     });
     
     setTimeout(() => {
@@ -296,6 +300,16 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <Label className="font-bold uppercase text-[10px] text-muted-foreground tracking-widest">Email Académico</Label>
                       <Input value={user?.email || ''} disabled className="rounded-xl h-12 bg-slate-50 opacity-60" />
+                    </div>
+                    <div className="space-y-2">
+                       <Label className="font-bold uppercase text-[10px] text-muted-foreground tracking-widest">Sobre ti / Trayectoria (Bio)</Label>
+                       <Textarea 
+                         value={bio} 
+                         onChange={(e) => setBio(e.target.value)} 
+                         className="rounded-xl min-h-[120px] resize-none" 
+                         placeholder="Háblanos de tus capacidades, carreras y experiencia. Así te verá la IA y los estudiantes..." 
+                       />
+                       <p className="text-[10px] text-muted-foreground italic">Este párrafo será utilizado por el Genio IA para personificar tu estilo de enseñanza.</p>
                     </div>
                     <div className="pt-4 p-4 bg-primary/5 rounded-2xl border border-primary/10">
                        <p className="text-xs font-bold text-primary mb-2 flex items-center gap-2"><Share2 className="h-3 w-3" /> Tu Enlace Público:</p>

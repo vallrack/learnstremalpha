@@ -129,6 +129,12 @@ function LessonPlayerContent() {
   const [isLoadingPremium, setIsLoadingPremium] = useState(false);
   const [totalLessons, setTotalLessons] = useState(0);
 
+  const instructorRef = useMemoFirebase(() => {
+    if (!db || !course?.instructorId) return null;
+    return doc(db, 'users', course.instructorId);
+  }, [db, course?.instructorId]);
+  const { data: instructorProfile } = useDoc(instructorRef);
+
   // Calcular total de lecciones del curso para la barra de progreso
   useEffect(() => {
     if (!db || !courseId || !modules) return;
@@ -536,6 +542,8 @@ function LessonPlayerContent() {
       <FloatingAITutor 
         lessonTitle={currentLesson.title} 
         lessonContent={effectiveDescription || ''} 
+        instructorName={instructorProfile?.displayName || course.instructorName}
+        instructorBio={instructorProfile?.bio}
         isDisabled={isAcademy && profile?.permissions?.canUseAI === false}
       />
 

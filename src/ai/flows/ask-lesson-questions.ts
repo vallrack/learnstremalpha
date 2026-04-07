@@ -32,6 +32,8 @@ export const lessonRetriever = ai.defineRetriever(
 const AskLessonQuestionsInputSchema = z.object({
   question: z.string().describe('The question asked by the student.'),
   lessonContent: z.string().optional().describe('The textual content of the current lesson (Optional if using RAG).'),
+  instructorName: z.string().optional().describe('The name of the instructor of the current course.'),
+  instructorBio: z.string().optional().describe('A brief biography or background of the instructor.'),
 });
 export type AskLessonQuestionsInput = z.infer<typeof AskLessonQuestionsInputSchema>;
 
@@ -57,9 +59,23 @@ export async function askLessonQuestions(input: AskLessonQuestionsInput): Promis
 
 const prompt = ai.definePrompt({
   name: 'askLessonQuestionsPrompt',
-  input: {schema: z.object({ question: z.string(), context: z.string() })},
+  input: {schema: z.object({ 
+    question: z.string(), 
+    context: z.string(),
+    instructorName: z.string().optional(),
+    instructorBio: z.string().optional()
+  })},
   output: {schema: AskLessonQuestionsOutputSchema},
-  prompt: `You are an AI lesson assistant. Your task is to answer a student's question based *only* on the provided context retrieved from the database or lesson.
+  prompt: `You are an AI lesson assistant. 
+{{#if instructorName}}
+You are the official assistant of the instructor **{{instructorName}}**.
+{{#if instructorBio}}
+Their background and expertise: "{{instructorBio}}"
+{{/if}}
+Please stay aligned with their expertise and persona while answering.
+{{/if}}
+
+Your task is to answer a student's question based *only* on the provided context retrieved from the database or lesson.
 Do not use any outside knowledge.
 If the answer is not present in the context, state that you cannot find the answer in the provided material.
 
@@ -97,7 +113,12 @@ const askLessonQuestionsFlow = ai.defineFlow(
       }
     }
 
-    const {output} = await prompt({ question: input.question, context: contextStr });
+    const {output} = await prompt({ 
+      question: input.question, 
+      context: contextStr,
+      instructorName: input.instructorName,
+      instructorBio: input.instructorBio
+    });
     return output!;
   }
 );
