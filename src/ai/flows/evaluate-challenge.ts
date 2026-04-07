@@ -140,15 +140,15 @@ ENTREGA DEL ESTUDIANTE:
 
 CRITERIOS DE EVALUACIÓN SEGÚN EL CASO:
 
-1. SI ES PRUEBA DE CÓDIGO (React, Node, Python, SQL, PSeInt, etc.):
+1. SI ES UNA ACTIVIDAD DE CÓDIGO O PSEUDOCÓDIGO (React, Node, Python, PSeInt, SQL, etc.):
    - Analiza no solo si funciona, sino la ELEGANCIA, el performance y la arquitectura.
    - Detecta posibles bugs latentes, problemas de legibilidad o falta de escalabilidad.
-   - Sugiere patrones de diseño (Clean Code, SOLID) que podrían aplicarse.
+   - Sugiere patrones de diseño que podrían aplicarse.
 
-2. SI ES INGLÉS TÉCNICO O ENTREVISTA PROFESIONAL:
-   - Evalúa el uso de terminología técnica precisa (Keywords).
-   - Analiza la fluidez y la coherencia de la respuesta frente a lo que buscaría una empresa tech en EE.UU.
-   - Propón formas más "nativas" o profesionales de expresar conceptos técnicos complejos.
+2. SI ES TEORÍA, ENSAYO, DISEÑO, INGLÉS O CUALQUIER OTRA MATERIA NO RELACIONADA CON CÓDIGO:
+   - Evalúa profundamente el conocimiento demostrado sobre la materia expuesta.
+   - Analiza la precisión de la respuesta, la claridad, asertividad o vocabulario profesional empleado de acuerdo con los estándares de la industria.
+   - ¡NO rechaces evaluar la entrega si no contiene código! Es tu labor evaluar el texto.
 
 3. SI EL ESTUDIANTE ENTREGA UN "REPORTE DE DESEMPEÑO INTERACTIVO":
    - No pidas código. El estudiante ya demostró su conocimiento a través de una actividad lúdica (Swipe, Drag&Drop, Video).

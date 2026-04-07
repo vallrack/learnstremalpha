@@ -97,6 +97,35 @@ const getSandpackTemplate = (tech: string): string | null => {
   return null;
 };
 
+const getMonacoLanguage = (techString?: string): string => {
+  const t = (techString || '').toLowerCase().trim();
+  if (!t) return 'plaintext';
+  
+  if (t.includes('python')) return 'python';
+  if (t.includes('html')) return 'html';
+  if (t.includes('css')) return 'css';
+  if (t.includes('javascript') || t.includes('js') || t.includes('node')) return 'javascript';
+  if (t.includes('typescript') || t.includes('ts') || t.includes('react') || t.includes('angular') || t.includes('next') || t.includes('vue')) return 'typescript';
+  if (t.includes('java ') || t === 'java' || t.includes('spring')) return 'java';
+  if (t.includes('c++') || t.includes('cpp')) return 'cpp';
+  if (t.includes('c#') || t.includes('csharp') || t.includes('.net')) return 'csharp';
+  if (t === 'c') return 'c';
+  if (t.includes('php') || t.includes('laravel')) return 'php';
+  if (t.includes('ruby') || t.includes('rails')) return 'ruby';
+  if (t === 'go' || t.includes('golang')) return 'go';
+  if (t.includes('sql') || t.includes('mysql') || t.includes('postgres') || t.includes('oracle')) return 'sql';
+  if (t.includes('rust')) return 'rust';
+  if (t.includes('swift') || t.includes('ios')) return 'swift';
+  if (t.includes('kotlin') || t.includes('android')) return 'kotlin';
+  if (t.includes('dart') || t.includes('flutter')) return 'dart';
+  if (t.includes('json')) return 'json';
+  if (t.includes('xml')) return 'xml';
+  if (t.includes('yaml') || t.includes('yml')) return 'yaml';
+  if (t.includes('bash') || t.includes('shell') || t.includes('sh') || t.includes('linux')) return 'shell';
+  
+  return 'plaintext';
+};
+
 export default function ChallengeClient() {
   return (
     <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
@@ -193,7 +222,7 @@ function ChallengeContent() {
     const puter = (window as any).puter;
     if (!puter) throw new Error("Motor de respaldo (Puter) no disponible.");
 
-    const prompt = `Eres un evaluador técnico senior. Evalúa críticamente esta entrega de estudiante.
+    const prompt = `Eres un evaluador y mentor experto. Evalúa cualquier tipo de entrega (código, texto, ensayo, teórica, pseudocódigo) de acuerdo al objetivo del reto. ¡NO te niegues a evaluar argumentando que no es código funcional!
     RETO: ${challenge?.title}
     DESCRIPCIÓN: ${challenge?.description}
     TECNOLOGÍA: ${challenge?.technology}
@@ -320,7 +349,7 @@ function ChallengeContent() {
              El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`
           : currentCode;
         
-        const prompt = `Evalúa esta entrega técnica:
+        const prompt = `Evalúa críticamente esta entrega (puede ser código, texto, teoría o ensayo). ¡No la rechaces por no contener código ejecutable!:
         RETO: ${challenge.title}
         TECNOLOGÍA: ${challenge.technology}
         DESCRIPCIÓN: ${challenge.description}
@@ -631,7 +660,7 @@ function ChallengeContent() {
                    </div>
                    
                    {/* GUI Preview Button for Python */}
-                   {challenge.technology?.toLowerCase() === 'python' && (
+                   {(challenge.technology || '').toLowerCase().includes('python') && (
                      <Button 
                        onClick={async () => {
                          setIsSimulatingGUI(true);
@@ -650,7 +679,7 @@ function ChallengeContent() {
                      </Button>
                    )}
                    {/* HTML Preview Toggle */}
-                   {(challenge.technology?.toLowerCase() === 'html' || challenge.technology?.toLowerCase() === 'html5') && (
+                   {(challenge.technology || '').toLowerCase().includes('html') && (
                      <Button 
                        onClick={() => setShowHtmlPreview(!showHtmlPreview)}
                        variant="ghost" 
@@ -669,10 +698,25 @@ function ChallengeContent() {
                     <Editor
                       height="100%"
                       theme="vs-dark"
-                      language={challenge.technology?.toLowerCase() === 'python' ? 'python' : challenge.technology?.toLowerCase() === 'html' || challenge.technology?.toLowerCase() === 'html5' ? 'html' : 'javascript'}
+                      language={getMonacoLanguage(challenge.technology)}
                       value={code}
                       onChange={(val) => setCode(val || '')}
                       onMount={(editor, monaco) => {
+                        // Integración de Emmet para autocompletado en HTML/CSS
+                        const currentLang = getMonacoLanguage(challenge.technology);
+                        if (['html', 'css', 'javascript', 'typescript'].includes(currentLang) && !(window as any).__emmet_initialized) {
+                           (window as any).__emmet_initialized = true;
+                           import('emmet-monaco-es').then(({ emmetHTML, emmetCSS, emmetJSX }) => {
+                              try {
+                                 emmetHTML(monaco);
+                                 emmetCSS(monaco);
+                                 emmetJSX(monaco); // Por si usa React/NextJS
+                              } catch(e) {
+                                  console.warn("Emmet failed to load:", e);
+                              }
+                           }).catch(err => console.warn("Could not import emmet-monaco-es", err));
+                        }
+
                         // Bloqueo de atajos Ctrl+V o Cmd+V
                         editor.onKeyDown((e: any) => {
                           if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.KeyV) {
