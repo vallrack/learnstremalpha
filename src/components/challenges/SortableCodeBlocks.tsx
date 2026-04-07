@@ -54,7 +54,13 @@ export function SortableCodeBlocks({ lines, correctOrder, onComplete }: { lines:
   const checkOrder = () => {
     let correct = 0;
     items.forEach((item, idx) => {
-      if (item.id === correctOrder[idx]) correct++;
+      // Robust comparison by text content (trimmed)
+      const currentText = item.text.trim();
+      const expectedText = (lines.find(l => l.id === correctOrder[idx])?.text || "").trim();
+      
+      if (currentText === expectedText) {
+        correct++;
+      }
     });
     const score = (correct / items.length) * 5;
     onComplete(score);
