@@ -423,7 +423,7 @@ export default function AdminPodcastsClient() {
                           <SelectItem value="Tecnología">Tecnología</SelectItem>
                           <SelectItem value="Carrera">Carrera</SelectItem>
                           <SelectItem value="Entrevista">Entrevista</SelectItem>
-                          <SelectItem value="Inglés Tech">Inglés Tech</SelectItem>
+                          <SelectItem value="Englishtech">Englishtech (Inglés Tech)</SelectItem>
                           <SelectItem value="Mentalidad">Mentalidad</SelectItem>
                         </SelectContent>
                       </Select>

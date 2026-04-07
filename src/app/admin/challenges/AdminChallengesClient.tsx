@@ -500,15 +500,16 @@ export default function AdminChallengesClient() {
                 Nueva Actividad
               </Button>
             </DialogTrigger>
-            <DialogContent className="lg:max-w-5xl md:max-w-3xl sm:max-w-[900px] w-[95vw] rounded-[2.5rem] max-h-[90vh] overflow-y-auto">
-              <form onSubmit={handleFormSubmit}>
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-headline">{editingId ? 'Editar Actividad' : 'Nueva Actividad'}</DialogTitle>
-                  <DialogDescription>Configura el formato y los parámetros de acceso.</DialogDescription>
+            <DialogContent className="lg:max-w-[1200px] md:max-w-4xl sm:max-w-[900px] w-[98vw] rounded-[3rem] max-h-[92vh] overflow-y-auto p-0 border-none shadow-2xl glassmorphism">
+              <form onSubmit={handleFormSubmit} className="relative">
+                <DialogHeader className="p-8 pb-0">
+                  <DialogTitle className="text-3xl font-headline font-black text-slate-900">{editingId ? 'Editar Actividad' : 'Nueva Actividad'}</DialogTitle>
+                  <DialogDescription className="text-slate-500 font-medium italic">Configura el formato, los parámetros de acceso y la lógica del reto.</DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 py-8">
-                  <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-0 min-h-[700px]">
+                  {/* METADATA COLUMN */}
+                  <div className="p-8 space-y-6 border-r bg-slate-50/50">
                     <div className="grid gap-2">
                       <Label className="font-bold">Título</Label>
                       <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Entrevista: State Management" className="rounded-xl h-11" />
@@ -623,7 +624,8 @@ export default function AdminChallengesClient() {
                     </div>
                   </div>
                   
-                  <div className="space-y-8 bg-muted/20 p-6 rounded-[2rem] border">
+                  {/* EDITOR / LOGIC COLUMN */}
+                  <div className="p-8 space-y-8 bg-white relative">
                     {/* AI Wizard Global - Habilitado para TODOS los tipos */}
                     <div className="mb-6">
                        {!isAIOpen ? (
@@ -632,43 +634,49 @@ export default function AdminChallengesClient() {
                            Despertar Genio IA para este Reto
                          </Button>
                        ) : (
-                         <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5 space-y-3 shadow-lg animate-in zoom-in-95">
-                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 mb-2">
-                                <Label className="text-orange-800 font-bold text-xs uppercase tracking-wider">Instrucciones de la Lección</Label>
-                                <div className="flex flex-wrap bg-orange-100 rounded-lg p-0.5 gap-0.5">
-                                   <button type="button" onClick={() => setAiEngine('gemini')} title="Google Gemini 1.5" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'gemini' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-400 hover:text-orange-600'}`}>GEMINI</button>
-                                   <button type="button" onClick={() => setAiEngine('claude')} title="Anthropic Claude (Puter)" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'claude' ? 'bg-white text-indigo-600 shadow-sm' : 'text-orange-400 hover:text-indigo-600'}`}>CLAUDE</button>
-                                   <button type="button" onClick={() => setAiEngine('deepseek')} title="DeepSeek V3" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'deepseek' ? 'bg-white text-blue-600 shadow-sm' : 'text-orange-400 hover:text-blue-600'}`}>DEEPSEEK</button>
-                                   <button type="button" onClick={() => setAiEngine('qwen')} title="Alibaba Qwen Max" className={`px-2 py-0.5 text-[10px] font-black rounded-md transition-all ${aiEngine === 'qwen' ? 'bg-white text-emerald-600 shadow-sm' : 'text-orange-400 hover:text-emerald-600'}`}>QWEN</button>
-                                </div>
+                         <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-3xl p-6 space-y-4 shadow-xl shadow-orange-500/10 animate-in zoom-in-95 duration-300">
+                             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 mb-2">
+                                 <div className="flex items-center gap-2">
+                                     <div className="bg-orange-500 p-1.5 rounded-lg text-white shadow-md shadow-orange-500/20"><Sparkles className="h-4 w-4" /></div>
+                                     <Label className="text-orange-900 font-black text-[10px] uppercase tracking-[0.15em] py-1">Genio IA de LearnStream</Label>
+                                 </div>
+                                 <div className="flex flex-wrap bg-white/50 backdrop-blur-md rounded-xl p-1 gap-1 border border-orange-200/50 shadow-inner">
+                                    <button type="button" onClick={() => setAiEngine('gemini')} title="Google Gemini 1.5" className={`px-2.5 py-1 text-[9px] font-black rounded-lg transition-all ${aiEngine === 'gemini' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-400 hover:text-orange-600'}`}>GEMINI</button>
+                                    <button type="button" onClick={() => setAiEngine('claude')} title="Anthropic Claude (Puter)" className={`px-2.5 py-1 text-[9px] font-black rounded-lg transition-all ${aiEngine === 'claude' ? 'bg-white text-indigo-600 shadow-sm' : 'text-orange-400 hover:text-indigo-600'}`}>CLAUDE</button>
+                                    <button type="button" onClick={() => setAiEngine('deepseek')} title="DeepSeek V3" className={`px-2.5 py-1 text-[9px] font-black rounded-lg transition-all ${aiEngine === 'deepseek' ? 'bg-white text-blue-600 shadow-sm' : 'text-orange-400 hover:text-blue-600'}`}>DEEPSEEK</button>
+                                    <button type="button" onClick={() => setAiEngine('qwen')} title="Alibaba Qwen Max" className={`px-2.5 py-1 text-[9px] font-black rounded-lg transition-all ${aiEngine === 'qwen' ? 'bg-white text-emerald-600 shadow-sm' : 'text-orange-400 hover:text-emerald-600'}`}>QWEN</button>
+                                 </div>
                              </div>
-                            <Textarea 
-                              value={aiLessonContent} 
-                              onChange={(e) => setAiLessonContent(e.target.value)}
-                              placeholder="Pega el contenido base (lección, texto, código) para generar el reto automáticamente..."
-                              className="min-h-[120px] text-xs bg-white border-orange-100 rounded-xl focus-visible:ring-orange-200"
-                            />
-                            {aiError && <p className="text-[10px] text-rose-500 font-bold">{aiError}</p>}
-                            <div className="flex gap-2">
-                               <Button type="button" onClick={() => handleAIGenerate(challengeType)} disabled={isGenerating} className="flex-1 bg-orange-600 hover:bg-orange-700 h-10 text-xs font-bold rounded-xl shadow-md shadow-orange-200 transition-all active:scale-95">
-                                  {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
-                                  Generar Estructura y Solución
-                               </Button>
-                               <Button type="button" variant="ghost" size="sm" onClick={() => {setIsAIOpen(false); setAiError('')}} className="text-orange-600 hover:bg-orange-100 h-10 rounded-xl">Cancelar</Button>
-                            </div>
-                         </div>
+                             <Textarea 
+                               value={aiLessonContent} 
+                               onChange={(e) => setAiLessonContent(e.target.value)}
+                               placeholder="Pega el contenido base (lección, texto, código) para que el Genio estructure el reto automáticamente..."
+                               className="min-h-[140px] text-xs bg-white/80 border-orange-200/50 rounded-2xl focus-visible:ring-orange-300 resize-none shadow-inner p-4 font-medium"
+                             />
+                             {aiError && <p className="text-[10px] text-rose-500 font-bold px-1">{aiError}</p>}
+                             <div className="flex gap-2 pt-2">
+                                <Button type="button" onClick={() => handleAIGenerate(challengeType)} disabled={isGenerating} className="flex-1 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 h-12 text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98]">
+                                   {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                                   Generar Todo Ahora
+                                </Button>
+                                <Button type="button" variant="ghost" size="sm" onClick={() => {setIsAIOpen(false); setAiError('')}} className="text-orange-600 hover:bg-orange-200/40 h-12 rounded-2xl px-6 font-bold">Cerrar</Button>
+                             </div>
+                          </div>
+
                        )}
                     </div>
 
                     {['dragdrop', 'sortable', 'flashcard', 'interactive-video', 'swipe'].includes(challengeType) ? (
                       <div className="grid gap-4">
                         <Tabs defaultValue="visual" className="w-full">
-                           <TabsList className="flex flex-wrap w-full mb-6 h-auto bg-slate-200/50 rounded-xl p-1 gap-1">
-                             <TabsTrigger value="visual" className="flex-1 min-w-[140px] rounded-lg font-bold py-2 text-[10px] sm:text-xs">🛠️ Editor Visual No-Code</TabsTrigger>
-                             <TabsTrigger value="json" className="flex-1 min-w-[140px] rounded-lg font-bold py-2 text-[10px] sm:text-xs truncate px-2">⚙️ Ajustes Avanzados (Opcional)</TabsTrigger>
+                           <TabsList className="flex flex-wrap w-full mb-8 h-auto bg-slate-100 rounded-[1.25rem] p-1.5 gap-1.5 border">
+                             <TabsTrigger value="visual" className="flex-1 min-w-[140px] rounded-xl font-black py-3 text-[10px] tracking-widest uppercase transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-lg active:scale-95">🛠️ Editor Visual</TabsTrigger>
+                             <TabsTrigger value="json" className="flex-1 min-w-[140px] rounded-xl font-black py-3 text-[10px] tracking-widest uppercase transition-all data-[state=active]:bg-white data-[state=active]:text-amber-600 data-[state=active]:shadow-lg active:scale-95 px-2">⚙️ Ajustes JSON</TabsTrigger>
                            </TabsList>
-                           <TabsContent value="visual" className="bg-white p-6 rounded-[2rem] border shadow-sm">
-                               <VisualH5PBuilder type={challengeType} jsonConfig={jsonConfig} setJsonConfig={setJsonConfig} technology={technology} lessonTitle={title} />
+                           <TabsContent value="visual" className="bg-white p-0 rounded-none border-none outline-none ring-0">
+                               <div className="rounded-[2.5rem] border bg-slate-50/50 p-8 shadow-inner ring-4 ring-white">
+                                   <VisualH5PBuilder type={challengeType} jsonConfig={jsonConfig} setJsonConfig={setJsonConfig} technology={technology} lessonTitle={title} />
+                               </div>
                            </TabsContent>
                            <TabsContent value="json">
                               <div className="grid gap-4">
@@ -721,97 +729,116 @@ export default function AdminChallengesClient() {
                           </div>
                         )}
 
-                        <div className="grid gap-3">
-                          <Label className="font-bold">{challengeType === 'code' ? 'Código Inicial (Estructura Base)' : 'Puntos Clave a Mencionar'}</Label>
-                          <Textarea 
-                            value={initialCode} 
-                            onChange={(e) => setInitialCode(e.target.value)} 
-                            className="font-mono text-[11px] min-h-[120px] rounded-2xl bg-white border-dashed" 
-                            placeholder={challengeType === 'code' ? "function solution() { ... }" : "Palabras clave que el estudiante debe intentar usar..."} 
-                          />
-                        </div>
-                        <div className="grid gap-3 mt-4">
-                          <Label className="font-bold text-emerald-600">{challengeType === 'code' ? 'Solución Esperada' : 'Guía IA (Contexto Interno)'}</Label>
-                          <Textarea 
-                            value={solution} 
-                            onChange={(e) => setSolution(e.target.value)} 
-                            className="font-mono text-[11px] min-h-[120px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
-                            placeholder="Ej: Actúa de forma estricta sobre Clean Architecture y pregunta sobre SOLID..." 
-                          />
+                        <div className="space-y-6 animate-in fade-in duration-500">
+                           <div className="grid gap-3">
+                             <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">{challengeType === 'code' ? 'Código Inicial (Estructura Base)' : 'Puntos Clave a Mencionar'}</Label>
+                             <div className="bg-slate-950 rounded-[2.5rem] p-6 shadow-2xl border border-slate-800 ring-4 ring-slate-900/50">
+                               <Textarea 
+                                 value={initialCode} 
+                                 onChange={(e) => setInitialCode(e.target.value)} 
+                                 className="font-mono text-[11px] min-h-[160px] bg-transparent border-none text-emerald-400 p-0 focus-visible:ring-0 resize-none leading-relaxed" 
+                                 placeholder={challengeType === 'code' ? "function solution() {\n  // Tu código aquí\n}" : "Conceptos obligatorios para la IA..."} 
+                               />
+                             </div>
+                           </div>
+                           <div className="grid gap-3">
+                             <Label className="text-[10px] font-black uppercase text-emerald-600 tracking-widest px-1">{challengeType === 'code' ? 'Solución Esperada (Test)' : 'Guía IA (Contexto Estratégico)'}</Label>
+                             <div className="bg-emerald-50/30 rounded-[2.5rem] p-6 border-2 border-emerald-100 shadow-inner">
+                               <Textarea 
+                                 value={solution} 
+                                 onChange={(e) => setSolution(e.target.value)} 
+                                 className="font-mono text-[11px] min-h-[160px] bg-transparent border-none text-emerald-700 p-0 focus-visible:ring-0 resize-none leading-relaxed" 
+                                 placeholder="Ej: El código debe retornar un booleano..." 
+                               />
+                             </div>
+                           </div>
                         </div>
                       </>
                     ) : challengeType === 'wordsearch' ? (
-                      <div className="space-y-6">
-                        <div className="grid gap-3">
-                          <Label className="font-bold">Palabras Clave</Label>
-                          <div className="flex gap-2">
-                            <Input value={wordInput} onChange={(e) => setWordsInput(e.target.value)} placeholder="Ej: PROMISE" className="rounded-xl h-11 bg-white" />
-                            <Button type="button" onClick={() => { if(wordInput) setWords([...words, wordInput.toUpperCase()]); setWordsInput(''); }} className="rounded-xl h-11">Añadir</Button>
+                      <div className="space-y-6 animate-in fade-in duration-500">
+                        <div className="bg-slate-50 border-2 border-dashed rounded-[3rem] p-8 space-y-6">
+                          <div className="grid gap-4">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Buscaminas de Conceptos</Label>
+                            <div className="flex gap-2 max-w-md mx-auto w-full">
+                              <Input value={wordInput} onChange={(e) => setWordsInput(e.target.value)} placeholder="Ej: VARIABLE" className="rounded-2xl h-14 bg-white border-none shadow-lg px-6 font-bold" onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); if(wordInput) setWords([...words, wordInput.toUpperCase()]); setWordsInput(''); } }} />
+                              <Button type="button" onClick={() => { if(wordInput) setWords([...words, wordInput.toUpperCase()]); setWordsInput(''); }} className="rounded-2xl h-14 bg-slate-900 px-8 font-black text-xs uppercase tracking-widest text-emerald-400 shadow-xl shadow-slate-900/20">Añadir</Button>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-2 mt-2">
+                          <div className="flex flex-wrap justify-center gap-3">
                             {words.map((w, i) => (
-                              <Badge key={i} className="rounded-lg bg-white border-slate-200 text-slate-700 py-1.5 gap-2">
-                                {w} <X className="h-3 w-3 cursor-pointer" onClick={() => setWords(words.filter((_, idx) => idx !== i))} />
+                              <Badge key={i} className="rounded-2xl bg-white border-none shadow-md text-slate-700 py-3 px-5 gap-3 font-bold text-xs hover:bg-rose-50 hover:text-rose-600 transition-all cursor-default group">
+                                {w} <X className="h-4 w-4 cursor-pointer text-slate-300 group-hover:text-rose-500" onClick={() => setWords(words.filter((_, idx) => idx !== i))} />
                               </Badge>
                             ))}
+                            {words.length === 0 && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest py-4">Agrega etiquetas clave para la sopa de letras</p>}
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-6">
+                      <div className="space-y-8 animate-in fade-in duration-500 px-1">
                         <div className="flex items-center justify-between">
-                          <Label className="font-bold">Preguntas de la Trivia</Label>
-                          <Button type="button" onClick={addQuestion} variant="outline" size="sm" className="rounded-xl h-8"><Plus className="h-3 w-3 mr-1"/> Añadir Pregunta</Button>
+                          <div className="space-y-1">
+                             <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Banco de Preguntas</h3>
+                             <p className="text-[10px] text-slate-500 font-medium">Define las opciones y marca la respuesta correcta.</p>
+                          </div>
+                          <Button type="button" onClick={addQuestion} className="rounded-2xl h-11 bg-slate-900 px-6 font-black text-xs uppercase tracking-widest text-primary hover:bg-slate-800 shadow-xl shadow-slate-900/10 transition-all active:scale-95"><Plus className="h-4 w-4 mr-2"/> Nueva Pregunta</Button>
                         </div>
-                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                        
+                        <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                           {questions.map((q, qIdx) => (
-                            <Card key={qIdx} className="rounded-2xl border-2 border-slate-100 bg-slate-50/50">
-                              <CardContent className="p-5 space-y-4">
-                                <div className="flex items-center gap-3">
-                                  <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center bg-primary text-[10px]">{qIdx + 1}</Badge>
+                            <Card key={qIdx} className="rounded-[2.5rem] border-none shadow-xl shadow-slate-200/40 relative group overflow-visible bg-white ring-1 ring-slate-100 transition-all hover:shadow-2xl hover:shadow-primary/5">
+                              <CardContent className="p-8 space-y-6">
+                                <div className="flex flex-col gap-4">
+                                  <div className="flex items-center justify-between">
+                                     <div className="flex items-center gap-2">
+                                        <Badge className="h-8 w-8 rounded-xl p-0 flex items-center justify-center bg-primary text-white font-black text-xs shadow-lg shadow-primary/20">{qIdx + 1}</Badge>
+                                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest py-1 px-1">Reto Principal</Label>
+                                     </div>
+                                     <Button 
+                                       type="button" 
+                                       variant="ghost" 
+                                       size="icon" 
+                                       className="h-10 w-10 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
+                                       onClick={() => removeQuestion(qIdx)}
+                                     >
+                                       <Trash2 className="h-5 w-5" />
+                                     </Button>
+                                  </div>
+                                  
                                   <Input 
-                                    placeholder="Escribe la pregunta..." 
+                                    placeholder="¿Cuál es la capital de...?" 
                                     value={q.question} 
                                     onChange={(e) => updateQuestion(qIdx, 'question', e.target.value)} 
                                     required
-                                    className="rounded-xl border-none shadow-none text-sm font-bold bg-transparent p-0 h-auto focus-visible:ring-0"
+                                    className="rounded-2xl border-none shadow-inner text-lg font-black bg-slate-50 px-6 h-16 focus-visible:ring-primary/20 transition-all"
                                   />
-                                  <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
-                                    onClick={() => removeQuestion(qIdx)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                                   {q.options.map((opt: string, oIdx: number) => (
-                                    <div key={oIdx} className="flex items-center gap-2 group p-2 bg-white rounded-xl border border-slate-100 shadow-sm">
+                                    <div key={oIdx} className={`flex items-center gap-4 group/opt p-4 rounded-3xl border-2 transition-all ${q.correctAnswer === oIdx ? 'bg-emerald-50 border-emerald-500/30' : 'bg-white border-slate-100 hover:border-slate-300'}`}>
                                       <input 
                                         type="radio" 
                                         name={`correct-${qIdx}`}
                                         checked={q.correctAnswer === oIdx} 
                                         onChange={() => updateQuestion(qIdx, 'correctAnswer', oIdx)}
-                                        className="h-4 w-4 text-primary border-slate-300 focus:ring-primary"
+                                        className="h-5 w-5 text-emerald-500 border-slate-300 focus:ring-emerald-500 cursor-pointer"
                                       />
                                       <Input 
                                         value={opt} 
                                         onChange={(e) => updateOption(qIdx, oIdx, e.target.value)} 
                                         placeholder={`Opción ${oIdx + 1}`}
-                                        className="h-8 text-[11px] border-none shadow-none bg-transparent p-0 focus-visible:ring-0"
+                                        className="h-8 text-xs font-bold border-none shadow-none bg-transparent p-0 focus-visible:ring-0 placeholder:text-slate-300"
                                       />
                                       {q.options.length > 2 && (
                                         <Button 
                                           type="button"
                                           variant="ghost" 
                                           size="icon" 
-                                          className="h-6 w-6 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-destructive transition-all"
+                                          className="h-7 w-7 opacity-0 group-hover/opt:opacity-100 text-slate-300 hover:text-rose-500 transition-all"
                                           onClick={() => removeOption(qIdx, oIdx)}
                                         >
-                                          <X className="h-3 w-3" />
+                                          <X className="h-4 w-4" />
                                         </Button>
                                       )}
                                     </div>
@@ -821,7 +848,7 @@ export default function AdminChallengesClient() {
                                       type="button" 
                                       variant="ghost" 
                                       onClick={() => addOption(qIdx)}
-                                      className="h-12 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 hover:text-primary hover:border-primary/30 transition-all text-xs font-bold gap-2"
+                                      className="h-16 border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400 hover:text-primary hover:border-primary/20 hover:bg-primary/5 transition-all text-[10px] font-black uppercase tracking-widest gap-2"
                                     >
                                       <Plus className="h-4 w-4" /> Añadir Opción
                                     </Button>
@@ -830,14 +857,23 @@ export default function AdminChallengesClient() {
                               </CardContent>
                             </Card>
                           ))}
+                          {questions.length === 0 && (
+                             <div className="py-20 text-center space-y-4 bg-slate-50/50 rounded-[4rem] border-2 border-dashed border-slate-200">
+                                <div className="bg-white h-20 w-20 rounded-full flex items-center justify-center mx-auto text-slate-200 shadow-xl"><Layers className="h-8 w-8" /></div>
+                                <p className="text-[10px] font-black text-slate-350 uppercase tracking-[0.25em] px-10 leading-relaxed max-w-[280px] mx-auto">No hay preguntas en esta trivia.</p>
+                             </div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20">
-                    {editingId ? 'Guardar Cambios' : 'Publicar Actividad'}
+                <DialogFooter className="sticky bottom-0 bg-white/80 backdrop-blur-xl border-t p-6 gap-3 z-30">
+                  <DialogTrigger asChild>
+                    <Button type="button" variant="outline" className="rounded-2xl h-14 px-8 font-bold text-slate-500 hover:bg-slate-50 border-slate-200">Cancelar</Button>
+                  </DialogTrigger>
+                  <Button type="submit" className="rounded-[1.75rem] h-14 px-12 text-lg font-black uppercase tracking-wider bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-0 active:scale-95">
+                    {editingId ? 'Guardar Cambios' : 'Lanzar Desafío Ahora'}
                   </Button>
                 </DialogFooter>
               </form>

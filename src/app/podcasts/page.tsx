@@ -98,7 +98,9 @@ export default function PodcastsPage() {
   const filteredPodcasts = (podcasts || []).filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || 
                           p.description.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = activeCategory === 'Todas' || p.category === activeCategory;
+    const matchesCategory = activeCategory === 'Todas' || 
+                           p.category === activeCategory || 
+                           (activeCategory === 'Englishtech' && (p.category === 'Inglés Tech' || p.category === 'English Tech'));
     return matchesSearch && matchesCategory;
   });
 
