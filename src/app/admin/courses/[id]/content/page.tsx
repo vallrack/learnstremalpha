@@ -321,15 +321,12 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     const courseT = course.technology.toLowerCase();
 
     return allChallenges.filter((c: any) => {
-      // Si no tiene tecnología específica (ej. creada antes de la actualización), mostrar por defecto
-      if (!c.technology) return true;
+      // Si el reto no tiene tecnología, no mostrarlo a menos que se active "Ver Todas"
+      if (!c.technology) return false;
       const chalT = c.technology.toLowerCase();
       
-      // Mostrar si coinciden, o si una incluye a la otra (ej. Python === Python con Tkinter)
+      // Mostrar solo si coinciden, o si una incluye a la otra (ej. Python === Python con Tkinter)
       if (courseT === chalT || courseT.includes(chalT) || chalT.includes(courseT)) return true;
-      
-      // Permitir actividades 'General' siempre
-      if (chalT === 'general') return true;
 
       return false;
     });
