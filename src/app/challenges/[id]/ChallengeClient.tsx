@@ -529,7 +529,7 @@ function ChallengeContent() {
               <div className="flex-1 p-4 lg:p-8 [&_.sp-layout]:!rounded-3xl [&_.sp-layout]:overflow-hidden [&_.sp-layout]:shadow-2xl [&_.sp-wrapper]:h-full [&_.sp-layout]:h-full border-none">
                 <SandpackLayout>
                   <SandpackCodeEditor showTabs showLineNumbers />
-                  <SandpackPreview showRefreshButton showOpenInNewWindow />
+                  <SandpackPreview showRefreshButton />
                 </SandpackLayout>
               </div>
               {isEvaluating && (
