@@ -60,6 +60,14 @@ export function SortableCodeBlocks({ lines, correctOrder, onComplete }: { lines:
     onComplete(score);
   };
 
+  if (!items || items.length === 0) {
+    return (
+      <div className="max-w-3xl mx-auto p-20 bg-slate-100 rounded-[3rem] border-4 border-dashed border-slate-300 text-center">
+        <p className="text-slate-400 font-bold">No hay líneas de código para ordenar.<br/>Añade algunas en el editor visual.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-8 bg-black/90 rounded-[3rem] p-10 shadow-2xl border-4 border-slate-900">
       <div className="text-center mb-8">

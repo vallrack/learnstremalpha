@@ -938,8 +938,8 @@ function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, o
          <div className="bg-white rounded-[3rem] p-6 shadow-sm border border-slate-100">
            {challenge.type === 'flashcard' && <FlipFlashcards cards={challenge.cards || []} onComplete={onComplete} />}
            {challenge.type === 'sortable' && <SortableCodeBlocks lines={[...(challenge.lines||[])].sort(()=>Math.random()-0.5)} correctOrder={challenge.correctOrder || []} onComplete={(score) => score === 5 ? onComplete() : alert('Algoritmo Incorrecto')} />}
-           {challenge.type === 'dragdrop' && <DragDropSnippets template={challenge.template} snippets={challenge.snippets||[]} correctMapping={challenge.correctMapping||{}} onComplete={(score) => score === 5 ? onComplete() : null} />}
-           {challenge.type === 'interactive-video' && <InteractiveVideo url={challenge.videoUrl} checkpoints={challenge.checkpoints||[]} onComplete={onComplete} />}
+           {challenge.type === 'dragdrop' && <DragDropSnippets template={challenge.template || ""} snippets={challenge.snippets||[]} correctMapping={challenge.correctMapping||{}} onComplete={(score) => score === 5 ? onComplete() : null} />}
+           {challenge.type === 'interactive-video' && <InteractiveVideo url={challenge.videoUrl || ""} checkpoints={challenge.checkpoints||[]} onComplete={onComplete} />}
            {challenge.type === 'swipe' && <SwipeCards deck={challenge.deck||[]} onComplete={onComplete}/>}
            {challenge.type === 'wordsearch' && <WordSearchGame words={challenge.words||[]} onComplete={onComplete}/>}
          </div>

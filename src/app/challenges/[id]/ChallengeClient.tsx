@@ -488,11 +488,11 @@ function ChallengeContent() {
               </div>
             ) : challenge.type === 'interactive-video' ? (
               <div className="max-w-4xl mx-auto py-12 px-6 w-full animate-in fade-in zoom-in duration-500">
-                 <InteractiveVideo url={effectiveJsonConfig.videoUrl as string} checkpoints={effectiveJsonConfig.checkpoints || []} onComplete={(score) => handleSubmit(score)} />
+                 <InteractiveVideo url={(effectiveJsonConfig.videoUrl as string) || ""} checkpoints={effectiveJsonConfig.checkpoints || []} onComplete={(score) => handleSubmit(score)} />
               </div>
             ) : challenge.type === 'dragdrop' ? (
               <div className="max-w-5xl mx-auto py-12 px-6 w-full animate-in slide-in-from-bottom-8 duration-500">
-                 <DragDropSnippets template={effectiveJsonConfig.template as string} snippets={effectiveJsonConfig.snippets || []} correctMapping={effectiveJsonConfig.correctMapping || {}} onComplete={(score) => handleSubmit(score)} />
+                 <DragDropSnippets template={(effectiveJsonConfig.template as string) || ""} snippets={effectiveJsonConfig.snippets || []} correctMapping={effectiveJsonConfig.correctMapping || {}} onComplete={(score) => handleSubmit(score)} />
               </div>
             ) : challenge.type === 'sortable' ? (
               <div className="max-w-4xl mx-auto py-12 px-6 w-full animate-in slide-in-from-right-8 duration-500">

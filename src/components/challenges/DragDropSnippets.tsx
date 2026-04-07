@@ -84,8 +84,16 @@ export function DragDropSnippets({ template, snippets, correctMapping, onComplet
 
    const isAllFilled = Object.keys(correctMapping).every(slot => !!placements[slot]);
 
-   // Parser de plantilla: "const {{{s1}}} = require('{{{s2}}}');"
-   const parts = template.split(/(\{\{\{.*?\}\}\})/g);
+   // Parser de plantilla robusto: soporte para {{id}} y {{{id}}}
+   const parts = (template || "").split(/(\{\{2,3\}.*?\}\{2,3\})/g);
+
+   if (!template || template.trim() === "") {
+     return (
+       <div className="flex flex-col items-center justify-center p-20 bg-slate-100 rounded-[3rem] border-4 border-dashed border-slate-300">
+         <p className="text-slate-400 font-bold text-center">No hay plantilla definida para este reto.<br/>Define una en el editor visual.</p>
+       </div>
+     );
+   }
 
    return (
      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -101,10 +109,11 @@ export function DragDropSnippets({ template, snippets, correctMapping, onComplet
          
          <div className="bg-[#1e1e1e] p-12 rounded-[3rem] shadow-2xl border-4 border-slate-900 text-lg font-mono text-slate-300 leading-relaxed whitespace-pre-wrap relative overflow-hidden">
             {parts.map((part, i) => {
-               const match = part.match(/\{\{\{(.*?)\}\}\}/);
+               // Extraemos el ID considerando tanto {{id}} como {{{id}}}
+               const match = part.match(/^\{\{2,3\}(.*?)\}\{2,3\}$/);
                if (match) {
-                 const slotId = match[1];
-                 return <DroppableSlot key={slotId} id={slotId} currentItem={placements[slotId] || null} snippetMap={snippetMap} />;
+                 const slotId = match[1].trim();
+                 return <DroppableSlot key={`${slotId}-${i}`} id={slotId} currentItem={placements[slotId] || null} snippetMap={snippetMap} />;
                }
                return <span key={i}>{part}</span>;
             })}

@@ -161,40 +161,30 @@ export default function AdminChallengesClient() {
     setAiError('');
 
     try {
-      const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad tipo "${type}" basada en esta lección:
+      const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad interactiva tipo "${type}" basada en esta lección:
         
       TÍTULO: ${title}
       TECNOLOGÍA: ${technology}
       CONTENIDO: ${aiLessonContent}
       
-      REGLAS DE RETO:
-      - Para retos de CÓDIGO (code/sortable/etc):
+      REGLAS CRÍTICAS DE RETO:
+      - Para retos de CÓDIGO (code):
         * El "initialCode" debe ser una ESTRUCTURA INCOMPLETA o un ESQUELETO (ej: solo el inicio del algoritmo o comentarios TODO). 
         * El "solution" debe ser el CÓDIGO COMPLETO y funcional.
-        * NO pongas el código completo en ambos campos.
+      - Para REORDENAR (sortable):
+        * Genera un bloque de código lógico de 4-8 líneas.
+        * El JSON debe ser: { "lines": [{ "id": "L1", "text": "..." }], "correctOrder": ["L1", "L2", ...] }
+      - Para FILL-IN (dragdrop):
+        * Genera una "template" de código con huecos usando {{{s1}}}, {{{s2}}}.
+        * El JSON debe ser: { "template": "...", "snippets": [{ "id": "s1", "text": "..." }], "correctMapping": { "s1": "s1" } }
       - Retorna UNICAMENTE un objeto JSON válido con esta estructura exacta:
         { 
           "activityConfig": { ...config especifica según el tipo... }, 
           "activityTitle": "título creativo", 
           "activityDescription": "descripción breve" 
         }
-      - Para activityConfig, sigue el esquema exacto de ${type}:
-        flashcard: { cards: [{front, back}] }
-        swipe: { deck: [{statement, isTrue}] }
-        sortable: { lines: [{id, text}], correctOrder: [ids] }
-        quiz: { questions: [{question, options, correctAnswer}] }
-        wordsearch: { words: ["PALABRA1", "PALABRA2"] }
-        dragdrop: { template: "texto con {{{hueco}}}", snippets: [{id, text}], correctMapping: {hueco: id} }
-        interview: { 
-          targetRole: "título del rol o persona", 
-          targetLanguage: "en" o "es", 
-          initialCode: "palabras clave o puntos que el estudiante DEBE mencionar (separados por coma)",
-          solution: "la guía completa e instrucciones internas para la IA tutor" 
-        }
-      - CASO ESPECIAL ENTREVISTA: Si el CONTENIDO parece ser una PERSONA o GUÍA DE ENTREVISTA (ej: "Actúa como...", "Eres un..."), usa ese texto TAL CUAL para el campo "solution" y extrae el rol y lenguaje correspondientes.
-      - IMPORTANTE: activityConfig debe ser un objeto.
-      - DEBES escapar TODAS las comillas dobles internas usando \\" para no romper el JSON.
-      - Para los saltos de línea dentro de cadenas de texto (como código), DEBES usar \\n y NO saltos de línea reales.
+      - IMPORTANTE: activityConfig debe ser un OBJETO, no un string.
+      - DEBES escapar comillas internas como \\" y usar \\n para saltos de línea.
       - Retorna SOLO el JSON, sin bloques de código Markdown ni texto explicativo.
       - Todo en ESPAÑOL LATINO salvo que el contenido sea explícitamente en inglés.`;
 
@@ -259,11 +249,13 @@ export default function AdminChallengesClient() {
         const puter = (window as any).puter;
         if (!puter) throw new Error("Puter.js no detectado.");
 
-        const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad tipo "${type}" basada en esta lección:
+        const prompt = `Eres un diseñador instruccional experto. Genera el contenido para una actividad interactiva tipo "${type}" basada en esta lección:
         TÍTULO: ${title}
         TECNOLOGÍA: ${technology}
         CONTENIDO: ${aiLessonContent}
-        REGLAS: Retorna UNICAMENTE un objeto JSON con estructura: { "activityConfig": {objeto}, "activityTitle": "...", "activityDescription": "..." }`;
+        REGLAS: Retorna UNICAMENTE un objeto JSON con estructura: { "activityConfig": {objeto}, "activityTitle": "...", "activityDescription": "..." }
+        - Para FILL-IN (dragdrop): Usa {{{s1}}} para huecos.
+        - Para REORDENAR (sortable): Usa lines y correctOrder.`;
 
         const response = await puter.ai.chat(prompt, { model: 'gpt-4o' }); // Modelo más estable
         const rawPuter = response?.message?.content?.[0]?.text || response?.message?.content || "";
