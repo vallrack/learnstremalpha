@@ -702,24 +702,6 @@ function ChallengeContent() {
                       value={code}
                       onChange={(val) => setCode(val || '')}
                       onMount={(editor, monaco) => {
-                        // Integración de Emmet para autocompletado en HTML/CSS
-                        const currentLang = getMonacoLanguage(challenge.technology);
-                        import('emmet-monaco-es').then((emmetModule: any) => {
-                           try {
-                              if (currentLang === 'html' && emmetModule.emmetHTML) {
-                                 emmetModule.emmetHTML(monaco, ['html', 'php', 'xml']);
-                              }
-                              if (currentLang === 'css' && emmetModule.emmetCSS) {
-                                 emmetModule.emmetCSS(monaco, ['css', 'scss', 'less']);
-                              }
-                              if ((currentLang === 'javascript' || currentLang === 'typescript') && emmetModule.emmetJSX) {
-                                 emmetModule.emmetJSX(monaco, ['javascript', 'javascriptreact', 'typescript', 'typescriptreact']);
-                              }
-                           } catch(e) {
-                              console.warn("Emmet failed to load:", e);
-                           }
-                        }).catch(err => console.warn("Could not import emmet-monaco-es", err));
-
                         // Bloqueo de atajos Ctrl+V o Cmd+V
                         editor.onKeyDown((e: any) => {
                           if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.KeyV) {
@@ -739,6 +721,84 @@ function ChallengeContent() {
                            }, true);
                         }
                       }}
+                      beforeMount={(monaco) => {
+                        const currentLang = getMonacoLanguage(challenge.technology);
+                        
+                        if (currentLang === 'html') {
+                          // Habilitar configuraciones HTML nativas de Monaco
+                          monaco.languages.html.htmlDefaults.setOptions({
+                            suggest: { html5: true },
+                            format: { tabSize: 2, insertSpaces: true }
+                          });
+
+                          // Registrar snippets Emmet personalizados como CompletionItemProvider
+                          const regKey = '__learnstream_emmet_html_registered';
+                          if (!(window as any)[regKey]) {
+                            (window as any)[regKey] = true;
+                            monaco.languages.registerCompletionItemProvider('html', {
+                              triggerCharacters: ['!', '<', '.', '#', '>', '+', '*'],
+                              provideCompletionItems: (_model, position, _ctx, _token) => {
+                                const range = {
+                                  startLineNumber: position.lineNumber,
+                                  endLineNumber: position.lineNumber,
+                                  startColumn: 1,
+                                  endColumn: position.column,
+                                };
+                                const snips = [
+                                  { l: '!', e: '<!DOCTYPE html>\n<html lang="es">\n<head>\n\t<meta charset="UTF-8">\n\t<meta name="viewport" content="width=device-width, initial-scale=1.0">\n\t<title>${1:Título}</title>\n</head>\n<body>\n\t$0\n</body>\n</html>', d: 'HTML5 Boilerplate completo' },
+                                  { l: 'tabla', e: '<table>\n\t<thead>\n\t\t<tr>\n\t\t\t<th>${1:Encabezado}</th>\n\t\t</tr>\n\t</thead>\n\t<tbody>\n\t\t<tr>\n\t\t\t<td>${2:Dato}</td>\n\t\t</tr>\n\t</tbody>\n</table>', d: 'Tabla HTML completa con thead y tbody' },
+                                  { l: 'form', e: '<form action="${1:#}" method="${2|post,get|}">\n\t$0\n</form>', d: 'Formulario' },
+                                  { l: 'inp', e: '<input type="${1|text,email,password,number,checkbox,radio,file,hidden|}" name="${2}" placeholder="${3}">', d: 'Input' },
+                                  { l: 'btn', e: '<button type="${1|button,submit,reset|}">${2:Click}</button>', d: 'Botón' },
+                                  { l: 'nav', e: '<nav>\n\t<ul>\n\t\t<li><a href="${1:#}">${2:Enlace}</a></li>\n\t</ul>\n</nav>', d: 'Navegación' },
+                                  { l: 'card', e: '<div class="card">\n\t<h2>${1:Título}</h2>\n\t<p>${2:Descripción}</p>\n</div>', d: 'Tarjeta' },
+                                  { l: 'ul', e: '<ul>\n\t<li>${1}</li>\n\t<li>${2}</li>\n</ul>', d: 'Lista no ordenada' },
+                                  { l: 'ol', e: '<ol>\n\t<li>${1}</li>\n\t<li>${2}</li>\n</ol>', d: 'Lista ordenada' },
+                                  { l: 'img', e: '<img src="${1}" alt="${2:descripción}" width="${3}" height="${4}">', d: 'Imagen' },
+                                  { l: 'a', e: '<a href="${1:#}" target="${2|_self,_blank|}">${3:Texto}</a>', d: 'Enlace' },
+                                  { l: 'section', e: '<section>\n\t<h2>${1:Sección}</h2>\n\t$0\n</section>', d: 'Sección' },
+                                  { l: 'article', e: '<article>\n\t<h2>${1:Título}</h2>\n\t<p>$0</p>\n</article>', d: 'Artículo' },
+                                  { l: 'header', e: '<header>\n\t$0\n</header>', d: 'Header' },
+                                  { l: 'footer', e: '<footer>\n\t<p>${1:© 2025}</p>\n</footer>', d: 'Footer' },
+                                  { l: 'main', e: '<main>\n\t$0\n</main>', d: 'Contenido principal' },
+                                  { l: 'div', e: '<div class="${1}">\n\t$0\n</div>', d: 'Div con clase' },
+                                  { l: 'span', e: '<span class="${1}">${2}</span>', d: 'Span con clase' },
+                                  { l: 'link', e: '<link rel="stylesheet" href="${1:styles.css}">', d: 'CSS externo' },
+                                  { l: 'script', e: '<script src="${1:main.js}"></script>', d: 'Script externo' },
+                                  { l: 'meta', e: '<meta name="${1:description}" content="${2}">', d: 'Meta tag' },
+                                  { l: 'style', e: '<style>\n\t${1}\n</style>', d: 'Estilo interno' },
+                                  { l: 'select', e: '<select name="${1}">\n\t<option value="${2}">${3}</option>\n</select>', d: 'Select' },
+                                  { l: 'textarea', e: '<textarea name="${1}" rows="${2:4}" placeholder="${3}">${4}</textarea>', d: 'Textarea' },
+                                  { l: 'label', e: '<label for="${1}">${2}</label>', d: 'Label' },
+                                  { l: 'h1', e: '<h1>${1}</h1>', d: 'Título h1' },
+                                  { l: 'h2', e: '<h2>${1}</h2>', d: 'Título h2' },
+                                  { l: 'h3', e: '<h3>${1}</h3>', d: 'Título h3' },
+                                  { l: 'p', e: '<p>${1}</p>', d: 'Párrafo' },
+                                ];
+                                return {
+                                  suggestions: snips.map(({ l, e, d }) => ({
+                                    label: l,
+                                    kind: monaco.languages.CompletionItemKind.Snippet,
+                                    documentation: d,
+                                    insertText: e,
+                                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                    detail: `✦ Emmet: ${d}`,
+                                    sortText: '0' + l,
+                                    range,
+                                  }))
+                                };
+                              }
+                            });
+                          }
+                        }
+
+                        if (currentLang === 'css') {
+                          monaco.languages.css.cssDefaults.setOptions({
+                            validate: true,
+                            lint: { unknownProperties: 'warning' }
+                          });
+                        }
+                      }}
                       options={{
                         minimap: { enabled: false },
                         fontSize: 16,
@@ -746,7 +806,12 @@ function ChallengeContent() {
                         scrollBeyondLastLine: false,
                         roundedSelection: false,
                         fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-                        wordWrap: 'on'
+                        wordWrap: 'on',
+                        quickSuggestions: { other: true, comments: false, strings: true },
+                        suggestOnTriggerCharacters: true,
+                        acceptSuggestionOnEnter: 'on',
+                        tabCompletion: 'on',
+                        snippetSuggestions: 'top',
                       }}
                       className="absolute inset-0"
                     />
