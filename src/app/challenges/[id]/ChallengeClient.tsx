@@ -29,6 +29,13 @@ import {
   Stars,
   Monitor
 } from 'lucide-react';
+import {
+  SandpackProvider,
+  SandpackLayout,
+  SandpackCodeEditor,
+  SandpackPreview,
+  useSandpack,
+} from "@codesandbox/sandpack-react";
 import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp, increment, setDoc, arrayUnion } from 'firebase/firestore';
 import { evaluateChallenge, type EvaluateChallengeOutput } from '@/ai/flows/evaluate-challenge';
@@ -55,6 +62,40 @@ import {
   DialogTitle, 
   DialogDescription 
 } from '@/components/ui/dialog';
+
+function SandpackSubmitter({ isEvaluating, onSubmit }: { isEvaluating: boolean, onSubmit: (code: string) => void }) {
+  const { sandpack } = useSandpack();
+  const { files } = sandpack;
+  
+  return (
+    <Button 
+      onClick={() => {
+        let combined = "";
+        for (const [path, fileObj] of Object.entries(files)) {
+           if (path.includes('node_modules') || path.includes('package-lock.json')) continue;
+           combined += `\n--- ARCHIVO: ${path} ---\n${fileObj.code}`;
+        }
+        onSubmit(combined);
+      }} 
+      disabled={isEvaluating} 
+      className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold gap-2 px-4 shadow-sm"
+    >
+      {isEvaluating ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Sparkles className="h-3 w-3" /> Evaluar Proyecto Automáticamente</>}
+    </Button>
+  );
+}
+
+const getSandpackTemplate = (tech: string): string | null => {
+  const t = tech?.toLowerCase() || '';
+  if (t.includes('next')) return 'nextjs';
+  if (t === 'react' || t.includes('react')) return 'react-ts';
+  if (t === 'angular' || t.includes('angular')) return 'angular';
+  if (t === 'vue' || t.includes('vue')) return 'vue';
+  if (t === 'node' || t.includes('node') || t.includes('express')) return 'node';
+  if (t === 'svelte' || t.includes('svelte')) return 'svelte';
+  if (t === 'solid' || t.includes('solid')) return 'solid';
+  return null;
+};
 
 export default function ChallengeClient() {
   return (
@@ -95,6 +136,8 @@ function ChallengeContent() {
   const [showHtmlPreview, setShowHtmlPreview] = useState(false);
 
   const h5pTypes = ['quiz', 'dragdrop', 'sortable', 'flashcard', 'swipe', 'wordsearch', 'interactive-video'];
+  
+  const sandpackTemplate = challenge ? getSandpackTemplate(challenge.technology) : null;
 
   useEffect(() => {
     if (challenge) setCode(challenge.initialCode || '');
@@ -191,7 +234,7 @@ function ChallengeContent() {
     return result;
   };
 
-  const handleSubmit = async (quizScore?: number) => {
+  const handleSubmit = async (quizScore?: number, forceCode?: string) => {
     if (!challenge || !db || isPremiumLocked) return;
     
     if (h5pTypes.includes(challenge.type) && quizScore !== undefined) {
@@ -215,14 +258,15 @@ function ChallengeContent() {
     setIsEvaluating(true);
     setResult(null);
     try {
+      const currentCode = forceCode || code;
       // Para retos interactivos que no usan el editor de código, enviamos el reporte de puntos a la IA
-      const submissionCode = quizScore !== undefined && !code.trim()
+      const submissionCode = quizScore !== undefined && !currentCode.trim()
         ? `[REPORTE DE DESEMPEÑO INTERACTIVO]
            Reto: ${challenge.title}
            Materia: ${challenge.technology}
            Puntaje Alcanzado: ${quizScore.toFixed(1)}/5.0. 
            El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`
-        : code;
+        : currentCode;
 
       const res = await evaluateChallenge({
         challengeId: challenge.id,
@@ -253,26 +297,28 @@ function ChallengeContent() {
       console.error("Evaluation Error catching:", error);
       // Intento de rescate si el servidor de plano falló
       try {
-        const submissionCode = quizScore !== undefined && !code.trim()
+        const currentCode = forceCode || code;
+        const submissionCode = quizScore !== undefined && !currentCode.trim()
           ? `[REPORTE DE DESEMPEÑO INTERACTIVO]
              Reto: ${challenge.title}
              Materia: ${challenge.technology}
              Puntaje Alcanzado: ${quizScore.toFixed(1)}/5.0. 
              El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`
-          : code;
+          : currentCode;
 
       const fallbackResult = await handleClaudeFallback(submissionCode);
       processResult(fallbackResult);
     } catch (fallbackError) {
       console.warn("Claude fallback failed, trying DeepSeek...");
       try {
-        const submissionCode = quizScore !== undefined && !code.trim()
+        const currentCode = forceCode || code;
+        const submissionCode = quizScore !== undefined && !currentCode.trim()
           ? `[REPORTE DE DESEMPEÑO INTERACTIVO]
              Reto: ${challenge.title}
              Materia: ${challenge.technology}
              Puntaje Alcanzado: ${quizScore.toFixed(1)}/5.0. 
              El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`
-          : code;
+          : currentCode;
         
         const prompt = `Evalúa esta entrega técnica:
         RETO: ${challenge.title}
@@ -466,6 +512,43 @@ function ChallengeContent() {
           </div>
         </aside>
 
+        {sandpackTemplate ? (
+          <SandpackProvider 
+            template={sandpackTemplate as any} 
+            theme="dark" 
+            files={code ? { [sandpackTemplate==='react-ts'?'/App.tsx':sandpackTemplate==='nextjs'?'/app/page.tsx':'/src/index.js']: code } : {}}
+          >
+            <section className="flex-1 flex flex-col bg-slate-100 relative min-w-0">
+              <div className="h-12 bg-white border-b flex items-center justify-between px-6 shrink-0">
+                <div className="text-slate-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                  <Terminal className="h-3 w-3" />
+                  Entorno de Proyecto Completo ({challenge.technology})
+                </div>
+                <SandpackSubmitter isEvaluating={isEvaluating} onSubmit={(c) => { setCode(c); handleSubmit(undefined, c); }} />
+              </div>
+              <div className="flex-1 p-4 lg:p-8 [&_.sp-layout]:!rounded-3xl [&_.sp-layout]:overflow-hidden [&_.sp-layout]:shadow-2xl [&_.sp-wrapper]:h-full [&_.sp-layout]:h-full border-none">
+                <SandpackLayout>
+                  <SandpackCodeEditor showTabs showLineNumbers />
+                  <SandpackPreview showRefreshButton showOpenInNewWindow />
+                </SandpackLayout>
+              </div>
+              {isEvaluating && (
+                <div className="absolute inset-0 bg-slate-100/60 backdrop-blur-xl flex items-center justify-center z-20">
+                  <div className="flex flex-col items-center gap-6 p-16 bg-white rounded-[4rem] border shadow-2xl animate-in zoom-in duration-300">
+                    <div className="relative">
+                      <Sparkles className="h-20 w-20 text-primary animate-pulse" />
+                      <Stars className="absolute -top-2 -right-2 h-8 w-8 text-amber-400 animate-bounce" />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <h3 className="text-3xl font-headline font-bold text-slate-900">IA Procesando Proyecto...</h3>
+                      <p className="text-muted-foreground font-medium">Examinando arquitectura, componentes y lógica.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
+          </SandpackProvider>
+        ) : (
         <section className="flex-1 flex flex-col bg-slate-100 relative min-w-0">
           <div className="h-12 bg-white border-b flex items-center justify-between px-6 shrink-0">
             {challenge.type !== 'interview' && (
@@ -651,6 +734,7 @@ function ChallengeContent() {
             )}
           </div>
         </section>
+        )}
       </main>
       {/* XP Reward Animation */}
       {showXPReward && (
