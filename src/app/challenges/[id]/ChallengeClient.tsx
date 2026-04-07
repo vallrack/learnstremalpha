@@ -26,7 +26,8 @@ import {
   ArrowRight,
   MessageSquare,
   HelpCircle,
-  Stars
+  Stars,
+  Monitor
 } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp, increment, setDoc, arrayUnion } from 'firebase/firestore';
@@ -91,6 +92,7 @@ function ChallengeContent() {
   const [isSimulatingGUI, setIsSimulatingGUI] = useState(false);
   const [guiData, setGUIData] = useState<{ components: any[], windowTitle: string, width?: number, height?: number } | null>(null);
   const [guiTheme, setGUITheme] = useState<'retro' | 'modern'>('modern');
+  const [showHtmlPreview, setShowHtmlPreview] = useState(false);
 
   const h5pTypes = ['quiz', 'dragdrop', 'sortable', 'flashcard', 'swipe', 'wordsearch', 'interactive-video'];
 
@@ -561,49 +563,74 @@ function ChallengeContent() {
                        size="sm" 
                        className="h-8 rounded-lg bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 border border-orange-500/20 gap-2 px-3 transition-all"
                      >
-                        {isSimulatingGUI ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                        <span className="text-[10px] font-bold uppercase tracking-tighter">Preview GUI IA</span>
+                        {isSimulatingGUI ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Sparkles className="h-3 w-3" /> Preview GUI IA</>}
+                     </Button>
+                   )}
+                   {/* HTML Preview Toggle */}
+                   {(challenge.technology?.toLowerCase() === 'html' || challenge.technology?.toLowerCase() === 'html5') && (
+                     <Button 
+                       onClick={() => setShowHtmlPreview(!showHtmlPreview)}
+                       variant="ghost" 
+                       size="sm" 
+                       className={`h-8 rounded-lg gap-2 px-3 transition-all ${showHtmlPreview ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                     >
+                        <Monitor className="h-3 w-3" />
+                        <span className="text-[10px] font-bold uppercase tracking-tighter">
+                          {showHtmlPreview ? 'Cerrar Vista Web' : 'Vista Web (Live)'}
+                        </span>
                      </Button>
                    )}
                  </div>
-                <div className="flex-1 min-h-[400px] relative">
-                  <Editor
-                    height="100%"
-                    theme="vs-dark"
-                    language={challenge.technology?.toLowerCase() === 'python' ? 'python' : challenge.technology?.toLowerCase() === 'html' ? 'html' : 'javascript'}
-                    value={code}
-                    onChange={(val) => setCode(val || '')}
-                    onMount={(editor, monaco) => {
-                      // Bloqueo de atajos Ctrl+V o Cmd+V
-                      editor.onKeyDown((e: any) => {
-                        if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.KeyV) {
-                           e.preventDefault();
-                           e.stopPropagation();
-                           toast({ title: 'Modo Estricto', description: 'Copiar y pegar código está deshabilitado para garantizar tu aprendizaje.', variant: 'destructive' });
-                        }
-                      });
-                      
-                      // Bloqueo duro a nivel DOM para menu click derecho -> Pegar
-                      const domNode = editor.getDomNode();
-                      if (domNode) {
-                         domNode.addEventListener('paste', (e) => {
+                <div className="flex-1 min-h-[400px] flex relative overflow-hidden">
+                  <div className={`relative transition-all duration-300 ${showHtmlPreview ? 'w-1/2 border-r-4 border-slate-900' : 'w-full'}`}>
+                    <Editor
+                      height="100%"
+                      theme="vs-dark"
+                      language={challenge.technology?.toLowerCase() === 'python' ? 'python' : challenge.technology?.toLowerCase() === 'html' || challenge.technology?.toLowerCase() === 'html5' ? 'html' : 'javascript'}
+                      value={code}
+                      onChange={(val) => setCode(val || '')}
+                      onMount={(editor, monaco) => {
+                        // Bloqueo de atajos Ctrl+V o Cmd+V
+                        editor.onKeyDown((e: any) => {
+                          if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.KeyV) {
                              e.preventDefault();
                              e.stopPropagation();
                              toast({ title: 'Modo Estricto', description: 'Copiar y pegar código está deshabilitado para garantizar tu aprendizaje.', variant: 'destructive' });
-                         }, true);
-                      }
-                    }}
-                    options={{
-                      minimap: { enabled: false },
-                      fontSize: 16,
-                      padding: { top: 24, bottom: 24 },
-                      scrollBeyondLastLine: false,
-                      roundedSelection: false,
-                      fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-                      wordWrap: 'on'
-                    }}
-                    className="absolute inset-0"
-                  />
+                          }
+                        });
+                        
+                        // Bloqueo duro a nivel DOM para menu click derecho -> Pegar
+                        const domNode = editor.getDomNode();
+                        if (domNode) {
+                           domNode.addEventListener('paste', (e) => {
+                               e.preventDefault();
+                               e.stopPropagation();
+                               toast({ title: 'Modo Estricto', description: 'Copiar y pegar código está deshabilitado para garantizar tu aprendizaje.', variant: 'destructive' });
+                           }, true);
+                        }
+                      }}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 16,
+                        padding: { top: 24, bottom: 24 },
+                        scrollBeyondLastLine: false,
+                        roundedSelection: false,
+                        fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+                        wordWrap: 'on'
+                      }}
+                      className="absolute inset-0"
+                    />
+                  </div>
+                  {showHtmlPreview && (
+                     <div className="w-1/2 relative bg-white animate-in slide-in-from-right-8 duration-300">
+                        <iframe 
+                           className="w-full h-full border-none" 
+                           srcDoc={code} 
+                           sandbox="allow-scripts allow-modals" 
+                           title="HTML Preview"
+                        />
+                     </div>
+                  )}
                 </div>
               </div>
             )}
