@@ -76,10 +76,11 @@ export function DragDropSnippets({ template, snippets, correctMapping, onComplet
      let correct = 0;
      const total = Object.keys(correctMapping).length;
      for (const [slot, expected] of Object.entries(correctMapping)) {
-       const id = (placements[slot] || "").toString().toLowerCase().trim();
-       const text = (snippetMap[placements[slot] || ""] || "").toString().toLowerCase().trim();
-       const exp = expected.toString().toLowerCase().trim();
-       if (id === exp || text === exp) correct++;
+       const placedId = placements[slot];
+       if (!placedId) continue;
+       const placedText = (snippetMap[placedId] || "").toString().toLowerCase().trim();
+       const expectedText = (snippetMap[expected] || expected).toString().toLowerCase().trim();
+       if (placedText === expectedText) correct++;
      }
      const score = (correct / total) * 5;
      onComplete(score);
