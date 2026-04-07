@@ -704,18 +704,21 @@ function ChallengeContent() {
                       onMount={(editor, monaco) => {
                         // Integración de Emmet para autocompletado en HTML/CSS
                         const currentLang = getMonacoLanguage(challenge.technology);
-                        if (['html', 'css', 'javascript', 'typescript'].includes(currentLang) && !(window as any).__emmet_initialized) {
-                           (window as any).__emmet_initialized = true;
-                           import('emmet-monaco-es').then(({ emmetHTML, emmetCSS, emmetJSX }) => {
-                              try {
-                                 emmetHTML(monaco);
-                                 emmetCSS(monaco);
-                                 emmetJSX(monaco); // Por si usa React/NextJS
-                              } catch(e) {
-                                  console.warn("Emmet failed to load:", e);
+                        import('emmet-monaco-es').then((emmetModule: any) => {
+                           try {
+                              if (currentLang === 'html' && emmetModule.emmetHTML) {
+                                 emmetModule.emmetHTML(monaco, ['html', 'php', 'xml']);
                               }
-                           }).catch(err => console.warn("Could not import emmet-monaco-es", err));
-                        }
+                              if (currentLang === 'css' && emmetModule.emmetCSS) {
+                                 emmetModule.emmetCSS(monaco, ['css', 'scss', 'less']);
+                              }
+                              if ((currentLang === 'javascript' || currentLang === 'typescript') && emmetModule.emmetJSX) {
+                                 emmetModule.emmetJSX(monaco, ['javascript', 'javascriptreact', 'typescript', 'typescriptreact']);
+                              }
+                           } catch(e) {
+                              console.warn("Emmet failed to load:", e);
+                           }
+                        }).catch(err => console.warn("Could not import emmet-monaco-es", err));
 
                         // Bloqueo de atajos Ctrl+V o Cmd+V
                         editor.onKeyDown((e: any) => {
