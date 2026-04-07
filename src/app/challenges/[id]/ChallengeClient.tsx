@@ -97,8 +97,9 @@ const getSandpackTemplate = (tech: string): string | null => {
   return null;
 };
 
-const getMonacoLanguage = (techString?: string): string => {
-  const t = (techString || '').toLowerCase().trim();
+const getMonacoLanguage = (techString?: string, titleString?: string): string => {
+  let t = (techString || '').toLowerCase().trim();
+  if (!t && titleString) t = titleString.toLowerCase().trim();
   if (!t) return 'plaintext';
   
   if (t.includes('python')) return 'python';
@@ -497,7 +498,9 @@ function ChallengeContent() {
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <section>
               <div className="flex items-center justify-between mb-4">
-                <Badge variant="outline" className="rounded-xl border-primary/20 bg-primary/5 text-primary font-bold">{challenge.technology}</Badge>
+                <Badge variant="outline" className="rounded-xl border-primary/20 bg-primary/5 text-primary font-bold">
+                  {challenge.technology || (challenge.title.toLowerCase().includes('html') ? 'HTML5' : challenge.title.toLowerCase().includes('python') ? 'Python' : 'Código')}
+                </Badge>
                 <Badge className={challenge.difficulty === 'Principiante' ? 'bg-emerald-500/10 text-emerald-600 border-none' : 'bg-rose-500/10 text-rose-600 border-none'}>
                   {challenge.difficulty}
                 </Badge>
@@ -660,7 +663,7 @@ function ChallengeContent() {
                    </div>
                    
                    {/* GUI Preview Button for Python */}
-                   {(challenge.technology || '').toLowerCase().includes('python') && (
+                   {((challenge.technology || '') || (challenge.title || '')).toLowerCase().includes('python') && (
                      <Button 
                        onClick={async () => {
                          setIsSimulatingGUI(true);
@@ -679,7 +682,7 @@ function ChallengeContent() {
                      </Button>
                    )}
                    {/* HTML Preview Toggle */}
-                   {(challenge.technology || '').toLowerCase().includes('html') && (
+                   {((challenge.technology || '') || (challenge.title || '')).toLowerCase().includes('html') && (
                      <Button 
                        onClick={() => setShowHtmlPreview(!showHtmlPreview)}
                        variant="ghost" 
@@ -722,7 +725,7 @@ function ChallengeContent() {
                         }
                       }}
                       beforeMount={(monaco) => {
-                        const currentLang = getMonacoLanguage(challenge.technology);
+                        const currentLang = getMonacoLanguage(challenge.technology, challenge.title);
                         
                         if (currentLang === 'html') {
                           // Habilitar configuraciones HTML nativas de Monaco
@@ -738,10 +741,15 @@ function ChallengeContent() {
                             monaco.languages.registerCompletionItemProvider('html', {
                               triggerCharacters: ['!', '<', '.', '#', '>', '+', '*'],
                               provideCompletionItems: (_model: any, position: any, _ctx?: any, _token?: any) => {
+                                const lineContent = _model.getLineContent(position.lineNumber);
+                                const textUntilPosition = lineContent.substring(0, position.column - 1);
+                                const match = textUntilPosition.match(/([a-zA-Z0-9_!]+)$/);
+                                const word = match ? match[1] : '';
+                                
                                 const range = {
                                   startLineNumber: position.lineNumber,
                                   endLineNumber: position.lineNumber,
-                                  startColumn: 1,
+                                  startColumn: position.column - word.length,
                                   endColumn: position.column,
                                 };
                                 const snips = [
