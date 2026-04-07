@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, collectionGroup, getDocs, where } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -33,12 +33,17 @@ import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminStudentsPage() {
   const router = useRouter();
   const db = useFirestore();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [filterCourseId, setFilterCourseId] = useState<string>('all');
+  const [enrolledUserIds, setEnrolledUserIds] = useState<string[] | null>(null);
+  const [isLoadingFilter, setIsLoadingFilter] = useState(false);
 
   const usersQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -52,15 +57,47 @@ export default function AdminStudentsPage() {
   }, [db]);
   const { data: allCourses } = useCollection(coursesQuery);
 
+  useEffect(() => {
+    if (!db) return;
+    if (filterCourseId === 'all') {
+      setEnrolledUserIds(null);
+      setIsLoadingFilter(false);
+      return;
+    }
+
+    const fetchEnrolled = async () => {
+      setIsLoadingFilter(true);
+      try {
+        const snap = await getDocs(query(collectionGroup(db, 'courseProgress'), where('courseId', '==', filterCourseId)));
+        // Extraemos el ID del usuario (el abuelo del documento courseProgress)
+        const ids = snap.docs.map(d => d.ref.parent.parent?.id).filter(Boolean) as string[];
+        setEnrolledUserIds([...new Set(ids)]);
+      } catch (error: any) {
+        console.error("Firebase Index Error:", error);
+        toast({
+          variant: "destructive",
+          title: "Requiere Índice de Firebase",
+          description: "La primera vez que uses este filtro debes crear un índice de Collection Group. Revisa la consola de tu navegador (F12) para hacer clic en el enlace proporcionado por Firebase.",
+        });
+        setEnrolledUserIds([]);
+      } finally {
+        setIsLoadingFilter(false);
+      }
+    };
+
+    fetchEnrolled();
+  }, [db, filterCourseId, toast]);
+
   // Filtramos para mostrar usuarios registrados y NO administradores (para evitar auto-modificación accidental)
-  const filteredStudents = students?.filter(s => 
-    s.email && 
-    s.role !== 'admin' &&
-    (
-      s.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      s.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  ) || [];
+  const filteredStudents = students?.filter(s => {
+    const hasEmail = !!s.email;
+    const isNotAdmin = s.role !== 'admin';
+    const matchesSearch = s.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          s.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCourse = filterCourseId === 'all' || (enrolledUserIds !== null && enrolledUserIds.includes(s.id));
+    
+    return hasEmail && isNotAdmin && matchesSearch && matchesCourse;
+  }) || [];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -86,22 +123,37 @@ export default function AdminStudentsPage() {
                 <p className="text-muted-foreground">Monitorea el progreso, gestiona roles y estados de cuenta.</p>
               </div>
               
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Buscar por nombre o email..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 rounded-xl h-11 border-slate-200"
-                />
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                <div className="w-full sm:w-64">
+                  <Select value={filterCourseId} onValueChange={setFilterCourseId}>
+                    <SelectTrigger className="rounded-xl h-11 border-slate-200">
+                      <SelectValue placeholder="Filtrar por curso..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los cursos</SelectItem>
+                      {allCourses?.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative w-full sm:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Buscar por nombre o email..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 rounded-xl h-11 border-slate-200"
+                  />
+                </div>
               </div>
             </header>
 
             <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-x-auto">
-              {isLoading ? (
+              {isLoading || isLoadingFilter ? (
                 <div className="p-20 flex flex-col items-center justify-center gap-4">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-muted-foreground font-medium">Cargando base de datos...</p>
+                  <p className="text-muted-foreground font-medium">Aplicando filtros de base de datos...</p>
                 </div>
               ) : (
                 <Table>
