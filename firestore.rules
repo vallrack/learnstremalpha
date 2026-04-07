@@ -112,7 +112,9 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isSignedIn() && resource.data.instructorId == request.auth.uid);
 
       match /premium/data {
-        allow read: if isPremium() || hasPurchased('coding_challenges', challengeId);
+        allow read: if isPremium() || 
+                      hasPurchased('coding_challenges', challengeId) || 
+                      get(/databases/$(database)/documents/coding_challenges/$(challengeId)).data.isFree == true;
       }
     }
     

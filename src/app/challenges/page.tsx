@@ -47,12 +47,15 @@ export default function ChallengesCataloguePage() {
 
   const filteredChallenges = useMemo(() => {
     if (!allChallenges) return [];
-    return allChallenges.filter(challenge => 
-      !searchTerm || 
+    return allChallenges.filter(challenge => {
+      // Si es solo para curso, no mostrar en catÃ¡logo (salvo admin)
+      if (!isAdmin && challenge.isCourseOnly === true) return false;
+
+      return !searchTerm || 
       challenge.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      challenge.technology?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [allChallenges, searchTerm]);
+      challenge.technology?.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  }, [allChallenges, searchTerm, isAdmin]);
 
   const groupedChallenges = useMemo(() => {
     return filteredChallenges.reduce((acc, challenge) => {

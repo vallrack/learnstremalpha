@@ -97,6 +97,7 @@ export default function AdminChallengesClient() {
   const [targetRole, setTargetRole] = useState('');
   const [price, setPrice] = useState('0');
   const [currency, setCurrency] = useState('COP');
+  const [isCourseOnly, setIsCourseOnly] = useState(false);
 
   // AI Generation state
   const { toast } = useToast();
@@ -144,6 +145,7 @@ export default function AdminChallengesClient() {
     setTargetRole('');
     setPrice('0');
     setCurrency('COP');
+    setIsCourseOnly(false);
   };
 
   const activityCategories: Record<string, { label: string; types: string[]; icon?: string }> = {
@@ -314,6 +316,7 @@ export default function AdminChallengesClient() {
     setVisibility(challenge.visibility || 'public');
     setPrice(challenge.price?.toString() || '0');
     setCurrency(challenge.currency || 'COP');
+    setIsCourseOnly(challenge.isCourseOnly || false);
 
     // Cargar datos premium desde la subcolección
     if (db) {
@@ -369,6 +372,7 @@ export default function AdminChallengesClient() {
       price: !isFree ? parseFloat(price) || 0 : 0,
       currency,
       visibility,
+      isCourseOnly,
       updatedAt: serverTimestamp(),
     };
 
@@ -576,19 +580,34 @@ export default function AdminChallengesClient() {
                       </div>
                     </div>
 
-                    <div className="grid gap-2">
-                      <Label className="font-bold">Acceso Económico</Label>
-                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border h-14">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${isFree ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
-                            {isFree ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label className="font-bold">Acceso Económico</Label>
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border h-14">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${isFree ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                              {isFree ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold">{isFree ? 'Libre' : 'Premium'}</span>
+                            </div>
                           </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold">{isFree ? 'Gratuito para todos' : 'Exclusivo Premium'}</span>
-                            <span className="text-[10px] text-muted-foreground">{isFree ? 'Sin restricciones' : 'Requiere suscripción'}</span>
-                          </div>
+                          <Switch checked={isFree} onCheckedChange={setIsFree} />
                         </div>
-                        <Switch checked={isFree} onCheckedChange={setIsFree} />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="font-bold">Privacidad Catálogo</Label>
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border h-14">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${isCourseOnly ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>
+                              {isCourseOnly ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold">{isCourseOnly ? 'Solo Curso' : 'En Catálogo'}</span>
+                            </div>
+                          </div>
+                          <Switch checked={isCourseOnly} onCheckedChange={setIsCourseOnly} />
+                        </div>
                       </div>
                     </div>
 

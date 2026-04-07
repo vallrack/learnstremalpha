@@ -914,7 +914,12 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
 }
 
 function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, onComplete: () => void }) {
+  const params = useParams();
+  const searchParams = useSearchParams();
   const db = useFirestore();
+  const [premiumData, setPremiumData] = useState<any>(null);
+  const [isLoadingPremium, setIsLoadingPremium] = useState(false);
+
   const challengeRef = useMemoFirebase(() => {
     if (!db || !challengeId) return null;
     return doc(db, 'coding_challenges', challengeId);
@@ -922,10 +927,32 @@ function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, o
   
   const { data: challenge, isLoading } = useDoc(challengeRef);
 
-  if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  useEffect(() => {
+    async function fetchPremiumData() {
+      if (!db || !challengeId) return;
+      setIsLoadingPremium(true);
+      try {
+        const premiumRef = doc(db, 'coding_challenges', challengeId, 'premium', 'data');
+        const snap = await getDoc(premiumRef);
+        if (snap.exists()) {
+          setPremiumData(snap.data());
+        }
+      } catch (err) {
+        console.error("Error fetching premium challenge data in course context:", err);
+      } finally {
+        setIsLoadingPremium(false);
+      }
+    }
+    fetchPremiumData();
+  }, [db, challengeId]);
+
+  if (isLoading || isLoadingPremium) return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!challenge) return <div className="p-12 text-center text-slate-500">No se encontró la actividad.</div>;
 
   const h5pTypes = ['flashcard', 'sortable', 'dragdrop', 'interactive-video', 'swipe', 'wordsearch'];
+  
+  // Fusionamos la metadata con los datos técnicos (premium)
+  const fullChallenge = { ...challenge, ...premiumData };
 
   if (h5pTypes.includes(challenge.type)) {
      return (
@@ -936,12 +963,12 @@ function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, o
             {challenge.description && <p className="text-muted-foreground">{challenge.description}</p>}
          </div>
          <div className="bg-white rounded-[3rem] p-6 shadow-sm border border-slate-100">
-           {challenge.type === 'flashcard' && <FlipFlashcards cards={challenge.cards || []} onComplete={onComplete} />}
-           {challenge.type === 'sortable' && <SortableCodeBlocks lines={[...(challenge.lines||[])].sort(()=>Math.random()-0.5)} correctOrder={challenge.correctOrder || []} onComplete={(score) => score === 5 ? onComplete() : alert('Algoritmo Incorrecto')} />}
-           {challenge.type === 'dragdrop' && <DragDropSnippets template={challenge.template || ""} snippets={challenge.snippets||[]} correctMapping={challenge.correctMapping||{}} onComplete={(score) => score === 5 ? onComplete() : null} />}
-           {challenge.type === 'interactive-video' && <InteractiveVideo url={challenge.videoUrl || ""} checkpoints={challenge.checkpoints||[]} onComplete={onComplete} />}
-           {challenge.type === 'swipe' && <SwipeCards deck={challenge.deck||[]} onComplete={onComplete}/>}
-           {challenge.type === 'wordsearch' && <WordSearchGame words={challenge.words||[]} onComplete={onComplete}/>}
+           {challenge.type === 'flashcard' && <FlipFlashcards cards={fullChallenge.cards || []} onComplete={onComplete} />}
+           {challenge.type === 'sortable' && <SortableCodeBlocks lines={[...(fullChallenge.lines||[])].sort(()=>Math.random()-0.5)} correctOrder={fullChallenge.correctOrder || []} onComplete={(score) => score === 5 ? onComplete() : alert('Algoritmo Incorrecto')} />}
+           {challenge.type === 'dragdrop' && <DragDropSnippets template={fullChallenge.template || ""} snippets={fullChallenge.snippets||[]} correctMapping={fullChallenge.correctMapping||{}} onComplete={(score) => score === 5 ? onComplete() : null} />}
+           {challenge.type === 'interactive-video' && <InteractiveVideo url={fullChallenge.videoUrl || ""} checkpoints={fullChallenge.checkpoints||[]} onComplete={onComplete} />}
+           {challenge.type === 'swipe' && <SwipeCards deck={fullChallenge.deck||[]} onComplete={onComplete}/>}
+           {challenge.type === 'wordsearch' && <WordSearchGame words={fullChallenge.words||[]} onComplete={onComplete}/>}
          </div>
        </div>
      );
@@ -955,7 +982,13 @@ function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, o
         <h2 className="text-3xl font-headline font-bold text-slate-900">{challenge.title}</h2>
         <p className="text-muted-foreground leading-relaxed">Esta lección consiste en un reto de programación o entrevista con IA en vivo.</p>
       </div>
-      <Link href={`/challenges/${challenge.id}`}><Button className="h-16 px-12 rounded-[1.5rem] text-xl font-bold gap-3 shadow-2xl shadow-primary/30 group"><PlayCircle className="h-6 w-6 group-hover:scale-110 transition-transform" /> Aceptar Desafío <ArrowRight className="h-5 w-5 ml-1" /></Button></Link>
+      <Link href={`/challenges/${challenge.id}?courseId=${params.id}&lessonId=${params.lessonId}&moduleId=${searchParams.get('moduleId')}`}>
+        <Button className="h-16 px-12 rounded-[1.5rem] text-xl font-bold gap-3 shadow-2xl shadow-primary/30 group">
+          <PlayCircle className="h-6 w-6 group-hover:scale-110 transition-transform" /> 
+          Aceptar Desafío 
+          <ArrowRight className="h-5 w-5 ml-1" />
+        </Button>
+      </Link>
     </div>
   );
 }

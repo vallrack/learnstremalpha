@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ import {
   Stars
 } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection, serverTimestamp, increment } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, increment, setDoc, arrayUnion } from 'firebase/firestore';
 import { evaluateChallenge, type EvaluateChallengeOutput } from '@/ai/flows/evaluate-challenge';
 import { evaluateWithExternalAI } from '@/app/actions/ai-generation';
 import { WordSearchGame } from '@/components/challenges/WordSearchGame';
@@ -66,6 +66,7 @@ export default function ChallengeClient() {
 function ChallengeContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const challengeId = params.id as string;
   const db = useFirestore();
   const { user, profile, isUserLoading } = useUser();
@@ -112,11 +113,12 @@ function ChallengeContent() {
 
   useEffect(() => {
     async function fetchPremiumData() {
-      // Solo intentamos descargar datos premium si el usuario tiene los permisos rígidamente (Admin, Suscriptor o Compra)
-      // Esto evita errores de "Permission Denied" en la consola para usuarios gratuitos o invitados.
-      const isAuthorized = profile?.role === 'admin' || profile?.isPremiumSubscriber || profile?.purchasedChallenges?.includes(challengeId);
+      // Permitimos descargar datos si el usuario es Admin, Suscriptor, Comprador 
+      // O si el reto es gratuito (esto permite a invitados ver el contenido técnico).
+      const isActuallyFree = challenge?.isFree === true;
+      const isAuthorized = isActuallyFree || profile?.role === 'admin' || profile?.isPremiumSubscriber || profile?.purchasedChallenges?.includes(challengeId);
       
-      if (!db || !isAuthorized || !challengeId || isUserLoading || isChallengeLoading || !user) return;
+      if (!db || !isAuthorized || !challengeId || isUserLoading || isChallengeLoading) return;
       
       setIsLoadingPremium(true);
       try {
@@ -134,7 +136,7 @@ function ChallengeContent() {
     }
 
     fetchPremiumData();
-  }, [db, isPremiumLocked, challengeId, isUserLoading, isChallengeLoading]);
+  }, [db, isPremiumLocked, challengeId, isUserLoading, isChallengeLoading, challenge?.isFree]);
 
   const effectiveSolution = premiumData?.solution || challenge?.solution;
   const effectiveQuestions = premiumData?.questions || challenge?.questions;
@@ -336,6 +338,23 @@ function ChallengeContent() {
           unlockedAt: serverTimestamp(),
         });
         toast({ title: "¡Insignia Desbloqueada!", description: evaluation.awardedBadge.title });
+      }
+
+      // --- LOGICA DE CURSO: Marcar lecciÃ³n completada ---
+      const courseId = searchParams.get('courseId');
+      const lessonId = searchParams.get('lessonId');
+      
+      if (courseId && lessonId && evaluation.passed) {
+        const progressRef = doc(db, 'users', user.uid, 'courseProgress', courseId);
+        setDoc(progressRef, {
+          courseId,
+          completedLessons: arrayUnion(lessonId),
+          lastLessonId: lessonId,
+          updatedAt: serverTimestamp(),
+          status: 'in-progress'
+        }, { merge: true }).then(() => {
+          toast({ title: "¡Lección completada!", description: "Tu progreso en el curso se ha guardado." });
+        }).catch(err => console.error("Error saving course progress from challenge:", err));
       }
     }
   };

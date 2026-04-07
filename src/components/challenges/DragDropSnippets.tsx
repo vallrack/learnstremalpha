@@ -85,7 +85,7 @@ export function DragDropSnippets({ template, snippets, correctMapping, onComplet
    const isAllFilled = Object.keys(correctMapping).every(slot => !!placements[slot]);
 
    // Parser de plantilla robusto: soporte para {{id}} y {{{id}}}
-   const parts = (template || "").split(/(\{\{2,3\}.*?\}\{2,3\})/g);
+   const parts = (template || "").split(/(\{\{\{?.*?\}\}\}?)/g);
 
    if (!template || template.trim() === "") {
      return (
@@ -110,7 +110,7 @@ export function DragDropSnippets({ template, snippets, correctMapping, onComplet
          <div className="bg-[#1e1e1e] p-12 rounded-[3rem] shadow-2xl border-4 border-slate-900 text-lg font-mono text-slate-300 leading-relaxed whitespace-pre-wrap relative overflow-hidden">
             {parts.map((part, i) => {
                // Extraemos el ID considerando tanto {{id}} como {{{id}}}
-               const match = part.match(/^\{\{2,3\}(.*?)\}\{2,3\}$/);
+               const match = part.match(/^\{\{\{?(.*?)\}\}\}?$/);
                if (match) {
                  const slotId = match[1].trim();
                  return <DroppableSlot key={`${slotId}-${i}`} id={slotId} currentItem={placements[slotId] || null} snippetMap={snippetMap} />;
