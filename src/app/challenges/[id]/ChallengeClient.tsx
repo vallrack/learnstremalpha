@@ -190,12 +190,21 @@ function ChallengeContent() {
   const handleSubmit = async (quizScore?: number) => {
     if (!challenge || !db || isPremiumLocked) return;
     
-    if (challenge.type === 'quiz' && quizScore !== undefined) {
+    const h5pTypes = ['quiz', 'dragdrop', 'sortable', 'flashcard', 'swipe', 'wordsearch', 'interactive-video'];
+    if (h5pTypes.includes(challenge.type) && quizScore !== undefined) {
       processResult({
         score: quizScore,
         passed: quizScore >= 3,
-        feedback: quizScore >= 4 ? "Excelente dominio teórico de los conceptos." : "Buen intento, revisa los temas en los que fallaste.",
-        awardedBadge: quizScore >= 4.5 ? { title: "Teórico Maestro", description: "Dominio perfecto de la trivia técnica.", iconType: "logic" } : undefined
+        feedback: quizScore === 5 
+          ? "¡Excelente trabajo! Has demostrado un dominio perfecto de los conceptos evaluados en esta actividad técnica." 
+          : quizScore >= 3 
+            ? "Buen intento. Has superado el desafío con éxito, aunque hay pequeños detalles que podrías seguir puliendo." 
+            : "No te desanimes. Sigue practicando estos conceptos; la constancia es la clave para alcanzar el nivel profesional.",
+        awardedBadge: quizScore >= 4.5 ? { 
+          title: challenge.type === 'quiz' ? "Teórico Maestro" : "Lógica Impecable", 
+          description: "Dominio perfecto de la actividad interactiva.", 
+          iconType: "logic" 
+        } : undefined
       });
       return;
     }
