@@ -737,7 +737,7 @@ function ChallengeContent() {
                             (window as any)[regKey] = true;
                             monaco.languages.registerCompletionItemProvider('html', {
                               triggerCharacters: ['!', '<', '.', '#', '>', '+', '*'],
-                              provideCompletionItems: (_model, position, _ctx, _token) => {
+                              provideCompletionItems: (_model: any, position: any, _ctx?: any, _token?: any) => {
                                 const range = {
                                   startLineNumber: position.lineNumber,
                                   endLineNumber: position.lineNumber,
