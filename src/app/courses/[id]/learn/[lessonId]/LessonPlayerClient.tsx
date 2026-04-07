@@ -916,6 +916,7 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
 function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, onComplete: () => void }) {
   const params = useParams();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const db = useFirestore();
   const [premiumData, setPremiumData] = useState<any>(null);
   const [isLoadingPremium, setIsLoadingPremium] = useState(false);
@@ -964,8 +965,27 @@ function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, o
          </div>
          <div className="bg-white rounded-[3rem] p-6 shadow-sm border border-slate-100">
            {challenge.type === 'flashcard' && <FlipFlashcards cards={fullChallenge.cards || []} onComplete={onComplete} />}
-           {challenge.type === 'sortable' && <SortableCodeBlocks lines={[...(fullChallenge.lines||[])].sort(()=>Math.random()-0.5)} correctOrder={fullChallenge.correctOrder || []} onComplete={(score) => score === 5 ? onComplete() : alert('Algoritmo Incorrecto')} />}
-           {challenge.type === 'dragdrop' && <DragDropSnippets template={fullChallenge.template || ""} snippets={fullChallenge.snippets||[]} correctMapping={fullChallenge.correctMapping||{}} onComplete={(score) => score === 5 ? onComplete() : null} />}
+           {challenge.type === 'sortable' && (
+             <SortableCodeBlocks 
+               lines={[...(fullChallenge.lines||[])].sort(()=>Math.random()-0.5)} 
+               correctOrder={fullChallenge.correctOrder || []} 
+               onComplete={(score) => {
+                 if (score === 5) onComplete();
+                 else toast({ title: "Algoritmo Incorrecto", description: "Revisa el orden de las líneas e intenta de nuevo.", variant: "destructive" });
+               }} 
+             />
+           )}
+           {challenge.type === 'dragdrop' && (
+             <DragDropSnippets 
+               template={fullChallenge.template || ""} 
+               snippets={fullChallenge.snippets||[]} 
+               correctMapping={fullChallenge.correctMapping||{}} 
+               onComplete={(score) => {
+                 if (score === 5) onComplete();
+                 else toast({ title: "Código Incompleto", description: "Asegúrate de llenar todos los espacios correctamente.", variant: "destructive" });
+               }} 
+             />
+           )}
            {challenge.type === 'interactive-video' && <InteractiveVideo url={fullChallenge.videoUrl || ""} checkpoints={fullChallenge.checkpoints||[]} onComplete={onComplete} />}
            {challenge.type === 'swipe' && <SwipeCards deck={fullChallenge.deck||[]} onComplete={onComplete}/>}
            {challenge.type === 'wordsearch' && <WordSearchGame words={fullChallenge.words||[]} onComplete={onComplete}/>}
