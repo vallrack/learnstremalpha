@@ -92,6 +92,8 @@ function ChallengeContent() {
   const [guiData, setGUIData] = useState<{ components: any[], windowTitle: string, width?: number, height?: number } | null>(null);
   const [guiTheme, setGUITheme] = useState<'retro' | 'modern'>('modern');
 
+  const h5pTypes = ['quiz', 'dragdrop', 'sortable', 'flashcard', 'swipe', 'wordsearch', 'interactive-video'];
+
   useEffect(() => {
     if (challenge) setCode(challenge.initialCode || '');
   }, [challenge]);
@@ -190,7 +192,6 @@ function ChallengeContent() {
   const handleSubmit = async (quizScore?: number) => {
     if (!challenge || !db || isPremiumLocked) return;
     
-    const h5pTypes = ['quiz', 'dragdrop', 'sortable', 'flashcard', 'swipe', 'wordsearch', 'interactive-video'];
     if (h5pTypes.includes(challenge.type) && quizScore !== undefined) {
       processResult({
         score: quizScore,
@@ -471,7 +472,7 @@ function ChallengeContent() {
                 {challenge.type === 'quiz' ? 'Prueba de Conocimientos' : challenge.type === 'interview' ? 'Simulador de Entrevista' : challenge.type === 'wordsearch' ? 'Juego de Vocabulario' : 'Entorno de Programación'}
               </div>
             )}
-            {challenge.type !== 'quiz' && (challenge.type !== 'wordsearch' || isGameComplete) && (
+            {!h5pTypes.includes(challenge.type) && (challenge.type !== 'wordsearch' || isGameComplete) && (
               <Button onClick={() => handleSubmit()} disabled={isEvaluating || !code.trim()} className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold gap-2 px-4">
                 {isEvaluating ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Sparkles className="h-3 w-3" /> Enviar para Evaluación</>}
               </Button>
