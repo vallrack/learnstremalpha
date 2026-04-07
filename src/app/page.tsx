@@ -631,11 +631,24 @@ function AdminProfileBanner() {
     if (!db) return;
     const fetchAdmin = async () => {
       try {
-        const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
-        const q = query(collection(db, 'users'), where('role', '==', 'admin'), limit(1));
+        const { collection, query, where, limit, getDocs, orderBy } = await import('firebase/firestore');
+        // Buscamos varios administradores o instructores para encontrar al que tenga la bio completa
+        const q = query(
+          collection(db, 'users'), 
+          where('role', 'in', ['admin', 'superadmin', 'instructor']),
+          limit(20)
+        );
         const snap = await getDocs(q);
         if (!snap.empty) {
-          setAdminProfile({ id: snap.docs[0].id, ...snap.docs[0].data() });
+          // Buscamos el primero que tenga bio y foto, o al menos bio
+          const founder = snap.docs
+            .map(d => ({ id: d.id, ...d.data() as any }))
+            .find(u => u.bio && (u.profileImageUrl || u.photoURL)) || 
+            snap.docs.map(d => ({ id: d.id, ...d.data() as any })).find(u => u.bio);
+            
+          if (founder) {
+            setAdminProfile(founder);
+          }
         }
       } catch (err) {
         console.warn("AdminProfileBanner: Error fetching admin", err);
@@ -677,19 +690,24 @@ function AdminProfileBanner() {
 
           <div className="flex-1 space-y-8 relative z-10 text-center lg:text-left">
             <div className="space-y-2">
-              <Badge className="bg-primary/10 text-primary border-none rounded-lg px-4 py-1 font-black text-[10px] uppercase tracking-widest">Liderazgo & Visión</Badge>
+              <Badge className="bg-primary/10 text-primary border-none rounded-lg px-4 py-1 font-black text-[10px] uppercase tracking-widest">Nuestra Visión</Badge>
               <h2 className="text-4xl md:text-6xl font-headline font-bold text-slate-900 leading-tight">
-                Impulsando la <span className="text-primary">Edu-Tech</span>
+                Conoce a nuestro <span className="text-primary">Fundador</span>
               </h2>
             </div>
 
             <div className="space-y-6">
-               <p className="text-xl md:text-2xl text-slate-600 font-medium leading-relaxed italic border-l-4 border-primary/20 pl-6">
-                 "{adminProfile.bio}"
-               </p>
+               <div className="relative">
+                 <div className="absolute -left-4 -top-4 opacity-10">
+                   <Quote className="h-8 w-8 text-primary" />
+                 </div>
+                 <p className="text-xl md:text-2xl text-slate-600 font-medium leading-relaxed italic pl-4">
+                   "{adminProfile.bio}"
+                 </p>
+               </div>
                <div>
                   <h4 className="text-2xl font-headline font-bold text-slate-900">{adminProfile.displayName}</h4>
-                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-1">Fundador & CEO de LearnStream</p>
+                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-1">Fundador & Visionario de LearnStream</p>
                </div>
             </div>
 
