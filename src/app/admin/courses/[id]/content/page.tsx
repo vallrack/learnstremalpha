@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,7 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -304,13 +305,35 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
   const [challengeId, setChallengeId] = useState('');
   const [podcastId, setPodcastId] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
+  const [showAllChallenges, setShowAllChallenges] = useState(false);
 
   const challengesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return collection(db, 'coding_challenges');
   }, [db]);
   const { data: allChallenges } = useCollection(challengesQuery);
-  const compatibleChallenges = allChallenges || [];
+  
+  const compatibleChallenges = useMemo(() => {
+    if (!allChallenges) return [];
+    if (showAllChallenges) return allChallenges;
+    if (!course?.technology) return allChallenges;
+
+    const courseT = course.technology.toLowerCase();
+
+    return allChallenges.filter((c: any) => {
+      // Si no tiene tecnología específica (ej. creada antes de la actualización), mostrar por defecto
+      if (!c.technology) return true;
+      const chalT = c.technology.toLowerCase();
+      
+      // Mostrar si coinciden, o si una incluye a la otra (ej. Python === Python con Tkinter)
+      if (courseT === chalT || courseT.includes(chalT) || chalT.includes(courseT)) return true;
+      
+      // Permitir actividades 'General' siempre
+      if (chalT === 'general') return true;
+
+      return false;
+    });
+  }, [allChallenges, course?.technology, showAllChallenges]);
 
   const podcastsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -350,6 +373,7 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     setPrice('0');
     setCurrency('COP');
     setQuestions([]);
+    setShowAllChallenges(false);
   };
 
   const handleSaveLesson = async (e: React.FormEvent) => {
@@ -515,7 +539,14 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
                   <div className="grid gap-2"><Label>Descripción o Contenido Escrito</Label><Textarea placeholder="Contenido de la lección..." value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[120px] rounded-xl" /></div></>
                 )}
                 {type === 'challenge' && (
-                  <div className="grid gap-2"><Label>Vincular Desafío o Actividad Global</Label>
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Vincular Desafío o Actividad Global</Label>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-[10px] text-muted-foreground cursor-pointer uppercase font-bold tracking-wider" htmlFor="showAll">Ver Todas</Label>
+                        <Switch id="showAll" checked={showAllChallenges} onCheckedChange={setShowAllChallenges} className="scale-75 data-[state=checked]:bg-primary" />
+                      </div>
+                    </div>
                     <Select value={challengeId} onValueChange={setChallengeId} required>
                       <SelectTrigger className="rounded-xl h-14 border-2 transition-all hover:border-primary/50"><SelectValue placeholder="Elige un reto o actividad de la biblioteca..." /></SelectTrigger>
                       <SelectContent className="rounded-2xl max-h-[300px]">
