@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(req: NextRequest) {
   try {
-    const { courseId, students, courseTitle } = await req.json();
+    const { courseId, students, courseTitle, groupId } = await req.json();
 
     if (!courseId || !students || !Array.isArray(students)) {
       return NextResponse.json(
@@ -95,7 +95,12 @@ export async function POST(req: NextRequest) {
                 completedLessons: [],
                 enrollmentDate: FieldValue.serverTimestamp(),
                 lastAccessedAt: FieldValue.serverTimestamp(),
+                groupId: groupId || null,
             });
+        } else {
+            if (groupId) {
+              await progressRef.update({ groupId });
+            }
         }
         
         results.success++;

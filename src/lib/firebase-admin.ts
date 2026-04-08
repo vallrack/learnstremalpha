@@ -1,4 +1,4 @@
-import { initializeApp, getApps, applicationDefault, App } from 'firebase-admin/app';
+import { initializeApp, getApps, applicationDefault, App, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
@@ -10,16 +10,43 @@ if (apps.length === 0) {
                     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 
                     'devforge-academy';
   
-  try {
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (serviceAccountKey) {
+    try {
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      adminApp = initializeApp({
+        credential: cert(serviceAccount),
+        projectId: projectId,
+      });
+    } catch (error) {
+       console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:", error);
+       // Fallback to simpler init
+       adminApp = initializeApp({ projectId });
+    }
+  } else if (clientEmail && privateKey) {
     adminApp = initializeApp({
-      credential: applicationDefault(),
+      credential: cert({
+        projectId: projectId,
+        clientEmail: clientEmail,
+        privateKey: privateKey.replace(/\\n/g, '\n'),
+      }),
       projectId: projectId,
     });
-  } catch (error) {
-    console.warn('Initialization with applicationDefault() failed. Falling back to explicit projectId initialization...');
-    adminApp = initializeApp({
-      projectId: projectId,
-    });
+  } else {
+    try {
+      adminApp = initializeApp({
+        credential: applicationDefault(),
+        projectId: projectId,
+      });
+    } catch (error) {
+      console.warn('Initialization with applicationDefault() failed. Falling back to explicit projectId initialization...');
+      adminApp = initializeApp({
+        projectId: projectId,
+      });
+    }
   }
 } else {
   adminApp = apps[0];

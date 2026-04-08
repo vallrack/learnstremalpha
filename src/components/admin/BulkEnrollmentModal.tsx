@@ -7,7 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Upload, FileSpreadsheet, Unplug as X, Loader2, Users, CheckCircle2, AlertCircle } from 'lucide-react';
 import * as xlsx from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface BulkEnrollmentModalProps {
   courseId: string;
@@ -26,10 +29,18 @@ export function BulkEnrollmentModal({ courseId, courseTitle, onSuccess }: BulkEn
   const [parsedData, setParsedData] = useState<StudentRecord[]>([]);
   const [fileName, setFileName] = useState('');
   const [results, setResults] = useState<{total: number, success: number, failed: number, errors: string[]} | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('none');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const auth = useAuth();
+  const db = useFirestore();
+
+  const groupsQuery = useMemoFirebase(() => {
+    if (!db || !courseId) return null;
+    return query(collection(db, 'courses', courseId, 'groups'), orderBy('createdAt', 'desc'));
+  }, [db, courseId]);
+  const { data: groups } = useCollection(groupsQuery);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -90,6 +101,7 @@ export function BulkEnrollmentModal({ courseId, courseTitle, onSuccess }: BulkEn
         body: JSON.stringify({
           courseId,
           courseTitle,
+          groupId: selectedGroupId === 'none' ? null : selectedGroupId,
           students: parsedData
         })
       });
@@ -123,6 +135,7 @@ export function BulkEnrollmentModal({ courseId, courseTitle, onSuccess }: BulkEn
     setParsedData([]);
     setFileName('');
     setResults(null);
+    setSelectedGroupId('none');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -177,15 +190,34 @@ export function BulkEnrollmentModal({ courseId, courseTitle, onSuccess }: BulkEn
             </div>
           ) : parsedData.length > 0 ? (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-              <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-50 p-4 rounded-xl border gap-4">
+                <div className="flex items-center gap-3">
                   <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
-                  <span className="font-medium text-sm">{fileName}</span>
+                  <span className="font-medium text-sm truncate max-w-[200px]">{fileName}</span>
                   <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full">{parsedData.length} registros</span>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleReset} className="h-8 text-muted-foreground hover:text-rose-600">
-                  Cambiar archivo
-                </Button>
+                
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                  {groups && groups.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground whitespace-nowrap">Asignar a cohorte:</Label>
+                      <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                        <SelectTrigger className="h-8 w-[160px] text-xs bg-white">
+                          <SelectValue placeholder="Sin cohorte" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin cohorte (General)</SelectItem>
+                          {groups.map(g => (
+                            <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={handleReset} className="h-8 text-muted-foreground hover:text-rose-600">
+                    Cambiar archivo
+                  </Button>
+                </div>
               </div>
 
               <div className="border rounded-2xl overflow-hidden max-h-[300px] overflow-y-auto">
