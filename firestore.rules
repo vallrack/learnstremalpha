@@ -95,8 +95,8 @@ service cloud.firestore {
     }
 
     // ⭐ Collection Group Rule for courseProgress (GroupsManager queries real-time)
-    match /{path=**}/courseProgress/{courseId} {
-      allow read: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId == request.auth.uid);
+    match /{path=**}/courseProgress/{id} {
+      allow read: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.instructorId == request.auth.uid);
     }
 
     match /instructor_applications/{appId} {

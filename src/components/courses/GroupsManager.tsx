@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, collectionGroup, where, getDocs } from 'firebase/firestore';
-import { Plus, Edit, Trash2, Users, Loader2, Save, Search, UserCircle, UserCheck, UserX } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Loader2, Save, Search, UserCircle, UserCheck, UserX, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +23,7 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [enrolledStudents, setEnrolledStudents] = useState<any[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const groupsQuery = useMemoFirebase(() => {
@@ -72,8 +73,10 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
         }
 
         setEnrolledStudents(usersResolved);
+        setFetchError(null);
       } catch (error: any) {
         console.error("Error fetching students:", error);
+        setFetchError(error.message || "Error al cargar estudiantes. Verifica tus permisos.");
       } finally {
         setIsLoadingStudents(false);
       }
@@ -255,6 +258,13 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
 
         {isLoadingStudents ? (
           <div className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : fetchError ? (
+          <div className="text-center py-10 bg-rose-50 rounded-2xl border-2 border-dashed border-rose-200">
+             <AlertTriangle className="h-8 w-8 text-rose-500 mx-auto mb-2" />
+             <p className="text-rose-700 font-bold">Error de Acceso</p>
+             <p className="text-rose-600 text-sm mt-1">{fetchError}</p>
+             <Button variant="outline" size="sm" className="mt-4 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-100" onClick={() => window.location.reload()}>Reintentar</Button>
+          </div>
         ) : enrolledStudents.length > 0 ? (
           <div className="border rounded-2xl overflow-hidden overflow-x-auto max-h-[400px]">
              <Table>
