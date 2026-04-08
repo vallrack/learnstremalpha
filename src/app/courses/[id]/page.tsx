@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert, Code2, ArrowRight } from 'lucide-react';
+import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert, Code2, ArrowRight, Video, CalendarIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
@@ -264,6 +264,8 @@ function CourseDetailContent() {
                   <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Contenido del Curso</h2>
                   <CourseCurriculum courseId={id} hasValidAccess={hasValidAccess} isFreeCourse={isFreeCourse} />
                 </section>
+                
+                <LiveClassesList courseId={id} groupId={progress?.groupId} hasValidAccess={hasValidAccess} />
 
                 <section>
                   <CourseReviews courseId={id} />
@@ -612,4 +614,87 @@ function InstructorBioSection({ profile }: { profile: any }) {
       </div>
     </section>
   );
+}
+
+function LiveClassesList({ courseId, groupId, hasValidAccess }: { courseId: string, groupId?: string | null, hasValidAccess: boolean }) {
+  const db = useFirestore();
+  const [classes, setClasses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db || !courseId) return;
+    
+    const fetchClasses = async () => {
+      try {
+        const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
+        const snap = await getDocs(query(collection(db, 'courses', courseId, 'virtualClasses'), orderBy('scheduledAt', 'asc')));
+        
+        let fetched: any[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+        fetched = fetched.filter(c => !c.groupId || c.groupId === groupId);
+        
+        setClasses(fetched);
+      } catch (err) {
+         console.warn(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClasses();
+  }, [db, courseId, groupId]);
+
+  if (loading || classes.length === 0) return null;
+
+  return (
+    <section>
+      <h2 className="text-2xl font-headline font-bold mt-12 mb-6 text-foreground flex items-center gap-2">
+        <Video className="h-6 w-6 text-primary" />
+        Clases en Vivo y Grabaciones
+      </h2>
+      <div className="space-y-4">
+        {classes.map(vc => {
+          const isPast = vc.scheduledAt ? vc.scheduledAt.toDate() < new Date() : false;
+          return (
+             <div key={vc.id} className={`p-5 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-4 transition-colors ${isPast ? 'bg-slate-50 border-slate-200' : 'bg-blue-50/50 border-blue-100 shadow-sm'}`}>
+                <div className="flex items-start gap-4">
+                  <div className={`p-3 rounded-xl shrink-0 ${isPast ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-600'}`}>
+                    <CalendarIcon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className={`font-bold ${isPast ? 'text-slate-600' : 'text-slate-900'}`}>{vc.title}</h4>
+                      {isPast && <Badge variant="secondary" className="text-[10px] bg-slate-200">Finalizada</Badge>}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <span>{vc.scheduledAt ? new Date(vc.scheduledAt.toDate()).toLocaleString() : 'Sin fecha'}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex w-full md:w-auto justify-end">
+                   {hasValidAccess ? (
+                     vc.recordingUrl ? (
+                        <Link href={vc.recordingUrl} target="_blank">
+                          <Button variant="outline" size="sm" className="rounded-xl border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-bold">
+                             <PlayCircle className="h-4 w-4 mr-2" /> Ver Grabación
+                          </Button>
+                        </Link>
+                     ) : (
+                        <Link href={vc.meetLink || '#'} target="_blank">
+                          <Button size="sm" disabled={isPast} className="rounded-xl bg-blue-600 hover:bg-blue-700 font-bold">
+                             <Video className="h-4 w-4 mr-2" /> Entrar a la Clase
+                          </Button>
+                        </Link>
+                     )
+                   ) : (
+                      <Button variant="outline" size="sm" disabled className="rounded-xl opacity-50">
+                        <Lock className="h-3 w-3 mr-2" /> Bloqueado
+                      </Button>
+                   )}
+                </div>
+             </div>
+          )
+        })}
+      </div>
+    </section>
+  )
 }

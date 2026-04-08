@@ -56,6 +56,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { BulkEnrollmentModal } from '@/components/admin/BulkEnrollmentModal';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { GroupsManager } from '@/components/courses/GroupsManager';
+import { VirtualClassesManager } from '@/components/courses/VirtualClassesManager';
 
 export default function CourseContentAdminPage() {
   const params = useParams();
@@ -168,16 +172,18 @@ export default function CourseContentAdminPage() {
               <p className="text-muted-foreground">Gestiona módulos, lecciones y desafíos compatibles con {course?.technology || 'su tecnología'}.</p>
             </div>
             
-            <Dialog open={isModuleDialogOpen} onOpenChange={(open) => {
-              setIsModuleDialogOpen(open);
-              if (!open) resetModuleForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button className="rounded-xl h-11 gap-2 shadow-lg shadow-primary/10">
-                  <Plus className="h-4 w-4" />
-                  Añadir Módulo
-                </Button>
-              </DialogTrigger>
+            <div className="flex items-center gap-3">
+              {isAuthorized && course && <BulkEnrollmentModal courseId={courseId} courseTitle={course.title} />}
+              <Dialog open={isModuleDialogOpen} onOpenChange={(open) => {
+                setIsModuleDialogOpen(open);
+                if (!open) resetModuleForm();
+              }}>
+                <DialogTrigger asChild>
+                  <Button className="rounded-xl h-11 gap-2 shadow-lg shadow-primary/10">
+                    <Plus className="h-4 w-4" />
+                    Añadir Módulo
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="rounded-3xl">
                 <form onSubmit={handleSaveModule}>
                   <DialogHeader>
@@ -231,57 +237,82 @@ export default function CourseContentAdminPage() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </header>
 
-        <section className="space-y-4">
-          {isModulesLoading ? (
-            <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-          ) : (
-            <Accordion type="single" collapsible className="space-y-4">
-              {modules?.map((module, i) => (
-                <AccordionItem key={module.id} value={module.id} className="bg-white border rounded-2xl overflow-hidden px-4 shadow-sm">
-                  <div className="flex items-center gap-2 group pr-4">
-                    <AccordionTrigger className="flex-1 hover:no-underline py-6">
-                      <div className="flex items-center gap-4 text-left">
-                        <div className="bg-muted p-2 rounded-lg"><GripVertical className="h-4 w-4 text-muted-foreground" /></div>
-                        <div>
-                          <p className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {i + 1}</p>
-                          <p className="text-lg font-bold">{module.title}</p>
+        <Tabs defaultValue="modules" className="w-full">
+          <TabsList className="mb-8 p-1 bg-slate-100/80 rounded-xl overflow-x-auto w-full justify-start h-auto flex flex-wrap border">
+            <TabsTrigger value="modules" className="rounded-lg px-4 py-2 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary border-transparent data-[state=active]:border-slate-200">
+              Contenido y Módulos
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="rounded-lg px-4 py-2 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary border-transparent data-[state=active]:border-slate-200">
+              Grupos y Sub-cohortes
+            </TabsTrigger>
+            <TabsTrigger value="virtual" className="rounded-lg px-4 py-2 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary border-transparent data-[state=active]:border-slate-200">
+              Clases en Vivo
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="modules" className="space-y-4 animate-in fade-in">
+            <section className="space-y-4">
+              {isModulesLoading ? (
+                <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              ) : (
+                <Accordion type="single" collapsible className="space-y-4">
+                  {modules?.map((module, i) => (
+                    <AccordionItem key={module.id} value={module.id} className="bg-white border rounded-2xl overflow-hidden px-4 shadow-sm">
+                      <div className="flex items-center gap-2 group pr-4">
+                        <AccordionTrigger className="flex-1 hover:no-underline py-6">
+                          <div className="flex items-center gap-4 text-left">
+                            <div className="bg-muted p-2 rounded-lg"><GripVertical className="h-4 w-4 text-muted-foreground" /></div>
+                            <div>
+                              <p className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {i + 1}</p>
+                              <p className="text-lg font-bold">{module.title}</p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingModule(module);
+                            setModuleTitle(module.title);
+                            setModuleOrder(module.orderIndex?.toString() || '0');
+                            setModuleIsPremium(module.isPremium || false);
+                            setModulePrice(module.price?.toString() || '0');
+                            setModuleCurrency(module.currency || 'COP');
+                            setIsModuleDialogOpen(true);
+                          }}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {isAuthorized && (
+                            <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteModule(module.id);
+                            }}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
-                    </AccordionTrigger>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingModule(module);
-                        setModuleTitle(module.title);
-                        setModuleOrder(module.orderIndex?.toString() || '0');
-                        setModuleIsPremium(module.isPremium || false);
-                        setModulePrice(module.price?.toString() || '0');
-                        setModuleCurrency(module.currency || 'COP');
-                        setIsModuleDialogOpen(true);
-                      }}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {isAuthorized && (
-                        <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteModule(module.id);
-                        }}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <AccordionContent className="pb-6 border-t pt-4">
-                    <LessonManager course={course} moduleId={module.id} isAuthorized={isAuthorized} />
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          )}
-        </section>
+                      <AccordionContent className="pb-6 border-t pt-4">
+                        <LessonManager course={course} moduleId={module.id} isAuthorized={isAuthorized} />
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )}
+            </section>
+          </TabsContent>
+          
+          <TabsContent value="groups">
+            <GroupsManager courseId={courseId} isAuthorized={isAuthorized} />
+          </TabsContent>
+          
+          <TabsContent value="virtual">
+            <VirtualClassesManager courseId={courseId} isAuthorized={isAuthorized} />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
