@@ -9,8 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, collectionGroup, where, getDocs } from 'firebase/firestore';
-import { Plus, Edit, Trash2, Users, Loader2, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Loader2, Save, Search, UserCircle, UserCheck, UserX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export function GroupsManager({ courseId, isAuthorized }: { courseId: string, isAuthorized: boolean }) {
   const db = useFirestore();
@@ -20,6 +23,7 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [enrolledStudents, setEnrolledStudents] = useState<any[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const groupsQuery = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -27,6 +31,7 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
   }, [db, courseId]);
   const { data: groups, isLoading: isGroupsLoading } = useCollection(groupsQuery);
 
+  // Carga de estudiantes optimizada
   useEffect(() => {
     if (!db || !courseId) return;
     const fetchStudents = async () => {
@@ -34,22 +39,41 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
       try {
         const snap = await getDocs(query(collectionGroup(db, 'courseProgress'), where('courseId', '==', courseId)));
         
-        const studentsPromise = snap.docs.map(async (d) => {
-           const progressData = d.data();
-           const userId = d.ref.parent.parent?.id;
-           if (!userId) return null;
-           
-           const userDoc = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
-           if(!userDoc.empty) {
-               return { id: userId, progressRef: d.ref, ...userDoc.docs[0].data(), progressData };
-           }
-           return null;
+        // Obtenemos los IDs únicos de los estudiantes
+        const progressDocsMap = new Map();
+        snap.docs.forEach(d => {
+          const userId = d.ref.parent.parent?.id;
+          if (userId) progressDocsMap.set(userId, { ref: d.ref, data: d.data() });
         });
 
-        const resolved = (await Promise.all(studentsPromise)).filter(Boolean);
-        setEnrolledStudents(resolved);
+        const userIds = Array.from(progressDocsMap.keys());
+        if (userIds.length === 0) {
+          setEnrolledStudents([]);
+          return;
+        }
+
+        // Firebase IN query tiene límite de 30, pero aquí usualmente no habrá 
+        // miles en un solo curso localmente para esta vista. Si hay muchos, 
+        // procesamos en lotes de 30.
+        const usersResolved: any[] = [];
+        for (let i = 0; i < userIds.length; i += 30) {
+          const batchIds = userIds.slice(i, i + 30);
+          const usersSnap = await getDocs(query(collection(db, 'users'), where('__name__', 'in', batchIds)));
+          usersSnap.docs.forEach(uDoc => {
+            const uData = uDoc.data();
+            const pInfo = progressDocsMap.get(uDoc.id);
+            usersResolved.push({ 
+              id: uDoc.id, 
+              ...uData, 
+              progressRef: pInfo.ref, 
+              progressData: pInfo.data 
+            });
+          });
+        }
+
+        setEnrolledStudents(usersResolved);
       } catch (error: any) {
-        console.error("Firebase Index Error or Fetch Error:", error);
+        console.error("Error fetching students:", error);
       } finally {
         setIsLoadingStudents(false);
       }
@@ -57,6 +81,17 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
 
     fetchStudents();
   }, [db, courseId]);
+
+  const filteredStudents = enrolledStudents.filter(s => 
+    s.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const stats = {
+    total: enrolledStudents.length,
+    unassigned: enrolledStudents.filter(s => !s.progressData?.groupId).length,
+    groupsCount: groups?.length || 0
+  };
 
   const handleSaveGroup = (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,6 +143,37 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
 
   return (
     <div className="space-y-8 animate-in fade-in">
+      {/* Resumen de Cohorte */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="rounded-3xl border-none shadow-sm bg-primary text-white">
+          <CardContent className="p-6">
+            <p className="text-xs font-bold uppercase tracking-widest opacity-80">Total Matriculados</p>
+            <div className="flex items-end justify-between mt-2">
+              <h4 className="text-4xl font-headline font-bold">{stats.total}</h4>
+              <Users className="h-8 w-8 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl border-none shadow-sm bg-white">
+          <CardContent className="p-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sin Cohorte Asignado</p>
+            <div className="flex items-end justify-between mt-2">
+              <h4 className="text-4xl font-headline font-bold text-slate-900">{stats.unassigned}</h4>
+              <UserX className="h-8 w-8 text-rose-100" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl border-none shadow-sm bg-white">
+          <CardContent className="p-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Grupos Activos</p>
+            <div className="flex items-end justify-between mt-2">
+              <h4 className="text-4xl font-headline font-bold text-slate-900">{stats.groupsCount}</h4>
+              <UserCheck className="h-8 w-8 text-emerald-100" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="bg-white p-6 rounded-[2rem] shadow-sm border space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -171,9 +237,20 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
       </div>
 
       <div className="bg-white p-6 rounded-[2rem] shadow-sm border space-y-6">
-        <div>
-          <h3 className="text-xl font-headline font-bold">Asignación de Estudiantes</h3>
-          <p className="text-muted-foreground text-sm">Asigna a los estudiantes matriculados al grupo correspondiente.</p>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-headline font-bold">Asignación de Estudiantes</h3>
+            <p className="text-muted-foreground text-sm">Organiza a los alumnos en sus cohortes correspondientes.</p>
+          </div>
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar por nombre o email..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 rounded-xl bg-slate-50 border-none h-11"
+            />
+          </div>
         </div>
 
         {isLoadingStudents ? (
@@ -181,31 +258,43 @@ export function GroupsManager({ courseId, isAuthorized }: { courseId: string, is
         ) : enrolledStudents.length > 0 ? (
           <div className="border rounded-2xl overflow-hidden overflow-x-auto max-h-[400px]">
              <Table>
-               <TableHeader className="bg-slate-50 sticky top-0">
+               <TableHeader className="bg-slate-50 sticky top-0 z-10">
                  <TableRow>
-                   <TableHead>Estudiante</TableHead>
+                   <TableHead className="pl-6 h-12">Estudiante</TableHead>
                    <TableHead>Email</TableHead>
-                   <TableHead className="w-[250px]">Grupo Asignado</TableHead>
+                   <TableHead>Estado</TableHead>
+                   <TableHead className="w-[300px] pr-6">Cohorte Asignado</TableHead>
                  </TableRow>
                </TableHeader>
                <TableBody>
-                 {enrolledStudents.map(student => (
-                   <TableRow key={student.id}>
-                     <TableCell className="font-bold">{student.displayName || 'Desconocido'}</TableCell>
+                 {filteredStudents.map(student => (
+                   <TableRow key={student.id} className="group hover:bg-slate-50 transition-colors">
+                     <TableCell className="pl-6 py-4">
+                       <div className="flex items-center gap-3">
+                         <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
+                           <AvatarImage src={student.profileImageUrl} />
+                           <AvatarFallback className="bg-primary/10 text-primary font-bold">{student.displayName?.[0] || 'U'}</AvatarFallback>
+                         </Avatar>
+                         <span className="font-bold text-slate-900 group-hover:text-primary transition-colors">{student.displayName || 'Estudiante'}</span>
+                       </div>
+                     </TableCell>
                      <TableCell className="text-muted-foreground text-xs">{student.email}</TableCell>
                      <TableCell>
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px] h-5">Registrado</Badge>
+                     </TableCell>
+                     <TableCell className="pr-6">
                        <Select 
                          value={student.progressData?.groupId || 'none'} 
                          onValueChange={(val) => handleStudentGroupChange(student, val)}
                          disabled={!isAuthorized}
                        >
-                         <SelectTrigger className="h-9 rounded-xl border-slate-200">
+                         <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-white shadow-sm group-hover:border-primary/30 transition-all">
                            <SelectValue placeholder="Sin Grupo" />
                          </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="none">Todos (Sin grupo)</SelectItem>
+                         <SelectContent className="rounded-2xl">
+                           <SelectItem value="none" className="rounded-lg">📚 Todos (Curso General)</SelectItem>
                            {groups?.map(g => (
-                             <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                             <SelectItem key={g.id} value={g.id} className="rounded-lg">🚀 {g.name}</SelectItem>
                            ))}
                          </SelectContent>
                        </Select>

@@ -24,6 +24,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
   const [recordingUrl, setRecordingUrl] = useState('');
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [customMeetLink, setCustomMeetLink] = useState('');
+  const [technology, setTechnology] = useState('');
 
   const classesQuery = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -57,6 +58,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
       groupId: groupId === 'all' ? null : groupId,
       meetLink: finalMeetLink,
       recordingUrl,
+      technology,
       updatedAt: serverTimestamp()
     };
 
@@ -91,6 +93,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
     setGroupId(vc.groupId || 'all');
     setRecordingUrl(vc.recordingUrl || '');
     setCustomMeetLink(vc.meetLink || '');
+    setTechnology(vc.technology || '');
     setIsDialogOpen(true);
   };
 
@@ -101,6 +104,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
     setGroupId('all');
     setRecordingUrl('');
     setCustomMeetLink('');
+    setTechnology('');
     setEditingClassId(null);
   };
 
@@ -149,24 +153,30 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                       <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="rounded-xl" />
                     </div>
                     <div className="grid gap-2">
-                      <Label>Hora (Local)</Label>
-                      <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} required className="rounded-xl" />
+                       <Label>Hora (Local)</Label>
+                       <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} required className="rounded-xl" />
                     </div>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label>Grupo / Cohorte</Label>
-                    <Select value={groupId} onValueChange={setGroupId}>
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="¿Quiénes pueden unirse?" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos los estudiantes</SelectItem>
-                        {groups?.map(g => (
-                          <SelectItem key={g.id} value={g.id}>Solo el grupo: {g.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Grupo / Cohorte</Label>
+                      <Select value={groupId} onValueChange={setGroupId}>
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="¿Quiénes pueden unirse?" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos los estudiantes</SelectItem>
+                          {groups?.map(g => (
+                            <SelectItem key={g.id} value={g.id}>Solo el grupo: {g.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Tecnología Destacada</Label>
+                      <Input placeholder="Ej: React, Python..." value={technology} onChange={(e) => setTechnology(e.target.value)} className="rounded-xl" />
+                    </div>
                   </div>
 
                   <div className="grid gap-2 bg-slate-50 p-4 rounded-2xl border mt-2">
@@ -213,6 +223,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                       <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
                         <span>{vc.scheduledAt ? new Date(vc.scheduledAt.toDate()).toLocaleString() : 'Sin fecha'}</span>
                         <span className="font-medium text-slate-700">Grupo: {gName}</span>
+                        {vc.technology && <Badge variant="outline" className="h-4 text-[9px] border-blue-200 text-blue-600 bg-blue-50/50">{vc.technology}</Badge>}
                       </div>
                     </div>
                   </div>

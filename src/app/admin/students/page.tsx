@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   UserCheck,
   UserX,
+  Trash2,
   ShieldAlert,
   ShieldCheck,
   GraduationCap,
@@ -34,6 +35,18 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
+import { deleteDocumentNonBlocking } from '@/firebase';
 
 export default function AdminStudentsPage() {
   const router = useRouter();
@@ -241,12 +254,23 @@ export default function AdminStudentsPage() {
 function StudentDetailView({ studentId, allCourses, onBack }: { studentId: string, allCourses: any[], onBack: () => void }) {
   const router = useRouter();
   const db = useFirestore();
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { user: currentUser } = useUser();
   
   const studentRef = useMemoFirebase(() => {
     if (!db || !studentId) return null;
     return doc(db, 'users', studentId);
   }, [db, studentId]);
   const { data: student } = useDoc(studentRef);
+
+  // Verificamos si el usuario actual es admin
+  const currentUserRef = useMemoFirebase(() => {
+    if (!db || !currentUser?.uid) return null;
+    return doc(db, 'users', currentUser.uid);
+  }, [db, currentUser?.uid]);
+  const { data: currentUserProfile } = useDoc(currentUserRef);
+  const isAdmin = currentUserProfile?.role === 'admin' || currentUser?.email === 'demo@learnstream.ai';
 
   const progressQuery = useMemoFirebase(() => {
     if (!db || !studentId) return null;
@@ -268,6 +292,27 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
       role: newRole
     });
     router.refresh();
+  };
+
+  const handleDeleteUser = async () => {
+    if (!db || !studentId || !isAdmin) return;
+    setIsDeleting(true);
+    try {
+      await deleteDocumentNonBlocking(doc(db, 'users', studentId));
+      toast({
+        title: "Usuario eliminado",
+        description: "El estudiante ha sido removido del sistema permanentemente."
+      });
+      onBack();
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Error al eliminar",
+        description: "No se pudo eliminar al usuario. Verifica tus permisos."
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const enrichedEnrollments = enrollments?.map(enr => {
@@ -336,6 +381,37 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
                 {student?.role === 'instructor' ? <GraduationCap className="h-5 w-5 text-purple-600" /> : <Users className="h-5 w-5 text-slate-600" />}
               </div>
             </Card>
+
+            {isAdmin && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="h-full rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 gap-2 px-6">
+                    <Trash2 className="h-5 w-5" />
+                    Eliminar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="rounded-[2rem]">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-2xl font-headline font-bold">¿Estás completamente seguro?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción eliminará permanentemente la cuenta de <strong>{student?.displayName || 'este estudiante'}</strong> ({student?.email}). 
+                      Sus progresos y certificados dejarán de estar asociados a su cuenta de acceso.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="gap-2 pt-4">
+                    <AlertDialogCancel className="rounded-xl border-slate-200">Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleDeleteUser}
+                      disabled={isDeleting}
+                      className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white"
+                    >
+                      {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                      Confirmar Eliminación
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </div>
       </header>
