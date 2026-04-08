@@ -295,20 +295,37 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
   };
 
   const handleDeleteUser = async () => {
-    if (!db || !studentId || !isAdmin) return;
+    if (!db || !studentId || !isAdmin || !currentUser) return;
     setIsDeleting(true);
     try {
-      await deleteDocumentNonBlocking(doc(db, 'users', studentId));
+      // 1. Obtener Token de Administrador para la API
+      const token = await currentUser.getIdToken();
+      
+      // 2. Llamar a la API que borra tanto de Auth como de Firestore
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ userId: studentId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al eliminar el usuario');
+      }
+
       toast({
         title: "Usuario eliminado",
-        description: "El estudiante ha sido removido del sistema permanentemente."
+        description: "La cuenta ha sido removida de Auth y la base de datos permanentemente."
       });
       onBack();
-    } catch (err) {
+    } catch (err: any) {
       toast({
         variant: "destructive",
         title: "Error al eliminar",
-        description: "No se pudo eliminar al usuario. Verifica tus permisos."
+        description: err.message || "No se pudo completar la eliminación total."
       });
     } finally {
       setIsDeleting(false);
