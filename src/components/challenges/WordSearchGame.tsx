@@ -113,8 +113,15 @@ export function WordSearchGame({ words, onComplete }: WordSearchGameProps) {
     if (Math.abs(ir) > 1 || Math.abs(ic) > 1 || (ir !== 0 && ic !== 0 && Math.abs(ir) !== Math.abs(ic))) return;
 
     for (let i = 0; i <= steps; i++) {
-      selectedCells.push({ r: start.r + i * ir, c: start.c + i * ic });
+      const currR = Math.round(start.r + i * ir);
+      const currC = Math.round(start.c + i * ic);
+      // Validar límites de la cuadrícula
+      if (currR >= 0 && currR < GRID_SIZE && currC >= 0 && currC < GRID_SIZE) {
+        selectedCells.push({ r: currR, c: currC });
+      }
     }
+
+    if (selectedCells.length === 0) return;
 
     const selectedWord = selectedCells.map(cell => grid[cell.r][cell.c]).join('');
     const reversedWord = selectedWord.split('').reverse().join('');
@@ -137,7 +144,31 @@ export function WordSearchGame({ words, onComplete }: WordSearchGameProps) {
 
   const handleMouseEnter = (r: number, c: number) => {
     if (isSelecting && selection) {
-      setSelection({ ...selection, end: { r, c } });
+      const dr = r - selection.start.r;
+      const dc = c - selection.start.c;
+      const absDr = Math.abs(dr);
+      const absDc = Math.abs(dc);
+
+      let finalR = r;
+      let finalC = c;
+
+      // Snapping logic to force 8 straight directions
+      if (absDr > absDc * 1.5) {
+        finalC = selection.start.c; // Vertical snap
+      } else if (absDc > absDr * 1.5) {
+        finalR = selection.start.r; // Horizontal snap
+      } else {
+        // Diagonal snap
+        const size = Math.max(absDr, absDc);
+        finalR = selection.start.r + size * (dr >= 0 ? 1 : -1);
+        finalC = selection.start.c + size * (dc >= 0 ? 1 : -1);
+      }
+
+      // Validar límites antes de setear
+      finalR = Math.max(0, Math.min(GRID_SIZE - 1, finalR));
+      finalC = Math.max(0, Math.min(GRID_SIZE - 1, finalC));
+
+      setSelection({ ...selection, end: { r: finalR, c: finalC } });
     }
   };
 
