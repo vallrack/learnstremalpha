@@ -91,11 +91,9 @@ function CheckoutContent() {
   
   const podcastRef = useMemoFirebase(() => {
     if (!db || !podcastId) return null;
-    return query(collection(db, 'podcasts'), where('id', '==', podcastId)); // Note: podcasts might be a collection group or need specific path
+    return doc(db, 'podcasts', podcastId);
   }, [db, podcastId]);
-  
-  // Actually, podcastRef in current file uses doc(db, 'podcasts', podcastId). I'll stick to that if it was there.
-  // Wait, I see lines 91-95 in previous view_file.
+  const { data: podcastData, isLoading: isPodcastLoading } = useDoc(podcastRef);
   
   const virtualClassRef = useMemoFirebase(() => {
     if (!db || !courseId || !virtualClassId) return null;
