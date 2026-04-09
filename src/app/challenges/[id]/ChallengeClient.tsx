@@ -290,13 +290,25 @@ function ChallengeContent() {
     try {
       const currentCode = forceCode || code;
       // Para retos interactivos que no usan el editor de código, enviamos el reporte de puntos a la IA
-      const submissionCode = quizScore !== undefined && !currentCode.trim()
-        ? `[REPORTE DE DESEMPEÑO INTERACTIVO]
+      let submissionCode = currentCode;
+      
+      if (challenge.type === 'wordsearch' && isGameComplete) {
+        const foundWordsList = (premiumData?.words || challenge.words || []).join(', ');
+        submissionCode = `[REPORTE DE SOPA DE LETRAS]
+           Reto: ${challenge.title}
+           Materia: ${challenge.technology}
+           Estado: ¡Todas las palabras encontradas con éxito!
+           Palabras que el estudiante debió encontrar: ${foundWordsList}
+           
+           REFLEXIÓN TÉCNICA DEL ESTUDIANTE:
+           ${currentCode}`;
+      } else if (quizScore !== undefined && !currentCode.trim()) {
+        submissionCode = `[REPORTE DE DESEMPEÑO INTERACTIVO]
            Reto: ${challenge.title}
            Materia: ${challenge.technology}
            Puntaje Alcanzado: ${quizScore.toFixed(1)}/5.0. 
-           El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`
-        : currentCode;
+           El estudiante ha demostrado su conocimiento validando correctamente las sentencias en la interfaz interactiva.`;
+      }
 
       const res = await evaluateChallenge({
         challengeId: challenge.id,
@@ -599,7 +611,7 @@ function ChallengeContent() {
           <div className={`flex-1 relative overflow-y-auto ${challenge.type === 'interview' ? 'p-4 lg:p-12' : 'p-8'}`}>
             {challenge.type === 'wordsearch' ? (
               <div className="space-y-12">
-                <WordSearchGame words={challenge.words || []} onComplete={() => setIsGameComplete(true)} />
+                <WordSearchGame words={premiumData?.words || challenge.words || []} onComplete={() => setIsGameComplete(true)} />
                 {isGameComplete && (
                   <div className="max-w-2xl mx-auto space-y-6 animate-in slide-in-from-bottom-10 duration-700">
                     <div className="text-center space-y-2">

@@ -40,18 +40,33 @@ export function WordSearchGame({ words, onComplete }: WordSearchGameProps) {
       let placed = false;
       let attempts = 0;
       while (!placed && attempts < 150) {
-        const direction = Math.floor(Math.random() * 3); // 0: Horiz, 1: Vert, 2: Diag
+        // 8 Direcciones: 0:H, 1:V, 2:DR, 3:H-Rev, 4:V-Rev, 5:UL, 6:DL, 7:UR
+        const direction = Math.floor(Math.random() * 8);
         const row = Math.floor(Math.random() * GRID_SIZE);
         const col = Math.floor(Math.random() * GRID_SIZE);
         
         let canPlace = true;
         const wordCells: { r: number, c: number }[] = [];
 
-        for (let i = 0; i < word.length; i++) {
-          const r = row + (direction === 1 || direction === 2 ? i : 0);
-          const c = col + (direction === 0 || direction === 2 ? i : 0);
+        // Vectores de dirección [dr, dc]
+        const vectors = [
+          [0, 1],   // 0: Horizontal (Derecha)
+          [1, 0],   // 1: Vertical (Abajo)
+          [1, 1],   // 2: Diagonal (Abajo-Derecha)
+          [0, -1],  // 3: Horizontal (Izquierda)
+          [-1, 0],  // 4: Vertical (Arriba)
+          [-1, -1], // 5: Diagonal (Arriba-Izquierda)
+          [1, -1],  // 6: Diagonal (Abajo-Izquierda)
+          [-1, 1]   // 7: Diagonal (Arriba-Derecha)
+        ];
 
-          if (r >= GRID_SIZE || c >= GRID_SIZE || (newGrid[r][c] !== '' && newGrid[r][c] !== word[i])) {
+        const [dr, dc] = vectors[direction];
+
+        for (let i = 0; i < word.length; i++) {
+          const r = row + (i * dr);
+          const c = col + (i * dc);
+
+          if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE || (newGrid[r][c] !== '' && newGrid[r][c] !== word[i])) {
             canPlace = false;
             break;
           }
@@ -160,7 +175,10 @@ export function WordSearchGame({ words, onComplete }: WordSearchGameProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
         <div className="md:col-span-2">
           <div 
-            className="grid grid-cols-12 gap-1 p-4 bg-slate-900 rounded-[2rem] shadow-2xl border-4 border-slate-800 touch-none select-none"
+            className="grid gap-1 p-4 bg-slate-900 rounded-[2rem] shadow-2xl border-4 border-slate-800 touch-none select-none"
+            style={{ 
+              gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))` 
+            }}
             onMouseLeave={handleMouseUp}
           >
             {grid.map((row, r) => (
@@ -196,24 +214,27 @@ export function WordSearchGame({ words, onComplete }: WordSearchGameProps) {
           </div>
           <CardContent className="p-6">
             <div className="flex flex-wrap gap-2">
-              {words.map((word, i) => (
-                <Badge 
-                  key={i} 
-                  variant={foundWords.includes(word.toUpperCase().replace(/\s+/g, '')) ? 'default' : 'outline'}
-                  className={cn(
-                    "px-3 py-1.5 rounded-xl transition-all duration-500",
-                    foundWords.includes(word.toUpperCase().replace(/\s+/g, '')) 
-                      ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
-                      : "text-slate-400 border-slate-100"
-                  )}
-                >
-                  {foundWords.includes(word.toUpperCase().replace(/\s+/g, '')) && <CheckCircle2 className="h-3 w-3 mr-1.5" />}
-                  {word}
-                </Badge>
-              ))}
+              {words.map((word, i) => {
+                const isFound = foundWords.includes(normalizeWord(word));
+                return (
+                  <Badge 
+                    key={i} 
+                    variant={isFound ? 'default' : 'outline'}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl transition-all duration-500",
+                      isFound 
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
+                        : "text-slate-400 border-slate-100"
+                    )}
+                  >
+                    {isFound && <CheckCircle2 className="h-3 w-3 mr-1.5" />}
+                    {word}
+                  </Badge>
+                );
+              })}
             </div>
             
-            {foundWords.length === words.length && (
+            {words.length > 0 && foundWords.length === placedWordsPos.length && placedWordsPos.length > 0 && (
               <div className="mt-8 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 animate-bounce">
                 <p className="text-xs font-bold text-emerald-700 text-center">¡Increíble! Has encontrado todas las palabras.</p>
               </div>

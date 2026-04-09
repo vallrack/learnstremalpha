@@ -150,10 +150,12 @@ CRITERIOS DE EVALUACIÓN SEGÚN EL CASO:
    - Analiza la precisión de la respuesta, la claridad, asertividad o vocabulario profesional empleado de acuerdo con los estándares de la industria.
    - ¡NO rechaces evaluar la entrega si no contiene código! Es tu labor evaluar el texto.
 
-3. SI EL ESTUDIANTE ENTREGA UN "REPORTE DE DESEMPEÑO INTERACTIVO":
-   - No pidas código. El estudiante ya demostró su conocimiento a través de una actividad lúdica (Swipe, Drag&Drop, Video).
-   - Usa el puntaje proporcionado en el reporte para validar su éxito.
+3. SI EL ESTUDIANTE ENTREGA UN "REPORTE DE DESEMPEÑO INTERACTIVO" O "REPORTE DE SOPA DE LETRAS":
+   - No pidas código fuente. El estudiante ya demostró su conocimiento a través de una actividad lúdica (Sopa de Letras, Swipe, Drag&Drop, Video).
+   - En el caso de SOPA DE LETRAS: Valora tanto el hecho de haber encontrado todas las palabras como la calidad de la REFLEXIÓN TÉCNICA que el estudiante escribió sobre esos términos.
+   - Usa el puntaje proporcionado en el reporte (si existe) para validar su éxito.
    - Genera un feedback basado en la materia/tecnología del reto, felicitando por los aciertos y reforzando la importancia de los conceptos evaluados.
+   - Si es una reflexión, califica la profundidad y precisión técnica de la explicación del estudiante.
 
 OBLIGATORIO:
 - Calificación: 0.0 a 5.0. (Menos de 3.0 es reprobado).
