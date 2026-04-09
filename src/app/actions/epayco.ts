@@ -40,12 +40,65 @@ export async function verifyEpaycoTransaction(
           const moduleId = isComplex ? parts[1] : 'none';
           const lessonId = isComplex ? parts[2] : 'none';
           const challengeId = parts.length >= 4 ? parts[3] : 'none';
-          const podcastId = parts.length === 5 ? parts[4] : 'none';
+          const podcastId = parts.length >= 5 ? parts[4] : 'none';
+          const virtualClassId = parts.length === 6 ? parts[5] : 'none';
 
           const amount = Number(result.data.x_amount);
           const finalEmail = extraData?.userEmail || result.data.x_customer_email || guestEmail || '';
           
-          if (challengeId !== 'none') {
+          if (virtualClassId !== 'none') {
+            // COMPRA DE CLASE VIRTUAL INDEPENDIENTE
+            const vcDoc = await adminDb.collection('courses').doc(courseId).collection('virtualClasses').doc(virtualClassId).get();
+            if (vcDoc.exists) {
+              const vcData = vcDoc.data();
+              const instructorId = vcData?.instructorId || (await adminDb.collection('courses').doc(courseId).get()).data()?.instructorId;
+              
+              let revenueShare = 70;
+              if (instructorId) {
+                const instructorDoc = await adminDb.collection('users').doc(instructorId).get();
+                if (instructorDoc.exists) {
+                  revenueShare = instructorDoc.data()?.revenueSharePercentage ?? 70;
+                }
+              }
+              
+              const instructorCut = Math.floor(amount * (revenueShare / 100));
+              const adminCut = amount - instructorCut;
+
+              await adminDb.collection('transactions').add({
+                userId: actualUserId,
+                isGuest,
+                userEmail: finalEmail,
+                courseId,
+                virtualClassId,
+                type: 'virtual_class',
+                courseTitle: `Clase en Vivo: ${vcData?.title || 'Sin título'}`,
+                instructorId,
+                amount,
+                instructorShare: instructorCut,
+                adminShare: adminCut,
+                ref_payco,
+                createdAt: new Date(),
+                status: 'completed'
+              });
+
+              if (userRef) {
+                const userSnap = await userRef.get();
+                const userData = userSnap.data();
+                const currentClasses = userData?.purchasedClasses || [];
+                if (!currentClasses.includes(virtualClassId)) {
+                  updateData.purchasedClasses = [...currentClasses, virtualClassId];
+                }
+              } else if (isGuest) {
+                await adminDb.collection('guest_access').add({
+                  email: finalEmail,
+                  courseId,
+                  virtualClassId,
+                  createdAt: new Date(),
+                  ref_payco
+                });
+              }
+            }
+          } else if (challengeId !== 'none') {
             // COMPRA DE DESAFÍO INDEPENDIENTE
             const challengeDoc = await adminDb.collection('coding_challenges').doc(challengeId).get();
             if (challengeDoc.exists) {

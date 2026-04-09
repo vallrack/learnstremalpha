@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert, Code2, ArrowRight, Video, CalendarIcon } from 'lucide-react';
+import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert, Code2, ArrowRight, Video, CalendarIcon, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
@@ -265,13 +265,18 @@ function CourseDetailContent() {
                   <CourseCurriculum courseId={id} hasValidAccess={hasValidAccess} isFreeCourse={isFreeCourse} />
                 </section>
                 
-                <LiveClassesList courseId={id} groupId={progress?.groupId} hasValidAccess={hasValidAccess} />
-
                 <section>
                   <CourseReviews courseId={id} />
                 </section>
               </>
             )}
+
+            <LiveClassesList 
+                courseId={id} 
+                groupId={progress?.groupId} 
+                hasValidAccess={hasValidAccess} 
+                profile={profile}
+            />
           </div>
 
           <div className="space-y-6">
@@ -616,7 +621,7 @@ function InstructorBioSection({ profile }: { profile: any }) {
   );
 }
 
-function LiveClassesList({ courseId, groupId, hasValidAccess }: { courseId: string, groupId?: string | null, hasValidAccess: boolean }) {
+function LiveClassesList({ courseId, groupId, hasValidAccess, profile }: { courseId: string, groupId?: string | null, hasValidAccess: boolean, profile: any }) {
   const db = useFirestore();
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -653,42 +658,82 @@ function LiveClassesList({ courseId, groupId, hasValidAccess }: { courseId: stri
       <div className="space-y-4">
         {classes.map(vc => {
           const isPast = vc.scheduledAt ? vc.scheduledAt.toDate() < new Date() : false;
+          
+          // LÓGICA DE ACCESO POR NIVELES
+          const accessType = vc.accessType || 'course';
+          const isFree = accessType === 'free';
+          const isPlanOnly = accessType === 'plan';
+          const isPaidOnly = accessType === 'paid';
+          const hasIndividualAccess = profile?.purchasedClasses?.includes(vc.id);
+          const isGlobalSubscriber = !!profile?.isPremiumSubscriber;
+          
+          let canAccess = hasValidAccess; // Default: Course students/Admins/Authors
+          if (isFree) canAccess = true;
+          if (isPlanOnly) canAccess = isGlobalSubscriber || profile?.role === 'admin' || profile?.uid === vc.instructorId;
+          if (isPaidOnly) canAccess = hasIndividualAccess || profile?.role === 'admin' || profile?.uid === vc.instructorId;
+
           return (
-             <div key={vc.id} className={`p-5 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-4 transition-colors ${isPast ? 'bg-slate-50 border-slate-200' : 'bg-blue-50/50 border-blue-100 shadow-sm'}`}>
+             <div key={vc.id} className={`p-5 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-4 transition-colors ${isPast ? 'bg-slate-50 border-slate-200 opacity-80' : 'bg-white border-slate-100 shadow-sm hover:border-primary/20'}`}>
                 <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-xl shrink-0 ${isPast ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-600'}`}>
+                  <div className={`p-3 rounded-xl shrink-0 ${isPast ? 'bg-slate-100 text-slate-400' : 'bg-primary/5 text-primary'}`}>
                     <CalendarIcon className="h-6 w-6" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className={`font-bold ${isPast ? 'text-slate-600' : 'text-slate-900'}`}>{vc.title}</h4>
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h4 className={`font-bold ${isPast ? 'text-slate-500' : 'text-slate-900'}`}>{vc.title}</h4>
+                      {isFree && <Badge className="bg-emerald-100 text-emerald-700 text-[9px] border-none uppercase font-black">Libre</Badge>}
+                      {isPlanOnly && <Badge className="bg-indigo-100 text-indigo-700 text-[9px] border-none uppercase font-black">Plan Premium</Badge>}
+                      {isPaidOnly && !hasIndividualAccess && <Badge className="bg-amber-100 text-amber-700 text-[9px] border-none uppercase font-black">Masterclass</Badge>}
                       {isPast && <Badge variant="secondary" className="text-[10px] bg-slate-200">Finalizada</Badge>}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      <span>{vc.scheduledAt ? new Date(vc.scheduledAt.toDate()).toLocaleString() : 'Sin fecha'}</span>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                       <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{vc.scheduledAt ? new Date(vc.scheduledAt.toDate()).toLocaleString() : 'Sin fecha'}</span>
+                       </div>
+                       {vc.technology && (
+                          <div className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-600">
+                             <Zap className="h-2.5 w-2.5" />
+                             {vc.technology}
+                          </div>
+                       )}
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex w-full md:w-auto justify-end">
-                   {hasValidAccess ? (
+                <div className="flex w-full md:w-auto justify-end gap-2">
+                   {canAccess ? (
                      vc.recordingUrl ? (
                         <Link href={vc.recordingUrl} target="_blank">
-                          <Button variant="outline" size="sm" className="rounded-xl border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-bold">
+                          <Button variant="outline" size="sm" className="rounded-xl border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-bold shadow-sm">
                              <PlayCircle className="h-4 w-4 mr-2" /> Ver Grabación
                           </Button>
                         </Link>
                      ) : (
                         <Link href={vc.meetLink || '#'} target="_blank">
-                          <Button size="sm" disabled={isPast} className="rounded-xl bg-blue-600 hover:bg-blue-700 font-bold">
+                          <Button size="sm" disabled={isPast} className="rounded-xl bg-blue-600 hover:bg-blue-700 font-bold shadow-lg shadow-blue-200">
                              <Video className="h-4 w-4 mr-2" /> Entrar a la Clase
                           </Button>
                         </Link>
                      )
                    ) : (
-                      <Button variant="outline" size="sm" disabled className="rounded-xl opacity-50">
-                        <Lock className="h-3 w-3 mr-2" /> Bloqueado
-                      </Button>
+                      isPaidOnly ? (
+                        <Link href={`/checkout?courseId=${courseId}&virtualClassId=${vc.id}`}>
+                            <Button size="sm" className="rounded-xl bg-amber-500 hover:bg-amber-600 font-bold text-white shadow-lg shadow-amber-200 border-none">
+                                <Tag className="h-4 w-4 mr-2" /> Comprar Entrada ({vc.price} {vc.currency})
+                            </Button>
+                        </Link>
+                      ) : isPlanOnly ? (
+                        <Link href="/checkout">
+                            <Button size="sm" className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold text-white shadow-lg shadow-indigo-200 border-none">
+                                <Zap className="h-4 w-4 mr-2" /> Suscribirse al Plan
+                            </Button>
+                        </Link>
+                      ) : (
+                        <Button variant="outline" size="sm" disabled className="rounded-xl opacity-50 bg-slate-50 border-slate-200">
+                            <Lock className="h-3 w-3 mr-2" /> Contenido Bloqueado
+                        </Button>
+                      )
                    )}
                 </div>
              </div>

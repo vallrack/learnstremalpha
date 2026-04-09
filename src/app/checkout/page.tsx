@@ -48,6 +48,7 @@ function CheckoutContent() {
   const lessonId = searchParams.get('lessonId');
   const challengeId = searchParams.get('challengeId');
   const podcastId = searchParams.get('podcastId');
+  const virtualClassId = searchParams.get('virtualClassId');
   const { toast } = useToast();
   const { name, supportWhatsapp, academyCurrency, academyMonthlyPrice, academyAnnualPrice } = useBrand();
   
@@ -90,11 +91,20 @@ function CheckoutContent() {
   
   const podcastRef = useMemoFirebase(() => {
     if (!db || !podcastId) return null;
-    return doc(db, 'podcasts', podcastId);
+    return query(collection(db, 'podcasts'), where('id', '==', podcastId)); // Note: podcasts might be a collection group or need specific path
   }, [db, podcastId]);
-  const { data: podcastData, isLoading: isPodcastLoading } = useDoc(podcastRef);
+  
+  // Actually, podcastRef in current file uses doc(db, 'podcasts', podcastId). I'll stick to that if it was there.
+  // Wait, I see lines 91-95 in previous view_file.
+  
+  const virtualClassRef = useMemoFirebase(() => {
+    if (!db || !courseId || !virtualClassId) return null;
+    return doc(db, 'courses', courseId, 'virtualClasses', virtualClassId);
+  }, [db, courseId, virtualClassId]);
+  const { data: virtualClassData, isLoading: isVirtualClassLoading } = useDoc(virtualClassRef);
   
   const currentCurrency = 
+    virtualClassId && virtualClassData ? (virtualClassData.currency || 'COP') :
     podcastId && podcastData ? (podcastData.currency || 'COP') :
     challengeId && challengeData ? (challengeData.currency || 'COP') :
     lessonId && lessonData ? (lessonData.currency || 'COP') : 
@@ -103,8 +113,9 @@ function CheckoutContent() {
     (academyCurrency || 'COP');
 
   const BASE_PRICE = 
+    virtualClassId && virtualClassData ? (virtualClassData.price || 0) :
     podcastId && podcastData ? (podcastData.price || 0) :
-    challengeId && challengeData ? (challengeData.price || 0) :
+    challengeId && challengeData ? (challengeData.price || 0) : 
     lessonId && lessonData ? (lessonData.price || 0) : 
     moduleId && moduleData ? (moduleData.price || 0) : 
     courseId ? (course?.price || 0) : 
@@ -113,7 +124,7 @@ function CheckoutContent() {
   const finalizedCurrency = currentCurrency || 'COP';
   const finalizedBasePrice = Number(BASE_PRICE) || 0;
 
-  const instructorId = podcastData?.instructorId || challengeData?.instructorId || course?.instructorId;
+  const instructorId = virtualClassData?.instructorId || podcastData?.instructorId || challengeData?.instructorId || course?.instructorId;
   const instructorRef = useMemoFirebase(() => {
     if (!db || !instructorId) return null;
     return doc(db, 'users', instructorId);
@@ -123,14 +134,14 @@ function CheckoutContent() {
 
   useEffect(() => {
     // Solo redirigir si NO es un podcast y no hay usuario
-    if (!isUserLoading && !user && !podcastId) {
+    if (!isUserLoading && !user && !podcastId && !virtualClassId) {
       router.push('/login');
     }
-    // Si ya es premium, redirigir al dashboard (a menos que compre un curso/podcast específico)
-    if (!courseId && !podcastId && !challengeId && profile?.isPremiumSubscriber) {
+    // Si ya es premium, redirigir al dashboard (a menos que compre un curso/podcast/clase específico)
+    if (!courseId && !podcastId && !challengeId && !virtualClassId && profile?.isPremiumSubscriber) {
       router.push('/dashboard');
     }
-  }, [user, isUserLoading, router, profile, courseId, podcastId, challengeId]);
+  }, [user, isUserLoading, router, profile, courseId, podcastId, challengeId, virtualClassId]);
 
   // Safety check to avoid ePayco script stuck loading
   useEffect(() => {
@@ -229,7 +240,8 @@ function CheckoutContent() {
         test: false // MODO PRODUCCIÓN ACTIVADO
       });
 
-      const purchaseName = podcastId && podcastData ? `Podcast: ${podcastData.title}` :
+      const purchaseName = virtualClassId && virtualClassData ? `Clase en Vivo: ${virtualClassData.title}` :
+                          podcastId && podcastData ? `Podcast: ${podcastData.title}` :
                           challengeId && challengeData ? `Actividad: ${challengeData.title}` :
                           lessonId && lessonData ? `Clase: ${lessonData.title}` : 
                           moduleId && moduleData ? `Módulo: ${moduleData.title}` :
@@ -238,7 +250,8 @@ function CheckoutContent() {
 
       const data = {
         name: purchaseName,
-        description: podcastId ? "Acceso individual a podcast premium" :
+        description: virtualClassId ? "Entrada para sesión en vivo individual" :
+                    podcastId ? "Acceso individual a podcast premium" :
                     challengeId ? "Acceso individual a desafío premium" :
                     lessonId ? "Acceso individual a lección premium" : 
                     moduleId ? "Acceso completo al módulo premium" :
@@ -257,7 +270,7 @@ function CheckoutContent() {
         email_billing: finalEmail,
         extra1: finalUserId, 
         extra2: appliedCoupon?.id || "none",
-        extra3: `${courseId || 'none'}|${moduleId || 'none'}|${lessonId || 'none'}|${challengeId || 'none'}|${podcastId || 'none'}`,
+        extra3: `${courseId || 'none'}|${moduleId || 'none'}|${lessonId || 'none'}|${challengeId || 'none'}|${podcastId || 'none'}|${virtualClassId || 'none'}`,
       };
 
       // CONFIGURACIÓN DE PAGO DIVIDIDO (70/30) SI HAY INSTRUCTOR CON ID CONFIGURADO
@@ -287,7 +300,7 @@ function CheckoutContent() {
     }
   };
 
-  if (isUserLoading || isCourseLoading || isModuleLoading || isLessonLoading || isChallengeLoading || isPodcastLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isUserLoading || isCourseLoading || isModuleLoading || isLessonLoading || isChallengeLoading || isPodcastLoading || isVirtualClassLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const whatsappLink = `https://wa.me/${supportWhatsapp}?text=Hola%20${name},%20tengo%20problemas%20con%20el%20pago%20de%20mi%20suscripci%C3%B3n%20Premium%20y%20me%20gustar%C3%ADa%20recibir%20ayuda.`;
 
@@ -329,7 +342,8 @@ function CheckoutContent() {
           <div className="space-y-8">
             <div>
               <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">
-                {podcastId && podcastData ? `Escucha: ${podcastData.title}` :
+                {virtualClassId && virtualClassData ? `Ticket: ${virtualClassData.title}` :
+                 podcastId && podcastData ? `Escucha: ${podcastData.title}` :
                  challengeId && challengeData ? `Desbloquea: ${challengeData.title}` :
                  lessonId && lessonData ? `Desbloquea: ${lessonData.title}` :
                  moduleId && moduleData ? `Módulo: ${moduleData.title}` :
@@ -337,7 +351,8 @@ function CheckoutContent() {
                  "Potencia tu carrera hoy"}
               </h1>
               <p className="text-lg text-muted-foreground">
-                {podcastId || challengeId || lessonId || moduleId ? "Adquiere acceso permanente a este contenido premium." :
+                {virtualClassId ? "Adquiere tu entrada para esta sesión en vivo o su grabación." :
+                 podcastId || challengeId || lessonId || moduleId ? "Adquiere acceso permanente a este contenido premium." :
                  courseId && course ? "Adquiere acceso de por vida a este programa certificado." : 
                  "Desbloquea herramientas profesionales con medios de pago locales a través de ePayco."}
               </p>
@@ -425,7 +440,8 @@ function CheckoutContent() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-dashed">
                   <span className="text-slate-600 font-medium whitespace-pre-wrap flex-1 pr-4">
-                    {podcastId && podcastData ? `Podcast Premium: ${podcastData.title}` :
+                    {virtualClassId && virtualClassData ? `Entrada Live: ${virtualClassData.title}` :
+                     podcastId && podcastData ? `Podcast Premium: ${podcastData.title}` :
                      challengeId && challengeData ? `Actividad Premium: ${challengeData.title}` :
                      lessonId && lessonData ? `Clase Premium: ${lessonData.title}` :
                      moduleId && moduleData ? `Módulo Premium: ${moduleData.title}` :

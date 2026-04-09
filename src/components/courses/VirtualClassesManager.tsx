@@ -27,6 +27,9 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [customMeetLink, setCustomMeetLink] = useState('');
   const [technology, setTechnology] = useState('');
+  const [accessType, setAccessType] = useState('course'); // free, course, plan, paid
+  const [price, setPrice] = useState('0');
+  const [currency, setCurrency] = useState('COP');
 
   const classesQuery = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -61,6 +64,9 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
       meetLink: finalMeetLink,
       recordingUrl,
       technology,
+      accessType,
+      price: accessType === 'paid' ? Number(price) : 0,
+      currency: accessType === 'paid' ? currency : 'COP',
       updatedAt: serverTimestamp()
     };
 
@@ -96,6 +102,9 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
     setRecordingUrl(vc.recordingUrl || '');
     setCustomMeetLink(vc.meetLink || '');
     setTechnology(vc.technology || '');
+    setAccessType(vc.accessType || 'course');
+    setPrice(vc.price?.toString() || '0');
+    setCurrency(vc.currency || 'COP');
     setIsDialogOpen(true);
   };
 
@@ -107,6 +116,9 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
     setRecordingUrl('');
     setCustomMeetLink('');
     setTechnology('');
+    setAccessType('course');
+    setPrice('0');
+    setCurrency('COP');
     setEditingClassId(null);
   };
 
@@ -207,16 +219,32 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="grid gap-1.5">
-                            <Label className="text-slate-700 font-semibold ml-1 text-sm">Público Seleccionado</Label>
-                            <Select value={groupId} onValueChange={setGroupId}>
+                            <Label className="text-slate-700 font-semibold ml-1 text-sm">Público y Acceso</Label>
+                            <Select value={groupId === 'all' ? accessType : groupId} onValueChange={(val) => {
+                                if (['free', 'course', 'plan', 'paid'].includes(val)) {
+                                    setAccessType(val);
+                                    setGroupId('all');
+                                } else {
+                                    setGroupId(val);
+                                    setAccessType('course');
+                                }
+                            }}>
                               <SelectTrigger className="rounded-xl h-10 border-slate-200 bg-slate-50/50">
                                 <SelectValue placeholder="¿Quiénes pueden unirse?" />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl">
-                                <SelectItem value="all" className="rounded-lg">Todos los estudiantes</SelectItem>
-                                {groups?.map(g => (
-                                  <SelectItem key={g.id} value={g.id} className="rounded-lg">Grupo: {g.name}</SelectItem>
-                                ))}
+                                <SelectItem value="free" className="rounded-lg">🔓 Público (Gratis)</SelectItem>
+                                <SelectItem value="course" className="rounded-lg">🎓 Estudiantes del Curso</SelectItem>
+                                <SelectItem value="plan" className="rounded-lg">💎 Suscriptores Premium (Plan)</SelectItem>
+                                <SelectItem value="paid" className="rounded-lg">💰 Pago Único (Venta)</SelectItem>
+                                {groups && groups.length > 0 && (
+                                    <>
+                                        <div className="px-2 py-1.5 text-[10px] font-bold text-slate-400 uppercase border-t mt-1">Grupos Específicos</div>
+                                        {groups.map(g => (
+                                            <SelectItem key={g.id} value={g.id} className="rounded-lg text-xs">Grupo: {g.name}</SelectItem>
+                                        ))}
+                                    </>
+                                )}
                               </SelectContent>
                             </Select>
                           </div>
@@ -233,6 +261,32 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                             </div>
                           </div>
                         </div>
+
+                        {accessType === 'paid' && (
+                            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-amber-50 border border-amber-200 animate-in zoom-in-95 duration-200">
+                                <div className="grid gap-1.5">
+                                    <Label className="text-amber-800 font-bold ml-1 text-xs uppercase">Precio de Entrada</Label>
+                                    <Input 
+                                        type="number" 
+                                        value={price} 
+                                        onChange={(e) => setPrice(e.target.value)}
+                                        className="rounded-lg h-9 bg-white border-amber-200" 
+                                    />
+                                </div>
+                                <div className="grid gap-1.5">
+                                    <Label className="text-amber-800 font-bold ml-1 text-xs uppercase">Moneda</Label>
+                                    <Select value={currency} onValueChange={setCurrency}>
+                                        <SelectTrigger className="rounded-lg h-9 bg-white border-amber-200">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="COP">COP (Pesos)</SelectItem>
+                                            <SelectItem value="USD">USD (Dólares)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        )}
                       </div>
                     </div>
 
@@ -341,7 +395,12 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                         </div>
                         <div className="flex items-center gap-1.5 text-sm text-slate-500">
                             <Users className="h-3.5 w-3.5" />
-                            <span className="font-medium">{gName}</span>
+                            <span className="font-semibold text-slate-700">
+                                {vc.accessType === 'free' ? '🔓 Público' : 
+                                 vc.accessType === 'plan' ? '💎 Premium Plan' : 
+                                 vc.accessType === 'paid' ? `💰 Venta (${vc.price} ${vc.currency})` : 
+                                 `🎓 ${gName}`}
+                            </span>
                         </div>
                         {vc.technology && (
                             <div className="flex items-center gap-1.5">
