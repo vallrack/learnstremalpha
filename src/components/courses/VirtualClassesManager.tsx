@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, Timestamp } from 'firebase/firestore';
-import { Plus, Edit, Trash2, Video, CalendarIcon, Loader2, Link as LinkIcon, ExternalLink, PlayCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Video, CalendarIcon, Loader2, Link as LinkIcon, ExternalLink, PlayCircle, Clock, Users, Zap, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: string, isAuthorized: boolean }) {
   const db = useFirestore();
@@ -119,134 +121,282 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
   if (isClassesLoading) return <div className="py-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
-    <div className="space-y-6 animate-in fade-in">
-      <div className="bg-white p-6 rounded-[2rem] shadow-sm border space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-2xl font-headline font-bold flex items-center gap-2">
-              <Video className="h-6 w-6 text-primary" />
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h3 className="text-3xl font-headline font-bold flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600">
+              <div className="p-2 bg-blue-50 rounded-2xl">
+                <Video className="h-7 w-7 text-blue-600" />
+              </div>
               Clases en Vivo
             </h3>
-            <p className="text-muted-foreground text-sm">Programa sesiones síncronas con Jitsi o sube tus grabaciones.</p>
+            <p className="text-slate-500 text-sm font-medium ml-1">Gestiona sesiones síncronas y grabaciones para tus estudiantes.</p>
           </div>
+          
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if(!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button className="rounded-xl h-11 gap-2 bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4" /> Programar Clase
+              <Button className="rounded-2xl h-12 px-6 gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
+                <Plus className="h-5 w-5" /> Programar Clase
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-3xl sm:max-w-[600px]">
+            <DialogContent className="rounded-[2.5rem] sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl">
               <form onSubmit={handleSaveClass}>
-                <DialogHeader>
-                  <DialogTitle>{editingClassId ? 'Editar Clase' : 'Programar Nueva Clase'}</DialogTitle>
-                  <DialogDescription>Generaremos un link de Jitsi automáticamente si dejas el campo de enlace vacío.</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-6">
-                  <div className="grid gap-2">
-                    <Label>Título de la Clase</Label>
-                    <Input placeholder="Ej: Q&A - Semana 1" value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label>Fecha</Label>
-                      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="rounded-xl" />
-                    </div>
-                    <div className="grid gap-2">
-                       <Label>Hora (Local)</Label>
-                       <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} required className="rounded-xl" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label>Grupo / Cohorte</Label>
-                      <Select value={groupId} onValueChange={setGroupId}>
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="¿Quiénes pueden unirse?" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos los estudiantes</SelectItem>
-                          {groups?.map(g => (
-                            <SelectItem key={g.id} value={g.id}>Solo el grupo: {g.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Tecnología Destacada</Label>
-                      <Input placeholder="Ej: React, Python..." value={technology} onChange={(e) => setTechnology(e.target.value)} className="rounded-xl" />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 bg-slate-50 p-4 rounded-2xl border mt-2">
-                    <Label className="text-sm font-bold flex items-center gap-2">
-                      <LinkIcon className="h-4 w-4" /> Enlace de Videollamada (Opcional)
-                    </Label>
-                    <p className="text-xs text-muted-foreground mb-1">Si lo dejas vacío, se generará un link privado de Jitsi Meet gratuitamente.</p>
-                    <Input placeholder="https://meet.google.com/..." value={customMeetLink} onChange={(e) => setCustomMeetLink(e.target.value)} className="rounded-xl bg-white" />
-                  </div>
-
-                  <div className="grid gap-2 bg-slate-50 p-4 rounded-2xl border mt-2">
-                    <Label className="text-sm font-bold flex items-center gap-2">
-                      <PlayCircle className="h-4 w-4" /> Grabación de la Clase (Opcional)
-                    </Label>
-                    <p className="text-xs text-muted-foreground mb-1">Añade aquí el link de YouTube o Drive una vez finalice la clase.</p>
-                    <Input placeholder="URL de la grabación..." value={recordingUrl} onChange={(e) => setRecordingUrl(e.target.value)} className="rounded-xl bg-white" />
-                  </div>
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-white relative overflow-hidden">
+                   <div className="absolute top-0 right-0 p-8 opacity-10">
+                      <Video className="h-32 w-32 rotate-12" />
+                   </div>
+                   <DialogHeader>
+                    <DialogTitle className="text-3xl font-headline font-bold text-white mb-2">
+                        {editingClassId ? 'Editar Sesión' : 'Nueva Sesión en Vivo'}
+                    </DialogTitle>
+                    <DialogDescription className="text-blue-100 text-base max-w-[400px]">
+                      Configura los detalles de tu clase. {editingClassId ? 'Modifica los campos necesarios.' : 'Generaremos un enlace automático si lo deseas.'}
+                    </DialogDescription>
+                  </DialogHeader>
                 </div>
-                <DialogFooter>
-                  <Button type="submit" className="w-full rounded-xl h-11 bg-blue-600 hover:bg-blue-700">Guardar Clase</Button>
-                </DialogFooter>
+                
+                <ScrollArea className="max-h-[70vh]">
+                  <div className="p-8 space-y-8">
+                    {/* Sección: Detalles Básicos */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-slate-900 font-bold uppercase tracking-wider text-xs">
+                        <Info className="h-4 w-4 text-blue-500" />
+                        Información General
+                      </div>
+                      <div className="grid gap-4">
+                        <div className="grid gap-2">
+                          <Label className="text-slate-700 font-semibold ml-1">Título de la Clase</Label>
+                          <Input 
+                            placeholder="Ej: Masterclass de Arquitectura React" 
+                            value={title} 
+                            onChange={(e) => setTitle(e.target.value)} 
+                            required 
+                            className="rounded-2xl h-12 border-slate-200 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50" 
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label className="text-slate-700 font-semibold ml-1">Fecha</Label>
+                            <div className="relative">
+                                <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input 
+                                    type="date" 
+                                    value={date} 
+                                    onChange={(e) => setDate(e.target.value)} 
+                                    required 
+                                    className="rounded-2xl h-12 pl-12 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
+                                />
+                            </div>
+                          </div>
+                          <div className="grid gap-2">
+                             <Label className="text-slate-700 font-semibold ml-1">Hora (Local)</Label>
+                             <div className="relative">
+                                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input 
+                                    type="time" 
+                                    value={time} 
+                                    onChange={(e) => setTime(e.target.value)} 
+                                    required 
+                                    className="rounded-2xl h-12 pl-12 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
+                                />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label className="text-slate-700 font-semibold ml-1">Público Seleccionado</Label>
+                            <Select value={groupId} onValueChange={setGroupId}>
+                              <SelectTrigger className="rounded-2xl h-12 border-slate-200 bg-slate-50/50">
+                                <SelectValue placeholder="¿Quiénes pueden unirse?" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl">
+                                <SelectItem value="all" className="rounded-xl">Todos los estudiantes</SelectItem>
+                                {groups?.map(g => (
+                                  <SelectItem key={g.id} value={g.id} className="rounded-xl">Grupo: {g.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label className="text-slate-700 font-semibold ml-1">Tecnología / Tema</Label>
+                            <div className="relative">
+                                <Zap className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input 
+                                    placeholder="Ej: Next.js, Firebase..." 
+                                    value={technology} 
+                                    onChange={(e) => setTechnology(e.target.value)} 
+                                    className="rounded-2xl h-12 pl-12 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
+                                />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-6">
+                      {/* Sección: Videollamada */}
+                      <div className="p-6 rounded-[2rem] bg-indigo-50/50 border border-indigo-100/50 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-sm font-bold flex items-center gap-2 text-indigo-700">
+                                <LinkIcon className="h-4 w-4" /> Enlace de Sesión
+                            </Label>
+                            <Badge variant="outline" className="bg-white text-indigo-600 border-indigo-200 text-[10px] font-bold uppercase py-0 px-2 h-5">Opcional</Badge>
+                        </div>
+                        <p className="text-xs text-indigo-600/70 ml-1">Si lo dejas vacío, usaremos <strong>Jitsi Meet</strong> automáticamente.</p>
+                        <Input 
+                            placeholder="https://meet.google.com/..." 
+                            value={customMeetLink} 
+                            onChange={(e) => setCustomMeetLink(e.target.value)} 
+                            className="rounded-2xl h-12 bg-white border-indigo-100 focus:ring-indigo-500/20" 
+                        />
+                      </div>
+
+                      {/* Sección: Grabación */}
+                      <div className="p-6 rounded-[2rem] bg-emerald-50/50 border border-emerald-100/50 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-sm font-bold flex items-center gap-2 text-emerald-700">
+                                <PlayCircle className="h-4 w-4" /> Enlace de Grabación
+                            </Label>
+                            <Badge variant="outline" className="bg-white text-emerald-600 border-emerald-200 text-[10px] font-bold uppercase py-0 px-2 h-5">Opcional</Badge>
+                        </div>
+                        <p className="text-xs text-emerald-600/70 ml-1">Añade el link (YouTube, Drive) cuando la clase finalice.</p>
+                        <Input 
+                            placeholder="https://www.youtube.com/watch?v=..." 
+                            value={recordingUrl} 
+                            onChange={(e) => setRecordingUrl(e.target.value)} 
+                            className="rounded-2xl h-12 bg-white border-emerald-100 focus:ring-emerald-500/20" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+                
+                <div className="p-8 bg-slate-50 border-t flex flex-col sm:flex-row gap-3">
+                  <Button 
+                    variant="ghost" 
+                    type="button" 
+                    onClick={() => setIsDialogOpen(false)}
+                    className="flex-1 rounded-2xl h-14 font-bold text-slate-500 hover:bg-white"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="flex-[2] rounded-2xl h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold text-white shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98]"
+                  >
+                    {editingClassId ? 'Guardar Cambios' : 'Confirmar y Programar'}
+                  </Button>
+                </div>
               </form>
             </DialogContent>
           </Dialog>
         </div>
 
         {classes && classes.length > 0 ? (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
             {classes.map(vc => {
               const isPast = vc.scheduledAt ? vc.scheduledAt.toDate() < new Date() : false;
               const gName = vc.groupId ? groups?.find(g => g.id === vc.groupId)?.name || 'Grupo Eliminado' : 'Todos';
               
               return (
-                <div key={vc.id} className={`p-5 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-4 transition-colors ${isPast ? 'bg-slate-50 border-slate-200' : 'bg-white border-blue-100 shadow-sm shadow-blue-500/5'}`}>
-                  <div className="flex items-start gap-4 w-full md:w-auto">
-                    <div className={`p-3 rounded-xl shrink-0 ${isPast ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-600'}`}>
-                      <CalendarIcon className="h-6 w-6" />
+                <div 
+                  key={vc.id} 
+                  className={cn(
+                    "group relative p-6 rounded-[2rem] border transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-6",
+                    isPast 
+                      ? "bg-slate-50/50 border-slate-100 opacity-80" 
+                      : "bg-white border-slate-100 hover:border-blue-200 hover:shadow-[0_15px_40px_rgba(59,130,246,0.08)]"
+                  )}
+                >
+                  <div className="flex items-start gap-5 w-full md:w-auto">
+                    <div className={cn(
+                        "p-4 rounded-[1.5rem] shrink-0 transition-transform duration-300 group-hover:scale-110",
+                        isPast ? 'bg-slate-200 text-slate-500' : 'bg-blue-50 text-blue-600'
+                    )}>
+                      <Video className="h-6 w-6" />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className={`font-bold ${isPast ? 'text-slate-600' : 'text-slate-900'}`}>{vc.title}</h4>
-                        {isPast && <Badge variant="secondary" className="text-[10px] bg-slate-200">Finalizada</Badge>}
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className={cn(
+                            "text-lg font-bold transition-colors",
+                            isPast ? 'text-slate-500' : 'text-slate-900 group-hover:text-blue-600'
+                        )}>
+                          {vc.title}
+                        </h4>
+                        {isPast && <Badge variant="secondary" className="text-[10px] font-bold bg-slate-200 text-slate-600 uppercase">Finalizada</Badge>}
+                        {!isPast && (
+                            <Badge variant="outline" className="text-[10px] font-bold border-blue-200 text-blue-600 bg-blue-50 uppercase animate-pulse">
+                                Programada
+                            </Badge>
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-                        <span>{vc.scheduledAt ? new Date(vc.scheduledAt.toDate()).toLocaleString() : 'Sin fecha'}</span>
-                        <span className="font-medium text-slate-700">Grupo: {gName}</span>
-                        {vc.technology && <Badge variant="outline" className="h-4 text-[9px] border-blue-200 text-blue-600 bg-blue-50/50">{vc.technology}</Badge>}
+                      
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                            <Clock className="h-3.5 w-3.5" />
+                            {vc.scheduledAt ? new Date(vc.scheduledAt.toDate()).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Sin fecha'}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                            <Users className="h-3.5 w-3.5" />
+                            <span className="font-medium">{gName}</span>
+                        </div>
+                        {vc.technology && (
+                            <div className="flex items-center gap-1.5">
+                                <Zap className="h-3.5 w-3.5 text-indigo-500" />
+                                <span className="text-sm font-medium text-slate-600">{vc.technology}</span>
+                            </div>
+                        )}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                  <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                     {vc.recordingUrl ? (
-                      <Link href={vc.recordingUrl} target="_blank">
-                        <Button variant="outline" size="sm" className="rounded-lg gap-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
+                      <Link href={vc.recordingUrl} target="_blank" className="w-full sm:w-auto">
+                        <Button variant="outline" size="sm" className="w-full rounded-2xl h-10 px-5 gap-2 border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-300 transition-colors">
                           <PlayCircle className="h-4 w-4" /> Ver Grabación
                         </Button>
                       </Link>
                     ) : (
-                      <Link href={vc.meetLink || '#'} target="_blank">
-                        <Button variant="outline" size="sm" disabled={isPast} className="rounded-lg gap-2 text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100">
-                          <Video className="h-4 w-4" /> Entrar a Llamada
+                      <Link href={vc.meetLink || '#'} target="_blank" className="w-full sm:w-auto">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            disabled={isPast} 
+                            className={cn(
+                                "w-full rounded-2xl h-10 px-5 gap-2 transition-all",
+                                isPast 
+                                  ? "text-slate-400 border-slate-200" 
+                                  : "text-blue-700 border-blue-200 bg-blue-50/50 hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-lg hover:shadow-blue-500/20"
+                            )}
+                        >
+                          <Video className="h-4 w-4" /> 
+                          {isPast ? 'Finalizada' : 'Entrar a la Clase'}
                         </Button>
                       </Link>
                     )}
                     
                     {isAuthorized && (
-                      <div className="flex gap-1 ml-2 pl-2 border-l">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(vc)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(vc.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <div className="flex gap-2 ml-2 pl-4 border-l border-slate-100">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-10 w-10 rounded-xl hover:bg-blue-50 hover:text-blue-600" 
+                            onClick={() => handleEdit(vc)}
+                        >
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-10 w-10 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600" 
+                            onClick={() => handleDelete(vc.id)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -255,10 +405,19 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
             })}
           </div>
         ) : (
-          <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-            <Video className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">No hay clases en vivo programadas.</p>
-            <p className="text-xs text-slate-400 mt-1">Crea una sesión para mantener a tus estudiantes conectados.</p>
+          <div className="text-center py-20 bg-slate-50/50 rounded-[2.5rem] border-2 border-dashed border-slate-200/60">
+            <div className="bg-white p-6 rounded-3xl inline-flex mb-6 shadow-sm">
+                <Video className="h-12 w-12 text-slate-300" />
+            </div>
+            <h4 className="text-xl font-bold text-slate-800 mb-2">No hay clases programadas</h4>
+            <p className="text-slate-500 font-medium max-w-xs mx-auto">Comienza ahora mismo y crea una sesión para inspirar a tus estudiantes.</p>
+            <Button 
+                variant="ghost" 
+                onClick={() => setIsDialogOpen(true)}
+                className="mt-6 font-bold text-blue-600 hover:bg-blue-50 rounded-xl"
+            >
+                Programar primera clase
+            </Button>
           </div>
         )}
       </div>
