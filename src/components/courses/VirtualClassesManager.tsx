@@ -140,24 +140,24 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                 <Plus className="h-5 w-5" /> Programar Clase
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[2rem] sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl">
+            <DialogContent className="rounded-[2rem] sm:max-w-[700px] p-0 overflow-hidden border-none shadow-2xl">
               <form onSubmit={handleSaveClass}>
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white relative overflow-hidden">
-                   <div className="absolute top-0 right-0 p-6 opacity-10">
-                      <Video className="h-20 w-20 rotate-12" />
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white relative overflow-hidden">
+                   <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <Video className="h-16 w-16 rotate-12" />
                    </div>
                    <DialogHeader>
-                    <DialogTitle className="text-2xl font-headline font-bold text-white mb-1">
+                    <DialogTitle className="text-xl font-headline font-bold text-white">
                         {editingClassId ? 'Editar Sesión' : 'Nueva Sesión en Vivo'}
                     </DialogTitle>
-                    <DialogDescription className="text-blue-100 text-sm max-w-[400px]">
-                      Configura los detalles de tu clase. {editingClassId ? 'Modifica los campos necesarios.' : 'Generaremos un enlace automático si lo deseas.'}
+                    <DialogDescription className="text-blue-100 text-xs max-w-[400px]">
+                      Configura los detalles de tu clase de forma rápida.
                     </DialogDescription>
                   </DialogHeader>
                 </div>
                 
-                <ScrollArea className="max-h-[65vh]">
-                  <div className="p-6 space-y-6">
+                <ScrollArea className="max-h-[60vh]">
+                  <div className="p-4 space-y-4">
                     {/* Sección: Detalles Básicos */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-slate-900 font-bold uppercase tracking-wider text-xs">
@@ -172,7 +172,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                             value={title} 
                             onChange={(e) => setTitle(e.target.value)} 
                             required 
-                            className="rounded-xl h-11 border-slate-200 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50" 
+                            className="rounded-xl h-10 border-slate-200 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50" 
                           />
                         </div>
                         
@@ -186,7 +186,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                                     value={date} 
                                     onChange={(e) => setDate(e.target.value)} 
                                     required 
-                                    className="rounded-xl h-11 pl-12 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
+                                    className="rounded-xl h-10 pl-12 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
                                 />
                             </div>
                           </div>
@@ -199,7 +199,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                                     value={time} 
                                     onChange={(e) => setTime(e.target.value)} 
                                     required 
-                                    className="rounded-xl h-11 pl-12 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
+                                    className="rounded-xl h-10 pl-12 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
                                 />
                             </div>
                           </div>
@@ -209,7 +209,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                           <div className="grid gap-1.5">
                             <Label className="text-slate-700 font-semibold ml-1 text-sm">Público Seleccionado</Label>
                             <Select value={groupId} onValueChange={setGroupId}>
-                              <SelectTrigger className="rounded-xl h-11 border-slate-200 bg-slate-50/50">
+                              <SelectTrigger className="rounded-xl h-10 border-slate-200 bg-slate-50/50">
                                 <SelectValue placeholder="¿Quiénes pueden unirse?" />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl">
@@ -228,7 +228,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                                     placeholder="Ej: Next.js, Firebase..." 
                                     value={technology} 
                                     onChange={(e) => setTechnology(e.target.value)} 
-                                    className="rounded-xl h-11 pl-12 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
+                                    className="rounded-xl h-10 pl-12 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
                                 />
                             </div>
                           </div>
@@ -236,58 +236,58 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                       </div>
                     </div>
 
-                    <div className="grid gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Sección: Videollamada */}
-                      <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/50 space-y-2">
+                      <div className="p-3 rounded-xl bg-indigo-50/50 border border-indigo-100/50 space-y-1.5">
                         <div className="flex items-center justify-between">
-                            <Label className="text-xs font-bold flex items-center gap-2 text-indigo-700">
-                                <LinkIcon className="h-3.5 w-3.5" /> Enlace de Sesión
+                            <Label className="text-[10px] font-bold flex items-center gap-1.5 text-indigo-700 uppercase tracking-tight">
+                                <LinkIcon className="h-3 w-3" /> Enlace Sesión
                             </Label>
-                            <Badge variant="outline" className="bg-white text-indigo-600 border-indigo-200 text-[9px] font-bold uppercase py-0 px-1.5 h-4.5">Opcional</Badge>
+                            <Badge variant="outline" className="bg-white text-indigo-600 border-indigo-100 text-[8px] font-bold uppercase py-0 px-1 h-3.5">Opcional</Badge>
                         </div>
-                        <p className="text-[11px] text-indigo-600/70 ml-0.5">Si lo dejas vacío, usaremos <strong>Jitsi Meet</strong> automáticamente.</p>
                         <Input 
                             placeholder="https://meet.google.com/..." 
                             value={customMeetLink} 
                             onChange={(e) => setCustomMeetLink(e.target.value)} 
-                            className="rounded-xl h-10.5 bg-white border-indigo-100 focus:ring-indigo-500/20" 
+                            className="rounded-lg h-9 bg-white border-indigo-100 focus:ring-indigo-500/20 text-sm" 
                         />
+                        <p className="text-[9px] text-indigo-600/60 leading-tight">Vacio usa <strong>Jitsi Meet</strong>.</p>
                       </div>
 
                       {/* Sección: Grabación */}
-                      <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100/50 space-y-2">
+                      <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100/50 space-y-1.5">
                         <div className="flex items-center justify-between">
-                            <Label className="text-xs font-bold flex items-center gap-2 text-emerald-700">
-                                <PlayCircle className="h-3.5 w-3.5" /> Enlace de Grabación
+                            <Label className="text-[10px] font-bold flex items-center gap-1.5 text-emerald-700 uppercase tracking-tight">
+                                <PlayCircle className="h-3 w-3" /> Link Grabación
                             </Label>
-                            <Badge variant="outline" className="bg-white text-emerald-600 border-emerald-200 text-[9px] font-bold uppercase py-0 px-1.5 h-4.5">Opcional</Badge>
+                            <Badge variant="outline" className="bg-white text-emerald-600 border-emerald-100 text-[8px] font-bold uppercase py-0 px-1 h-3.5">Opcional</Badge>
                         </div>
-                        <p className="text-[11px] text-emerald-600/70 ml-0.5">Añade el link (YouTube, Drive) cuando la clase finalice.</p>
                         <Input 
-                            placeholder="https://www.youtube.com/watch?v=..." 
+                            placeholder="https://www.youtube.com/..." 
                             value={recordingUrl} 
                             onChange={(e) => setRecordingUrl(e.target.value)} 
-                            className="rounded-xl h-10.5 bg-white border-emerald-100 focus:ring-emerald-500/20" 
+                            className="rounded-lg h-9 bg-white border-emerald-100 focus:ring-emerald-500/20 text-sm" 
                         />
+                        <p className="text-[9px] text-emerald-600/60 leading-tight">Link de YouTube/Drive al finalizar.</p>
                       </div>
                     </div>
                   </div>
                 </ScrollArea>
                 
-                <div className="p-6 bg-slate-50 border-t flex flex-col sm:flex-row gap-3">
+                <div className="p-4 bg-slate-50 border-t flex flex-col sm:flex-row gap-3">
                   <Button 
                     variant="ghost" 
                     type="button" 
                     onClick={() => setIsDialogOpen(false)}
-                    className="flex-1 rounded-xl h-12 font-bold text-slate-500 hover:bg-white"
+                    className="flex-1 rounded-xl h-10 font-bold text-slate-500 hover:bg-white"
                   >
                     Cancelar
                   </Button>
                   <Button 
                     type="submit" 
-                    className="flex-[2] rounded-xl h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold text-white shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98]"
+                    className="flex-[2] rounded-xl h-10 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold text-white shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98]"
                   >
-                    {editingClassId ? 'Guardar Cambios' : 'Confirmar y Programar'}
+                    {editingClassId ? 'Guardar' : 'Programar Clase'}
                   </Button>
                 </div>
               </form>
