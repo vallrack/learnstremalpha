@@ -99,6 +99,11 @@ service cloud.firestore {
       allow read: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.instructorId == request.auth.uid);
     }
 
+    // ⭐ Collection Group Rule for Virtual Classes (Public Catalog)
+    match /{path=**}/virtualClasses/{id} {
+        allow read: if true;
+    }
+
     match /instructor_applications/{appId} {
       allow create: if isSignedIn();
       allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);

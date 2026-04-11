@@ -7,9 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, Timestamp } from 'firebase/firestore';
-import { Plus, Edit, Trash2, Video, CalendarIcon, Loader2, Link as LinkIcon, ExternalLink, PlayCircle, Clock, Users, Zap, Info } from 'lucide-react';
+import { Plus, Edit, Trash2, Video, CalendarIcon, Loader2, Link as LinkIcon, ExternalLink, PlayCircle, Clock, Users, Zap, Info, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -18,6 +18,13 @@ import { cn } from '@/lib/utils';
 export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: string, isAuthorized: boolean }) {
   const db = useFirestore();
   const { toast } = useToast();
+  
+  const courseRef = useMemoFirebase(() => {
+    if (!db || !courseId) return null;
+    return doc(db, 'courses', courseId);
+  }, [db, courseId]);
+  const { data: course } = useDoc(courseRef);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
@@ -30,6 +37,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
   const [accessType, setAccessType] = useState('course'); // free, course, plan, paid
   const [price, setPrice] = useState('0');
   const [currency, setCurrency] = useState('COP');
+  const [showInCatalog, setShowInCatalog] = useState(false);
 
   const classesQuery = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -67,7 +75,11 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
       accessType,
       price: accessType === 'paid' ? Number(price) : 0,
       currency: accessType === 'paid' ? currency : 'COP',
-      updatedAt: serverTimestamp()
+      showInCatalog,
+      updatedAt: serverTimestamp(),
+      courseId,
+      courseTitle: course?.title || 'Unknown Course',
+      instructorName: course?.instructorName || 'Unknown Instructor'
     };
 
     if (editingClassId) {
@@ -105,6 +117,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
     setAccessType(vc.accessType || 'course');
     setPrice(vc.price?.toString() || '0');
     setCurrency(vc.currency || 'COP');
+    setShowInCatalog(vc.showInCatalog || false);
     setIsDialogOpen(true);
   };
 
@@ -119,6 +132,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
     setAccessType('course');
     setPrice('0');
     setCurrency('COP');
+    setShowInCatalog(false);
     setEditingClassId(null);
   };
 
@@ -260,6 +274,33 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                                 />
                             </div>
                           </div>
+                        </div>
+
+                        {/* Clasificación para Catálogo */}
+                        <div className="p-4 rounded-2xl bg-blue-50/30 border border-blue-100/50 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
+                                    <Sparkles className="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-bold text-slate-800">Mostrar en Catálogo Público</Label>
+                                    <p className="text-[10px] text-slate-500 font-medium">Hace que la clase sea visible en la sección "En Vivo".</p>
+                                </div>
+                            </div>
+                            <div 
+                                className={cn(
+                                    "w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-200 ease-in-out",
+                                    showInCatalog ? "bg-blue-600" : "bg-slate-200"
+                                )}
+                                onClick={() => setShowInCatalog(!showInCatalog)}
+                            >
+                                <div 
+                                    className={cn(
+                                        "w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ease-in-out",
+                                        showInCatalog ? "translate-x-6" : "translate-x-0"
+                                    )}
+                                />
+                            </div>
                         </div>
 
                         {accessType === 'paid' && (
@@ -407,6 +448,11 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                                 <Zap className="h-3.5 w-3.5 text-indigo-500" />
                                 <span className="text-sm font-medium text-slate-600">{vc.technology}</span>
                             </div>
+                        )}
+                        {vc.showInCatalog && (
+                            <Badge variant="outline" className="text-[10px] font-bold border-blue-100 text-blue-600 bg-blue-50/50">
+                                🌟 En Catálogo
+                            </Badge>
                         )}
                       </div>
                     </div>

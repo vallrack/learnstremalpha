@@ -121,6 +121,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/', label: t.common.language === 'es' ? 'Inicio' : 'Home', icon: Home },
+    { href: '/live', label: 'En Vivo', icon: Video },
     { href: '/paths', label: 'Rutas', icon: Compass },
     { href: '/courses', label: t.common.courses, icon: BookOpen },
     { href: '/challenges', label: t.common.challenges, icon: Code2 },
