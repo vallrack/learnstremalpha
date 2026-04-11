@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { emailService } from '@/lib/email/email-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -110,6 +110,19 @@ export async function POST(req: NextRequest) {
             if (groupId) {
               await progressRef.update({ groupId });
             }
+        }
+        
+        // Intentar enviar correo de bienvenida con los accesos
+        try {
+          await emailService.sendBulkWelcomeEmail({
+            email,
+            name: name || email.split('@')[0],
+            password: tempPassword,
+            courseTitle
+          });
+        } catch (emailErr) {
+          console.error(`Error enviando correo a ${email}:`, emailErr);
+          results.errors.push(`Correo no enviado a ${email}: El servidor de correos no respondió.`);
         }
         
         results.success++;

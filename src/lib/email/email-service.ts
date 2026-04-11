@@ -84,5 +84,57 @@ export const emailService = {
       console.error('Error sending with Brevo:', err);
       return { success: false, error: err };
     }
+  },
+
+  /**
+   * Envía un correo de bienvenida tras una matrícula masiva usando Brevo
+   */
+  async sendBulkWelcomeEmail({ email, name, password, courseTitle }: { 
+    email: string, 
+    name: string, 
+    password: string,
+    courseTitle: string 
+  }) {
+    try {
+      const response = await brevo.transactionalEmails.sendTransacEmail({
+        subject: `¡Accesos Listos! Curso: ${courseTitle} - ${DEFAULT_BRANDING.name}`,
+        htmlContent: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 20px;">
+            <div style="text-align: center; margin-bottom: 25px;">
+              <h1 style="color: #0f172a; margin: 0; font-size: 24px;">¡Hola, ${name}!</h1>
+              <p style="color: #64748b; margin-top: 10px;">Tu cuenta ha sido activada para el curso <strong>${courseTitle}</strong>.</p>
+            </div>
+            
+            <div style="background-color: #f8fafc; padding: 25px; border-radius: 15px; margin-bottom: 25px;">
+              <p style="margin: 0 0 15px 0; color: #334155; font-weight: bold;">Se te ha asignado el usuario y la clave para tu acceso:</p>
+              
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <p style="margin: 0; color: #475569;"><strong>Usuario/Email:</strong> ${email}</p>
+                <p style="margin: 0; color: #475569;"><strong>Contraseña Temporal:</strong> <span style="font-family: monospace; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold;">${password}</span></p>
+              </div>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="https://${DEFAULT_BRANDING.domain}/login" style="display: inline-block; background-color: #6366f1; color: white; padding: 14px 30px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px;">Iniciar Sesión Ahora</a>
+            </div>
+
+            <p style="margin-top: 25px; color: #64748b; font-size: 14px; line-height: 1.6;">
+              Hemos incluido toda la información necesaria para que comiences tu aprendizaje. Te recomendamos cambiar tu contraseña una vez ingreses por primera vez en tu perfil.
+            </p>
+
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #e2e8f0;" />
+            <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+              Enviado por ${DEFAULT_BRANDING.name} - ${DEFAULT_BRANDING.tagline}
+            </p>
+          </div>
+        `,
+        sender: { name: DEFAULT_BRANDING.name, email: `no-reply@${DEFAULT_BRANDING.domain}` },
+        to: [{ email: email, name: name }]
+      });
+      return { success: true, data: response };
+    } catch (err) {
+      console.error('Error sending welcome email with Brevo:', err);
+      return { success: false, error: err };
+    }
   }
 };
