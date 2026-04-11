@@ -28,7 +28,8 @@ import {
   Compass,
   Zap,
   Mic2,
-  Megaphone
+  Megaphone,
+  Video
 } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
