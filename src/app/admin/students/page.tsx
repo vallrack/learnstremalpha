@@ -407,23 +407,31 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
               />
             </Card>
 
-            <Card className="rounded-2xl border-slate-200 bg-white p-4 flex items-center gap-4 min-w-[200px]">
-              <div className="flex flex-col flex-1">
-                <Label className="text-xs font-bold uppercase text-muted-foreground mb-1">Rol de Usuario</Label>
-                <Select value={student?.role || 'student'} onValueChange={handleRoleChange}>
-                  <SelectTrigger className="h-8 border-none p-0 focus:ring-0 font-bold text-sm bg-transparent">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="student">Estudiante</SelectItem>
-                    <SelectItem value="instructor">Instructor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="p-2 bg-slate-100 rounded-lg">
                 {student?.role === 'instructor' ? <GraduationCap className="h-5 w-5 text-purple-600" /> : <Users className="h-5 w-5 text-slate-600" />}
               </div>
             </Card>
+
+            {student?.role === 'instructor' && (
+              <Card className="rounded-2xl border-purple-200 bg-purple-50/30 p-4 flex items-center gap-4">
+                <div className="flex flex-col">
+                  <Label className="text-xs font-bold uppercase text-purple-600 mb-1">Permisos de Plantilla</Label>
+                  <span className="text-sm font-bold text-slate-900">
+                    {student?.canEditBases ? 'Puede editar plantillas' : 'Solo puede clonar plantillas'}
+                  </span>
+                </div>
+                <Switch 
+                  checked={!!student?.canEditBases} 
+                  onCheckedChange={(checked) => {
+                    if (!db || !studentId) return;
+                    updateDocumentNonBlocking(doc(db, 'users', studentId), {
+                      canEditBases: checked
+                    });
+                  }}
+                  className="data-[state=checked]:bg-purple-600"
+                />
+              </Card>
+            )}
 
             {isAdmin && (
               <AlertDialog>

@@ -269,6 +269,17 @@ function LessonPlayerContent() {
     return hasValidAccess;
   }, [hasValidAccess, isUserLoading, isCourseLoading, profile]);
 
+  const isClosed = useMemo(() => {
+    if (!course) return false;
+    if (profile?.role === 'admin') return false; // Admin siempre puede probar
+    if (course.isArchived) return true;
+    if (course.closingDate) {
+      const closing = course.closingDate?.toDate?.() || new Date(course.closingDate);
+      return closing < new Date();
+    }
+    return false;
+  }, [course, profile]);
+
   useEffect(() => {
     async function fetchPremiumData() {
       if (!db || !finalizedAccess || !courseId || !moduleId || !lessonId || isUserLoading || isCourseLoading || isLessonLoading) return;
@@ -448,16 +459,44 @@ function LessonPlayerContent() {
         <main className="flex-1 flex flex-col min-w-0 bg-[#F1F0F4]/30">
           <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12">
             <div className="max-w-4xl mx-auto space-y-8">
+              {isClosed && (
+                <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] flex items-center gap-4 text-amber-800 animate-in slide-in-from-top-4">
+                  <div className="bg-amber-200 p-3 rounded-2xl"><ShieldAlert className="h-6 w-6" /></div>
+                  <div className="flex-1">
+                    <p className="font-bold">Curso Archivado / Finalizado</p>
+                    <p className="text-sm opacity-80">Este curso ha cerrado su ciclo académico. Puedes consultar los videos y materiales, pero las actividades interactivas están bloqueadas para este grupo.</p>
+                  </div>
+                </div>
+              )}
+
               {currentLesson.type === 'challenge' ? (
-                 <EmbeddedChallenge 
-                    challengeId={effectiveChallengeId}
-                    onComplete={() => {
-                       toast({ title: '¡Actividad Superada!', description: 'Has demostrado dominio del tema. Avanzando progreso...' });
-                       handleMarkAsCompleted();
-                    }}
-                 />
+                 <div className="relative">
+                   {isClosed && (
+                     <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-[2px] rounded-[3rem] flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-amber-300">
+                        <Lock className="h-12 w-12 text-amber-500 mb-4" />
+                        <h3 className="text-xl font-bold text-slate-900">Actividad Bloqueada</h3>
+                        <p className="text-sm text-slate-500 max-w-xs">El periodo de evaluación para este curso ha terminado.</p>
+                     </div>
+                   )}
+                   <EmbeddedChallenge 
+                      challengeId={effectiveChallengeId}
+                      onComplete={() => {
+                         if (isClosed) return;
+                         toast({ title: '¡Actividad Superada!', description: 'Has demostrado dominio del tema. Avanzando progreso...' });
+                         handleMarkAsCompleted();
+                      }}
+                   />
+                 </div>
               ) : currentLesson.type === 'quiz' ? (
-                <div className="max-w-2xl mx-auto"><QuizPlayer questions={effectiveQuestions || []} onComplete={handleMarkAsCompleted} /></div>
+                <div className="max-w-2xl mx-auto relative">
+                   {isClosed && (
+                     <div className="absolute inset-x-0 -top-4 -bottom-4 z-50 bg-white/60 backdrop-blur-[2px] rounded-[3rem] flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-amber-300">
+                        <Lock className="h-10 w-10 text-amber-500 mb-2" />
+                        <p className="font-bold text-slate-900">Evaluación Cerrada</p>
+                     </div>
+                   )}
+                   <QuizPlayer questions={effectiveQuestions || []} onComplete={isClosed ? () => {} : handleMarkAsCompleted} />
+                </div>
               ) : currentLesson.type === 'podcast' ? (
                 <div className="max-w-4xl mx-auto">
                     {podcastData ? (
@@ -526,9 +565,10 @@ function LessonPlayerContent() {
                       ) : (
                         <Button 
                           onClick={handleMarkAsCompleted}
-                          className={`rounded-xl h-10 px-6 font-bold shadow-lg transition-all ${progress?.completedLessons?.includes(lessonId) ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' : 'bg-primary hover:bg-primary/90 shadow-primary/20'}`}
+                          disabled={isClosed || progress?.completedLessons?.includes(lessonId)}
+                          className={`rounded-xl h-10 px-6 font-bold shadow-lg transition-all ${progress?.completedLessons?.includes(lessonId) ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' : isClosed ? 'bg-slate-200 text-slate-400 border-none shadow-none cursor-not-allowed' : 'bg-primary hover:bg-primary/90 shadow-primary/20'}`}
                         >
-                          {progress?.completedLessons?.includes(lessonId) ? <><CheckCircle className="h-4 w-4 mr-2" /> Completada</> : "Marcar lección"}
+                          {progress?.completedLessons?.includes(lessonId) ? <><CheckCircle className="h-4 w-4 mr-2" /> Completada</> : isClosed ? "Cerrada" : "Marcar lección"}
                         </Button>
                       )}
                     </>

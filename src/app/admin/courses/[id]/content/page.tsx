@@ -22,8 +22,11 @@ import {
   PlayCircle,
   HelpCircle,
   CheckCircle2,
-  Mic2
+  Mic2,
+  Copy
 } from 'lucide-react';
+import { cloneCourseContent } from '@/lib/course-duplication';
+import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
 import { 
   useCollection, 
@@ -76,6 +79,11 @@ export default function CourseContentAdminPage() {
   const [modulePrice, setModulePrice] = useState('0');
   const [moduleCurrency, setModuleCurrency] = useState('COP');
 
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importSourceId, setImportSourceId] = useState<string | null>(null);
+  const [importSelectedModules, setImportSelectedModules] = useState<string[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
     return doc(db, 'courses', courseId);
@@ -97,6 +105,40 @@ export default function CourseContentAdminPage() {
     return query(collection(db, 'courses', courseId, 'modules'), orderBy('orderIndex', 'asc'));
   }, [db, courseId]);
   const { data: modules, isLoading: isModulesLoading } = useCollection(modulesQuery);
+
+  const allCoursesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, 'courses');
+  }, [db]);
+  const { data: allCourses } = useCollection(allCoursesQuery);
+
+  const sourceModulesQuery = useMemoFirebase(() => {
+    if (!db || !importSourceId) return null;
+    return query(collection(db, 'courses', importSourceId, 'modules'), orderBy('orderIndex', 'asc'));
+  }, [db, importSourceId]);
+  const { data: sourceModules } = useCollection(sourceModulesQuery);
+
+  const handleImport = async () => {
+    if (!db || !importSourceId || importSelectedModules.length === 0 || !user?.uid) return;
+
+    setIsImporting(true);
+    try {
+      const startOrder = (modules?.length || 0);
+      await cloneCourseContent(db, importSourceId, courseId, user.uid, {
+        moduleIds: importSelectedModules,
+        startOrderIndex: startOrder
+      });
+      setIsImportDialogOpen(false);
+      setImportSourceId(null);
+      setImportSelectedModules([]);
+      router.refresh();
+      // Nota: toast se disparará si hay un hook de toast disponible, pero aquí usamos las alertas estándar
+    } catch (error) {
+      console.error("Error importing modules:", error);
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const handleSaveModule = (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,6 +216,74 @@ export default function CourseContentAdminPage() {
             
             <div className="flex items-center gap-3">
               {isAuthorized && course && <BulkEnrollmentModal courseId={courseId} courseTitle={course.title} />}
+              
+              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="rounded-xl h-11 gap-2">
+                    <Copy className="h-4 w-4" />
+                    Importar
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="rounded-3xl sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Importar Contenido</DialogTitle>
+                    <DialogDescription>Selecciona un curso y luego los módulos que deseas copiar a este programa.</DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-6 py-4">
+                    <div className="grid gap-2">
+                      <Label>Seleccionar Curso Origen</Label>
+                      <Select value={importSourceId || ''} onValueChange={(val) => {
+                        setImportSourceId(val);
+                        setImportSelectedModules([]);
+                      }}>
+                        <SelectTrigger className="rounded-xl"><SelectValue placeholder="Buscar curso..." /></SelectTrigger>
+                        <SelectContent>
+                          {allCourses?.filter(c => c.id !== courseId).map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {importSourceId && (
+                      <div className="space-y-3">
+                        <Label className="font-bold">Módulos Disponibles</Label>
+                        <div className="bg-muted/30 rounded-2xl border p-4 space-y-3">
+                          {sourceModules?.map(m => (
+                            <div key={m.id} className="flex items-center space-x-3 p-2 hover:bg-white rounded-xl transition-colors">
+                              <Checkbox 
+                                id={`mod-${m.id}`} 
+                                checked={importSelectedModules.includes(m.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) setImportSelectedModules([...importSelectedModules, m.id]);
+                                  else setImportSelectedModules(importSelectedModules.filter(id => id !== m.id));
+                                }}
+                              />
+                              <Label htmlFor={`mod-${m.id}`} className="flex-1 cursor-pointer font-medium">{m.title}</Label>
+                            </div>
+                          ))}
+                          {(!sourceModules || sourceModules.length === 0) && (
+                            <p className="text-xs text-muted-foreground italic p-4 text-center">Este curso no tiene módulos aún.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <Button 
+                      onClick={handleImport} 
+                      disabled={isImporting || importSelectedModules.length === 0}
+                      className="w-full rounded-xl h-12 gap-2"
+                    >
+                      {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                      Importar {importSelectedModules.length} Módulo(s)
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Dialog open={isModuleDialogOpen} onOpenChange={(open) => {
                 setIsModuleDialogOpen(open);
                 if (!open) resetModuleForm();

@@ -22,6 +22,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { cloneCourseContent } from '@/lib/course-duplication';
+import { Search } from 'lucide-react';
 
 export default function AdminCoursesPage() {
   const router = useRouter();
@@ -58,6 +60,10 @@ export default function AdminCoursesPage() {
   const [price, setPrice] = useState<number>(0);
   const [currency, setCurrency] = useState('COP');
   const [instructorRevenueShare, setInstructorRevenueShare] = useState<number>(70);
+  const [baseCourseId, setBaseCourseId] = useState<string | null>(null);
+  const [isBaseCourse, setIsBaseCourse] = useState(false);
+  const [isArchived, setIsArchived] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
 
   const coursesQuery = useMemoFirebase(() => {
     if (!db || (!profile && !isDemoAccount)) return null;
@@ -65,12 +71,39 @@ export default function AdminCoursesPage() {
       return collection(db, 'courses');
     }
     if (profile?.role === 'instructor' && user?.uid) {
+      // Si puede editar bases, traemos todo para filtrar en el cliente (o podríamos hacer query compleja)
+      // Para simplificar y evitar índices complejos, traemos todo si es instructor con permisos extendidos
+      if (profile.canEditBases) {
+        return collection(db, 'courses');
+      }
       return query(collection(db, 'courses'), where('instructorId', '==', user.uid));
     }
     return null;
   }, [db, profile, user?.uid, isAdmin, isDemoAccount]);
 
-  const { data: courses, isLoading } = useCollection(coursesQuery);
+  const { data: rawCourses, isLoading } = useCollection(coursesQuery);
+
+  // Filtrado final en cliente para seguridad y coherencia
+  const courses = useMemo(() => {
+    if (!rawCourses) return [];
+    if (isAdmin) return rawCourses;
+    
+    return rawCourses.filter((c: any) => {
+      const isOwner = c.instructorId === user?.uid;
+      const isBase = c.isBaseCourse === true;
+
+      if (profile?.role === 'instructor') {
+        if (profile.canEditBases) {
+          // Ve sus cursos O cualquier curso base
+          return isOwner || isBase;
+        } else {
+          // Ve solo sus cursos que NO sean base
+          return isOwner && !isBase;
+        }
+      }
+      return false;
+    });
+  }, [rawCourses, isAdmin, profile, user?.uid]);
 
   const resetForm = () => {
     setEditingCourseId(null);
@@ -87,6 +120,10 @@ export default function AdminCoursesPage() {
     setPrice(0);
     setCurrency('COP');
     setInstructorRevenueShare(70);
+    setBaseCourseId(null);
+    setIsBaseCourse(false);
+    setIsArchived(false);
+    setIsCloning(false);
   };
 
   const handleEditClick = (course: any) => {
@@ -102,6 +139,8 @@ export default function AdminCoursesPage() {
     setPrice(course.price || 0);
     setCurrency(course.currency || 'COP');
     setInstructorRevenueShare(course.instructorRevenueShare ?? 70);
+    setIsBaseCourse(course.isBaseCourse ?? false);
+    setIsArchived(course.isArchived ?? false);
     
     if (course.closingDate) {
       const date = course.closingDate instanceof Timestamp ? course.closingDate.toDate() : new Date(course.closingDate);
@@ -194,7 +233,9 @@ export default function AdminCoursesPage() {
         isActive,
         previewVideoUrl,
         updatedAt: serverTimestamp(),
-        instructorName: profile?.displayName || activeUser.displayName || activeUser.email || 'Demo Instructor'
+        instructorName: profile?.displayName || activeUser.displayName || activeUser.email || 'Demo Instructor',
+        isBaseCourse,
+        isArchived
       };
 
       if (closingDate) {
@@ -229,8 +270,23 @@ export default function AdminCoursesPage() {
         if (!courseData.imageUrl && !courseData.thumbnailDataUrl) {
           courseData.imageUrl = `https://picsum.photos/seed/${Math.random()}/800/450`;
         }
-        await addDocumentNonBlocking(collection(db, 'courses'), courseData);
-        toast({ title: "¡Curso creado!", description: "El nuevo programa ya está disponible en el catálogo." });
+        const docRef = await addDocumentNonBlocking(collection(db, 'courses'), courseData);
+        
+        if (baseCourseId && docRef?.id) {
+          setIsCloning(true);
+          try {
+            toast({ title: "Clonando contenido...", description: "Estamos trayendo los módulos y lecciones del curso base." });
+            await cloneCourseContent(db, baseCourseId, docRef.id, activeUser.uid);
+            toast({ title: "¡Clonación exitosa!", description: "El contenido ha sido replicado correctamente." });
+          } catch (cloneErr) {
+            console.error("Error cloning content:", cloneErr);
+            toast({ variant: "destructive", title: "Error en clonación", description: "El curso se creó pero no se pudo copiar el contenido." });
+          } finally {
+            setIsCloning(false);
+          }
+        } else {
+          toast({ title: "¡Curso creado!", description: "El nuevo programa ya está disponible en el catálogo." });
+        }
       }
       
       setIsDialogOpen(false);
@@ -315,6 +371,28 @@ export default function AdminCoursesPage() {
                       Define el contenido, imagen de portada y vigencia del programa.
                     </DialogDescription>
                   </DialogHeader>
+
+                  {!editingCourseId && (
+                    <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 mb-4 animate-in fade-in slide-in-from-top-4">
+                      <Label className="font-bold text-primary flex items-center gap-2 mb-2">
+                         <BookOpen className="h-4 w-4" /> Importar de Curso Base (Opcional)
+                      </Label>
+                      <Select value={baseCourseId || 'none'} onValueChange={(val) => setBaseCourseId(val === 'none' ? null : val)}>
+                        <SelectTrigger className="rounded-xl h-11 bg-white">
+                          <SelectValue placeholder="Seleccionar un curso existente para clonar..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">-- Ninguno (Empezar desde cero) --</SelectItem>
+                          {rawCourses?.filter((c: any) => c.isBaseCourse).map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.title} ({c.technology})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-primary/60 mt-2 font-medium">Esto copiará todos los módulos, lecciones y recursos del curso seleccionado.</p>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
                     <div className="space-y-6">
@@ -473,14 +551,38 @@ export default function AdminCoursesPage() {
                             <Label htmlFor="isActive" className="text-sm font-medium cursor-pointer">Publicar Inmediatamente</Label>
                             <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" />
                           </div>
+
+                          <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-200 shadow-sm mt-2">
+                             <div className="flex flex-col">
+                               <Label htmlFor="manualArchive" className="text-sm font-bold text-slate-700 cursor-pointer">Archivar curso</Label>
+                               <p className="text-[10px] text-slate-500">Ocultar del catálogo pero permitir acceso a alumnos inscritos.</p>
+                             </div>
+                             <input type="checkbox" id="manualArchive" checked={isArchived} onChange={(e) => setIsArchived(e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-slate-600 focus:ring-slate-500" />
+                          </div>
+
+                          <div className="flex items-center justify-between p-2 bg-purple-50 rounded-xl border border-purple-200 shadow-sm mt-2">
+                            <div className="flex flex-col">
+                              <Label htmlFor="isBase" className="text-sm font-bold text-purple-900 cursor-pointer">Curso Base / Plantilla</Label>
+                              <p className="text-[10px] text-purple-700">Oculto del catálogo, solo para clonación.</p>
+                            </div>
+                            <input type="checkbox" id="isBase" checked={isBaseCourse} onChange={(e) => setIsBaseCourse(e.target.checked)} className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" />
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <DialogFooter className="pt-4 border-t">
-                    <Button type="submit" disabled={uploadingImage} className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20">
-                      {uploadingImage ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Procesando imagen...</> : editingCourseId ? 'Guardar Cambios en el Curso' : 'Publicar Nuevo Programa'}
+                    <Button type="submit" disabled={uploadingImage || isCloning} className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20">
+                      {isCloning ? (
+                        <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Clonando Contenido...</>
+                      ) : uploadingImage ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Procesando imagen...</>
+                      ) : editingCourseId ? (
+                        'Guardar Cambios en el Curso'
+                      ) : (
+                        'Publicar Nuevo Programa'
+                      )}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -517,7 +619,16 @@ export default function AdminCoursesPage() {
                           />
                         </div>
                         <div className="flex flex-col">
-                          <span className="line-clamp-1 max-w-[250px]">{course.title}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="line-clamp-1 max-w-[250px]">{course.title}</span>
+                            <div className="flex gap-1">
+                              {course.isBaseCourse && <Badge className="bg-purple-600 text-white border-none rounded-lg text-[8px] h-4">Plantilla</Badge>}
+                              {course.isArchived && <Badge className="bg-slate-500 text-white border-none rounded-lg text-[8px] h-4">Archivado</Badge>}
+                              {course.closingDate && (new Date(course.closingDate instanceof Timestamp ? course.closingDate.toDate() : course.closingDate) < new Date()) && (
+                                <Badge className="bg-rose-500 text-white border-none rounded-lg text-[8px] h-4">Cerrado</Badge>
+                              )}
+                            </div>
+                          </div>
                           <span className="text-[10px] text-muted-foreground font-normal">{course.category}</span>
                         </div>
                       </div>
@@ -564,6 +675,34 @@ export default function AdminCoursesPage() {
                               </Link>
                             </TooltipTrigger>
                             <TooltipContent>Vista Previa Certificado</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-9 w-9 rounded-xl text-primary hover:bg-primary/5"
+                                onClick={() => {
+                                  resetForm();
+                                  setTitle(`Copia de ${course.title}`);
+                                  setDescription(course.description || '');
+                                  setCategory(course.category || '');
+                                  setTechnology(course.technology || '');
+                                  setImageUrl(course.thumbnailDataUrl || course.imageUrl || '');
+                                  setIsFree(course.isFree ?? true);
+                                  setPrice(course.price || 0);
+                                  setCurrency(course.currency || 'COP');
+                                  setBaseCourseId(course.id);
+                                  setIsDialogOpen(true);
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Clonar Curso</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
 

@@ -28,10 +28,28 @@ function CoursesContent() {
 
   const coursesQuery = useMemoFirebase(() => {
     if (!db) return null;
+    // Traemos los activos y filtramos los base en el cliente para evitar problemas de índices complejos
     return query(collection(db, 'courses'), where('isActive', '==', true));
   }, [db]);
 
-  const { data: courses, isLoading } = useCollection(coursesQuery);
+  const { data: rawCourses, isLoading } = useCollection(coursesQuery);
+
+  const courses = useMemo(() => {
+    if (!rawCourses) return [];
+    const now = new Date();
+    return rawCourses.filter((c: any) => {
+      // Excluir si es base
+      if (c.isBaseCourse) return false;
+      // Excluir si está archivado manualmente
+      if (c.isArchived) return false;
+      // Excluir si tiene fecha de cierre y ya pasó
+      if (c.closingDate) {
+        const closing = c.closingDate?.toDate?.() || new Date(c.closingDate);
+        if (closing < now) return false;
+      }
+      return true;
+    });
+  }, [rawCourses]);
 
   const categories = useMemo(() => {
     if (!courses) return [];
