@@ -406,7 +406,7 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
                 className="data-[state=checked]:bg-emerald-500"
               />
             </Card>
-
+            <Card className="rounded-2xl border-slate-200 bg-white p-4 flex items-center gap-4">
               <div className="p-2 bg-slate-100 rounded-lg">
                 {student?.role === 'instructor' ? <GraduationCap className="h-5 w-5 text-purple-600" /> : <Users className="h-5 w-5 text-slate-600" />}
               </div>
