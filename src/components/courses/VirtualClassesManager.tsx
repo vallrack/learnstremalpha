@@ -166,9 +166,9 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                 <Plus className="h-5 w-5" /> Programar Clase
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[2rem] sm:max-w-[700px] p-0 overflow-hidden border-none shadow-2xl">
-              <form onSubmit={handleSaveClass}>
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white relative overflow-hidden">
+            <DialogContent className="rounded-[2rem] sm:max-w-[700px] p-0 overflow-hidden border-none shadow-2xl flex flex-col max-h-[95vh]">
+              <form onSubmit={handleSaveClass} className="flex flex-col overflow-hidden h-full">
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white relative shrink-0 overflow-hidden">
                    <div className="absolute top-0 right-0 p-4 opacity-10">
                       <Video className="h-16 w-16 rotate-12" />
                    </div>
@@ -182,8 +182,8 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                   </DialogHeader>
                 </div>
                 
-                <ScrollArea className="max-h-[60vh]">
-                  <div className="p-4 space-y-4">
+                <ScrollArea className="flex-1 overflow-y-auto">
+                  <div className="p-5 space-y-6">
                     {/* Sección: Detalles Básicos */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-slate-900 font-bold uppercase tracking-wider text-xs">
@@ -299,72 +299,73 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                                 </div>
                               </div>
 
-                              {accessType === 'paid' && (
-                                  <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 animate-in zoom-in-95 duration-200">
-                                      <div className="grid gap-1.5">
-                                          <Label className="text-amber-800 font-bold ml-1 text-[10px] uppercase">Precio de Entrada</Label>
-                                          <Input 
-                                              type="number" 
-                                              value={price} 
-                                              onChange={(e) => setPrice(e.target.value)}
-                                              className="rounded-lg h-9 bg-white border-amber-200" 
-                                          />
-                                      </div>
-                                      <div className="grid gap-1.5">
-                                          <Label className="text-amber-800 font-bold ml-1 text-[10px] uppercase">Moneda</Label>
-                                          <Select value={currency} onValueChange={setCurrency}>
-                                              <SelectTrigger className="rounded-lg h-9 bg-white border-amber-200">
-                                                  <SelectValue />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                  <SelectItem value="COP">COP (Pesos)</SelectItem>
-                                                  <SelectItem value="USD">USD (Dólares)</SelectItem>
-                                              </SelectContent>
-                                          </Select>
-                                      </div>
-                                  </div>
-                              )}
+                            {accessType === 'paid' && (
+                                <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 animate-in zoom-in-95 duration-200">
+                                    <div className="grid gap-1.5">
+                                        <Label className="text-amber-800 font-bold ml-1 text-[10px] uppercase">Precio de Entrada</Label>
+                                        <Input 
+                                            type="number" 
+                                            value={price} 
+                                            onChange={(e) => setPrice(e.target.value)}
+                                            className="rounded-lg h-9 bg-white border-amber-200" 
+                                        />
+                                    </div>
+                                    <div className="grid gap-1.5">
+                                        <Label className="text-amber-800 font-bold ml-1 text-[10px] uppercase">Moneda</Label>
+                                        <Select value={currency} onValueChange={setCurrency}>
+                                            <SelectTrigger className="rounded-lg h-9 bg-white border-amber-200">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="COP">COP (Pesos)</SelectItem>
+                                                <SelectItem value="USD">USD (Dólares)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-slate-900 font-bold uppercase tracking-wider text-xs px-1 pt-2">
+                        <LinkIcon className="h-4 w-4 text-indigo-500" />
+                        Configuración de Conexión
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Sección: Videollamada */}
+                        <div className="p-3 rounded-xl bg-indigo-50/50 border border-indigo-100/50 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                              <Label className="text-[10px] font-bold flex items-center gap-1.5 text-indigo-700 uppercase tracking-tight">
+                                  <LinkIcon className="h-3 w-3" /> Enlace Sesión
+                              </Label>
+                              <Badge variant="outline" className="bg-white text-indigo-600 border-indigo-100 text-[8px] font-bold uppercase py-0 px-1 h-3.5">Opcional</Badge>
                           </div>
-                      </div>
+                          <Input 
+                              placeholder="https://meet.google.com/..." 
+                              value={customMeetLink} 
+                              onChange={(e) => setCustomMeetLink(e.target.value)} 
+                              className="rounded-lg h-9 bg-white border-indigo-100 focus:ring-indigo-500/20 text-sm" 
+                          />
+                          <p className="text-[9px] text-indigo-600/60 leading-tight">Vacio usa <strong>Jitsi Meet</strong>.</p>
+                        </div>
 
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-slate-900 font-bold uppercase tracking-wider text-xs px-1 pt-2">
-                          <LinkIcon className="h-4 w-4 text-indigo-500" />
-                          Configuración de Conexión
+                        {/* Sección: Grabación */}
+                        <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100/50 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                              <Label className="text-[10px] font-bold flex items-center gap-1.5 text-emerald-700 uppercase tracking-tight">
+                                  <PlayCircle className="h-3 w-3" /> Link Grabación
+                              </Label>
+                              <Badge variant="outline" className="bg-white text-emerald-600 border-emerald-100 text-[8px] font-bold uppercase py-0 px-1 h-3.5">Opcional</Badge>
+                          </div>
+                          <Input 
+                              placeholder="https://www.youtube.com/..." 
+                              value={recordingUrl} 
+                              onChange={(e) => setRecordingUrl(e.target.value)} 
+                              className="rounded-lg h-9 bg-white border-emerald-100 focus:ring-emerald-500/20 text-sm" 
+                          />
+                          <p className="text-[9px] text-emerald-600/60 leading-tight">Link de YouTube/Drive al finalizar.</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Sección: Videollamada */}
-                      <div className="p-3 rounded-xl bg-indigo-50/50 border border-indigo-100/50 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-bold flex items-center gap-1.5 text-indigo-700 uppercase tracking-tight">
-                                <LinkIcon className="h-3 w-3" /> Enlace Sesión
-                            </Label>
-                            <Badge variant="outline" className="bg-white text-indigo-600 border-indigo-100 text-[8px] font-bold uppercase py-0 px-1 h-3.5">Opcional</Badge>
-                        </div>
-                        <Input 
-                            placeholder="https://meet.google.com/..." 
-                            value={customMeetLink} 
-                            onChange={(e) => setCustomMeetLink(e.target.value)} 
-                            className="rounded-lg h-9 bg-white border-indigo-100 focus:ring-indigo-500/20 text-sm" 
-                        />
-                        <p className="text-[9px] text-indigo-600/60 leading-tight">Vacio usa <strong>Jitsi Meet</strong>.</p>
-                      </div>
-
-                      {/* Sección: Grabación */}
-                      <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100/50 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-bold flex items-center gap-1.5 text-emerald-700 uppercase tracking-tight">
-                                <PlayCircle className="h-3 w-3" /> Link Grabación
-                            </Label>
-                            <Badge variant="outline" className="bg-white text-emerald-600 border-emerald-100 text-[8px] font-bold uppercase py-0 px-1 h-3.5">Opcional</Badge>
-                        </div>
-                        <Input 
-                            placeholder="https://www.youtube.com/..." 
-                            value={recordingUrl} 
-                            onChange={(e) => setRecordingUrl(e.target.value)} 
-                            className="rounded-lg h-9 bg-white border-emerald-100 focus:ring-emerald-500/20 text-sm" 
-                        />
-                        <p className="text-[9px] text-emerald-600/60 leading-tight">Link de YouTube/Drive al finalizar.</p>
                       </div>
                     </div>
                   </div>

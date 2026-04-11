@@ -635,7 +635,14 @@ function LiveClassesList({ courseId, groupId, hasValidAccess, profile }: { cours
         const snap = await getDocs(query(collection(db, 'courses', courseId, 'virtualClasses'), orderBy('scheduledAt', 'asc')));
         
         let fetched: any[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+        
+        // 1. Filtrado por Grupo (Cohorte)
         fetched = fetched.filter(c => !c.groupId || c.groupId === groupId);
+        
+        // 2. Filtrado por Visibilidad (Solo mostrar clases internas a quienes tienen acceso al curso o son admins)
+        if (!hasValidAccess) {
+          fetched = fetched.filter(c => c.showInCatalog === true);
+        }
         
         setClasses(fetched);
       } catch (err) {
