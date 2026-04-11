@@ -54,31 +54,54 @@ export function BulkEnrollmentModal({ courseId, courseTitle, onSuccess }: BulkEn
         const wb = xlsx.read(dataBuffer, { type: 'buffer' });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
-        const data = xlsx.utils.sheet_to_json(ws);
         
-        const mappedData: StudentRecord[] = data.map((row: any) => {
-          // Intentar mapear columnas comunes, ignorando mayúsculas/minúsculas y términos variados
-          const keys = Object.keys(row);
-          const nameKey = keys.find(k => {
-            const low = k.toLowerCase();
-            return low.includes('nombre') || low.includes('name') || low.includes('estudiante') || low.includes('alumno') || low.includes('user');
+        // Obtenemos los datos como un array de arrays para manejar casos sin cabeceras
+        const rows = xlsx.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+        
+        if (rows.length === 0) {
+          toast({
+            variant: "destructive",
+            title: "Archivo vacío",
+            description: "No se encontraron datos en el archivo seleccionado."
           });
-          const emailKey = keys.find(k => {
-            const low = k.toLowerCase();
-            return low.includes('correo') || low.includes('email') || low.includes('gmail') || low.includes('mail');
-          });
+          return;
+        }
+
+        // Detectar si la primera fila parece ser una cabecera
+        const firstRow = rows[0].map(c => String(c || '').toLowerCase());
+        const hasHeader = firstRow.some(c => 
+          c.includes('nombre') || c.includes('name') || c.includes('correo') || c.includes('email') || 
+          c.includes('estudiante') || c.includes('alumno') || c.includes('user')
+        );
+
+        const dataStartIdx = hasHeader ? 1 : 0;
+        const dataRows = rows.slice(dataStartIdx);
+
+        const mappedData: StudentRecord[] = dataRows.map((row) => {
+          let email = '';
+          let name = '';
+
+          // Buscar la columna que contiene un '@' (Email)
+          const emailIdx = row.findIndex(c => String(c || '').includes('@'));
           
-          return {
-            name: nameKey ? String(row[nameKey] || '').trim() : '',
-            email: emailKey ? String(row[emailKey] || '').trim() : ''
-          };
-        }).filter(r => r.email && r.email.includes('@')); // Solo mantener aquellos con email válido
+          if (emailIdx !== -1) {
+            email = String(row[emailIdx] || '').trim();
+            
+            // Buscar la columna que probablemente sea el nombre (primera columna no vacía que no sea el email)
+            const nameIdx = row.findIndex((c, idx) => idx !== emailIdx && String(c || '').trim().length > 0);
+            if (nameIdx !== -1) {
+              name = String(row[nameIdx] || '').trim();
+            }
+          }
+
+          return { name, email };
+        }).filter(r => r.email && r.email.includes('@'));
 
         if (mappedData.length === 0) {
           toast({
             variant: "destructive",
             title: "Sin resultados",
-            description: "No se detectaron estudiantes. Verifica que las columnas tengan nombres como 'Nombre' y 'Email'."
+            description: "No se detectaron estudiantes con correos válidos. Verifica el formato del archivo."
           });
         }
 
