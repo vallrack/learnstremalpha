@@ -50,34 +50,49 @@ export function BulkEnrollmentModal({ courseId, courseTitle, onSuccess }: BulkEn
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const wb = xlsx.read(bstr, { type: 'binary' });
+        const dataBuffer = evt.target?.result;
+        const wb = xlsx.read(dataBuffer, { type: 'buffer' });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = xlsx.utils.sheet_to_json(ws);
         
         const mappedData: StudentRecord[] = data.map((row: any) => {
-          // Intentar mapear columnas comunes, ignorando mayúsculas/minúsculas
+          // Intentar mapear columnas comunes, ignorando mayúsculas/minúsculas y términos variados
           const keys = Object.keys(row);
-          const nameKey = keys.find(k => k.toLowerCase().includes('nombre') || k.toLowerCase().includes('name'));
-          const emailKey = keys.find(k => k.toLowerCase().includes('correo') || k.toLowerCase().includes('email'));
+          const nameKey = keys.find(k => {
+            const low = k.toLowerCase();
+            return low.includes('nombre') || low.includes('name') || low.includes('estudiante') || low.includes('alumno') || low.includes('user');
+          });
+          const emailKey = keys.find(k => {
+            const low = k.toLowerCase();
+            return low.includes('correo') || low.includes('email') || low.includes('gmail') || low.includes('mail');
+          });
           
           return {
-            name: nameKey ? row[nameKey] : '',
-            email: emailKey ? row[emailKey] : ''
+            name: nameKey ? String(row[nameKey] || '').trim() : '',
+            email: emailKey ? String(row[emailKey] || '').trim() : ''
           };
-        }).filter(r => r.email); // Solo mantener aquellos con email
+        }).filter(r => r.email && r.email.includes('@')); // Solo mantener aquellos con email válido
+
+        if (mappedData.length === 0) {
+          toast({
+            variant: "destructive",
+            title: "Sin resultados",
+            description: "No se detectaron estudiantes. Verifica que las columnas tengan nombres como 'Nombre' y 'Email'."
+          });
+        }
 
         setParsedData(mappedData);
       } catch (err) {
+        console.error("Excel Read Error:", err);
         toast({
           variant: "destructive",
           title: "Error de lectura",
-          description: "No se pudo leer el archivo Excel. Asegúrate de que tiene columnas como 'Nombre' y 'Email'."
+          description: "No se pudo leer el archivo Excel. Asegúrate de usar un formato .xlsx o .csv estándar."
         });
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const handleProcessEnrollment = async () => {

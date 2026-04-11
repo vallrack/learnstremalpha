@@ -55,25 +55,34 @@ export async function POST(req: NextRequest) {
         }
 
         let uid;
-        let isNewUser = false;
+        const tempPassword = ((name?.split(' ')[0] || 'User').normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "") + Math.floor(1000 + Math.random() * 9000) + '!').trim();
         
         try {
           const userRecord = await adminAuth.getUserByEmail(email);
           uid = userRecord.uid;
+          
+          // Actualizar contraseña para usuarios existentes por si acaso no les llega el correo
+          await adminAuth.updateUser(uid, { password: tempPassword });
+          
+          // Guardar la clave temporal en Firestore para que el admin la vea
+          await adminDb.collection('users').doc(uid).set({
+            tempPassword: tempPassword,
+            displayName: name || userRecord.displayName || email.split('@')[0],
+          }, { merge: true });
+
         } catch (error: any) {
           if (error.code === 'auth/user-not-found') {
-            const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
             const newUser = await adminAuth.createUser({
               email: email,
               password: tempPassword,
               displayName: name || email.split('@')[0],
             });
             uid = newUser.uid;
-            isNewUser = true;
 
             await adminDb.collection('users').doc(uid).set({
               email: email,
               displayName: name || email.split('@')[0],
+              tempPassword: tempPassword, // Guardamos la clave para el admin
               role: 'student',
               isActive: true,
               profileImageUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${name || email}&backgroundColor=0f172a,1d4ed8,047857&textColor=ffffff`,

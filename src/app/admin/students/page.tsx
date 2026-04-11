@@ -21,7 +21,9 @@ import {
   ShieldCheck,
   GraduationCap,
   BookOpen,
-  Trophy
+  Trophy,
+  Copy,
+  Info
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -191,7 +193,14 @@ export default function AdminStudentsPage() {
                               </Avatar>
                               <div className="flex flex-col">
                                 <span className="font-bold text-slate-900">{student.displayName || 'Estudiante'}</span>
-                                <span className="text-xs text-muted-foreground">{student.email}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">{student.email}</span>
+                                  {student.tempPassword && (
+                                    <Badge variant="outline" className="h-4 px-1 text-[8px] border-amber-200 bg-amber-50 text-amber-700 font-bold uppercase">
+                                      Pass: {student.tempPassword}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </TableCell>
@@ -357,6 +366,23 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
               <h2 className="text-4xl font-headline font-bold text-slate-900">{student?.displayName || 'Usuario'}</h2>
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5"><Mail className="h-4 w-4" /> {student?.email}</span>
+                {student?.tempPassword && (
+                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 py-1 px-3">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Clave Temporal: <span className="font-mono font-bold tracking-wider">{student.tempPassword}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 ml-1 hover:bg-emerald-100 hover:text-emerald-800"
+                      onClick={() => {
+                        navigator.clipboard.writeText(student.tempPassword);
+                        toast({ title: "Copiada", description: "La clave ha sido copiada al portapapeles." });
+                      }}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                )}
                 {student?.isPremiumSubscriber && (
                   <Badge className="bg-amber-100 text-amber-700 border-amber-200">
                     <Crown className="h-3 w-3 mr-1" /> Premium
