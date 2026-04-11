@@ -181,8 +181,7 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                     </DialogDescription>
                   </DialogHeader>
                 </div>
-                
-                <ScrollArea className="flex-1 overflow-y-auto">
+                           <ScrollArea className="flex-1 overflow-y-auto">
                   <div className="p-5 space-y-6">
                     {/* Sección: Detalles Básicos */}
                     <div className="space-y-4">
@@ -230,103 +229,112 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
                             </div>
                           </div>
                         </div>
-
-                          </div>
+                        
+                        <div className="grid gap-1.5 pt-2">
+                             <Label className="text-slate-700 font-semibold ml-1 text-sm">Tecnología / Tema Principal</Label>
+                             <Input 
+                                placeholder="Ej: React, Python, UI/UX..." 
+                                value={technology} 
+                                onChange={(e) => setTechnology(e.target.value)} 
+                                className="rounded-xl h-10 border-slate-200 bg-slate-50/50 focus:ring-blue-500/20" 
+                             />
                         </div>
                       </div>
+                    </div>
 
-                      {/* Sección: Visibilidad y Acceso */}
-                      <div className="space-y-4">
-                          <div className="flex items-center gap-2 text-slate-900 font-bold uppercase tracking-wider text-xs">
-                            <Users className="h-4 w-4 text-indigo-500" />
-                            Acceso y Visibilidad
-                          </div>
-                          <div className="grid gap-4 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="grid gap-1.5">
-                                  <Label className="text-slate-700 font-semibold ml-1 text-sm">Público y Acceso</Label>
-                                  <Select value={groupId === 'all' ? accessType : groupId} onValueChange={(val) => {
-                                      if (['free', 'course', 'plan', 'paid'].includes(val)) {
-                                          setAccessType(val);
-                                          setGroupId('all');
-                                      } else {
-                                          setGroupId(val);
-                                          setAccessType('course');
-                                      }
-                                  }}>
-                                    <SelectTrigger className="rounded-xl h-10 border-slate-200 bg-white">
-                                      <SelectValue placeholder="¿Quiénes pueden unirse?" />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl">
-                                      <SelectItem value="free" className="rounded-lg">🔓 Público (Gratis)</SelectItem>
-                                      <SelectItem value="course" className="rounded-lg">🎓 Estudiantes del Curso</SelectItem>
-                                      <SelectItem value="plan" className="rounded-lg">💎 Suscriptores Premium (Plan)</SelectItem>
-                                      <SelectItem value="paid" className="rounded-lg">💰 Pago Único (Venta)</SelectItem>
-                                      {groups && groups.length > 0 && (
-                                          <>
-                                              <div className="px-2 py-1.5 text-[10px] font-bold text-slate-400 uppercase border-t mt-1">Grupos Específicos</div>
-                                              {groups.map(g => (
-                                                  <SelectItem key={g.id} value={g.id} className="rounded-lg text-xs">Grupo: {g.name}</SelectItem>
-                                              ))}
-                                          </>
-                                      )}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                {/* Clasificación para Catálogo */}
-                                <div className="flex flex-col gap-1.5 justify-center">
-                                    <div className="flex items-center justify-between p-2 rounded-xl border border-blue-100 bg-blue-50/30">
-                                        <div className="flex items-center gap-2">
-                                            <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                                            <Label className="text-[11px] font-bold text-slate-800">En Catálogo Público</Label>
-                                        </div>
-                                        <div 
-                                            className={cn(
-                                                "w-10 h-5 rounded-full p-0.5 cursor-pointer transition-colors duration-200 ease-in-out shrink-0",
-                                                showInCatalog ? "bg-blue-600" : "bg-slate-300"
-                                            )}
-                                            onClick={() => setShowInCatalog(!showInCatalog)}
-                                        >
-                                            <div 
-                                                className={cn(
-                                                    "w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ease-in-out",
-                                                    showInCatalog ? "translate-x-5" : "translate-x-0"
-                                                )}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                    {/* Sección: Visibilidad y Acceso */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-slate-900 font-bold uppercase tracking-wider text-xs">
+                          <Users className="h-4 w-4 text-indigo-500" />
+                          Acceso y Visibilidad
+                        </div>
+                        <div className="grid gap-4 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="grid gap-1.5">
+                                <Label className="text-slate-700 font-semibold ml-1 text-sm">Público y Acceso</Label>
+                                <Select value={groupId === 'all' ? accessType : groupId} onValueChange={(val) => {
+                                    if (['free', 'course', 'plan', 'paid'].includes(val)) {
+                                        setAccessType(val);
+                                        setGroupId('all');
+                                    } else {
+                                        setGroupId(val);
+                                        setAccessType('course');
+                                    }
+                                }}>
+                                  <SelectTrigger className="rounded-xl h-10 border-slate-200 bg-white">
+                                    <SelectValue placeholder="¿Quiénes pueden unirse?" />
+                                  </SelectTrigger>
+                                  <SelectContent className="rounded-xl">
+                                    <SelectItem value="free" className="rounded-lg">🔓 Público (Gratis)</SelectItem>
+                                    <SelectItem value="course" className="rounded-lg">🎓 Estudiantes del Curso</SelectItem>
+                                    <SelectItem value="plan" className="rounded-lg">💎 Suscriptores Premium (Plan)</SelectItem>
+                                    <SelectItem value="paid" className="rounded-lg">💰 Pago Único (Venta)</SelectItem>
+                                    {groups && groups.length > 0 && (
+                                        <>
+                                            <div className="px-2 py-1.5 text-[10px] font-bold text-slate-400 uppercase border-t mt-1">Grupos Específicos</div>
+                                            {groups.map(g => (
+                                                <SelectItem key={g.id} value={g.id} className="rounded-lg text-xs">Grupo: {g.name}</SelectItem>
+                                            ))}
+                                        </>
+                                    )}
+                                  </SelectContent>
+                                </Select>
                               </div>
 
-                            {accessType === 'paid' && (
-                                <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 animate-in zoom-in-95 duration-200">
-                                    <div className="grid gap-1.5">
-                                        <Label className="text-amber-800 font-bold ml-1 text-[10px] uppercase">Precio de Entrada</Label>
-                                        <Input 
-                                            type="number" 
-                                            value={price} 
-                                            onChange={(e) => setPrice(e.target.value)}
-                                            className="rounded-lg h-9 bg-white border-amber-200" 
-                                        />
-                                    </div>
-                                    <div className="grid gap-1.5">
-                                        <Label className="text-amber-800 font-bold ml-1 text-[10px] uppercase">Moneda</Label>
-                                        <Select value={currency} onValueChange={setCurrency}>
-                                            <SelectTrigger className="rounded-lg h-9 bg-white border-amber-200">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="COP">COP (Pesos)</SelectItem>
-                                                <SelectItem value="USD">USD (Dólares)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                            )}
+                              {/* Clasificación para Catálogo */}
+                              <div className="flex flex-col gap-1.5 justify-center">
+                                  <div className="flex items-center justify-between p-2 rounded-xl border border-blue-100 bg-blue-50/30">
+                                      <div className="flex items-center gap-2">
+                                          <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                                          <Label className="text-[11px] font-bold text-slate-800">En Catálogo Público</Label>
+                                      </div>
+                                      <div 
+                                          className={cn(
+                                              "w-10 h-5 rounded-full p-0.5 cursor-pointer transition-colors duration-200 ease-in-out shrink-0",
+                                              showInCatalog ? "bg-blue-600" : "bg-slate-300"
+                                          )}
+                                          onClick={() => setShowInCatalog(!showInCatalog)}
+                                      >
+                                          <div 
+                                              className={cn(
+                                                  "w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ease-in-out",
+                                                  showInCatalog ? "translate-x-5" : "translate-x-0"
+                                              )}
+                                          />
+                                      </div>
+                                  </div>
+                              </div>
+                           </div>
+
+                           {accessType === 'paid' && (
+                               <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 animate-in zoom-in-95 duration-200">
+                                   <div className="grid gap-1.5">
+                                       <Label className="text-amber-800 font-bold ml-1 text-[10px] uppercase">Precio de Entrada</Label>
+                                       <Input 
+                                           type="number" 
+                                           value={price} 
+                                           onChange={(e) => setPrice(e.target.value)}
+                                           className="rounded-lg h-9 bg-white border-amber-200" 
+                                       />
+                                   </div>
+                                   <div className="grid gap-1.5">
+                                       <Label className="text-amber-800 font-bold ml-1 text-[10px] uppercase">Moneda</Label>
+                                       <Select value={currency} onValueChange={setCurrency}>
+                                           <SelectTrigger className="rounded-lg h-9 bg-white border-amber-200">
+                                               <SelectValue />
+                                           </SelectTrigger>
+                                           <SelectContent>
+                                               <SelectItem value="COP">COP (Pesos)</SelectItem>
+                                               <SelectItem value="USD">USD (Dólares)</SelectItem>
+                                           </SelectContent>
+                                       </Select>
+                                   </div>
+                               </div>
+                           )}
                         </div>
                     </div>
 
+                    {/* Sección: Configuración de Conexión */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-slate-900 font-bold uppercase tracking-wider text-xs px-1 pt-2">
                         <LinkIcon className="h-4 w-4 text-indigo-500" />
