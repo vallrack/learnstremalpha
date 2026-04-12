@@ -18,7 +18,6 @@ export async function verifyEpaycoTransaction(
   const academyDoc = await adminDb.collection('settings').doc('branding').get();
   const academyMerchantId = academyDoc.data()?.epaycoMerchantId || 'env_default';
   let instructorMerchantId: string | undefined = undefined;
-  let instructorMerchantId: string | undefined = undefined;
 
   try {
     const response = await fetch(`https://secure.epayco.co/validation/v1/reference/${ref_payco}`);
