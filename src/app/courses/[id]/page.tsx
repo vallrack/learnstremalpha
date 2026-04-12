@@ -700,7 +700,7 @@ function LiveClassesList({ courseId, groupId, hasValidAccess, profile, userId, c
           const hasIndividualAccess = profile?.purchasedClasses?.includes(vc.id);
           const isGlobalSubscriber = !!profile?.isPremiumSubscriber;
           const isAdmin = profile?.role === 'admin';
-          const isAuthorOrInstructor = (userId && (userId === courseInstructorId || userId === vc.instructorId));
+          const isAuthorOrInstructor = !!(userId && (userId === courseInstructorId || userId === vc.instructorId));
           
           let canAccess = hasValidAccess; // Default: Course students/Admins/Authors
           if (isFree) canAccess = true;
