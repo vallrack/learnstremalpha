@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TECH_STACK } from '@/lib/languages';
 import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 import Link from 'next/link';
@@ -64,6 +65,7 @@ export default function AdminCoursesPage() {
   const [isBaseCourse, setIsBaseCourse] = useState(false);
   const [isArchived, setIsArchived] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
   const coursesQuery = useMemoFirebase(() => {
     if (!db || (!profile && !isDemoAccount)) return null;
@@ -83,27 +85,44 @@ export default function AdminCoursesPage() {
 
   const { data: rawCourses, isLoading } = useCollection(coursesQuery);
 
-  // Filtrado final en cliente para seguridad y coherencia
+  // Filtrado final en cliente para seguridad, coherencia y pestañas
   const courses = useMemo(() => {
     if (!rawCourses) return [];
-    if (isAdmin) return rawCourses;
     
-    return rawCourses.filter((c: any) => {
-      const isOwner = c.instructorId === user?.uid;
-      const isBase = c.isBaseCourse === true;
+    let filtered = rawCourses;
+    
+    if (!isAdmin) {
+      filtered = rawCourses.filter((c: any) => {
+        const isOwner = c.instructorId === user?.uid;
+        const isBase = c.isBaseCourse === true;
 
-      if (profile?.role === 'instructor') {
-        if (profile.canEditBases) {
-          // Ve sus cursos O cualquier curso base
-          return isOwner || isBase;
-        } else {
-          // Ve solo sus cursos que NO sean base
-          return isOwner && !isBase;
+        if (profile?.role === 'instructor') {
+          if (profile.canEditBases) {
+            return isOwner || isBase;
+          } else {
+            return isOwner && !isBase;
+          }
         }
-      }
-      return false;
-    });
-  }, [rawCourses, isAdmin, profile, user?.uid]);
+        return false;
+      });
+    }
+
+    // Aplicar filtro de pestañas
+    if (activeTab === 'templates') {
+      return filtered.filter((c: any) => c.isBaseCourse === true);
+    }
+    if (activeTab === 'cohorts') {
+      return filtered.filter((c: any) => !c.isBaseCourse);
+    }
+    
+    return filtered;
+  }, [rawCourses, isAdmin, profile, user?.uid, activeTab]);
+
+  const courseNamesMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    rawCourses?.forEach((c: any) => { map[c.id] = c.title; });
+    return map;
+  }, [rawCourses]);
 
   const resetForm = () => {
     setEditingCourseId(null);
@@ -230,12 +249,13 @@ export default function AdminCoursesPage() {
         price: isFree ? 0 : Number(price),
         currency: isFree ? 'COP' : currency,
         instructorRevenueShare: isAdmin ? Number(instructorRevenueShare) : (editingCourseId ? undefined : 70),
-        isActive,
+        isActive: isBaseCourse ? false : isActive,
         previewVideoUrl,
         updatedAt: serverTimestamp(),
         instructorName: profile?.displayName || activeUser.displayName || activeUser.email || 'Demo Instructor',
         isBaseCourse,
-        isArchived
+        isArchived,
+        clonedFrom: baseCourseId || null
       };
 
       if (closingDate) {
@@ -377,7 +397,29 @@ export default function AdminCoursesPage() {
                       <Label className="font-bold text-primary flex items-center gap-2 mb-2">
                          <BookOpen className="h-4 w-4" /> Importar de Curso Base (Opcional)
                       </Label>
-                      <Select value={baseCourseId || 'none'} onValueChange={(val) => setBaseCourseId(val === 'none' ? null : val)}>
+                      <Select 
+                        value={baseCourseId || 'none'} 
+                        onValueChange={(val) => {
+                          const newBaseId = val === 'none' ? null : val;
+                          setBaseCourseId(newBaseId);
+                          
+                          if (newBaseId) {
+                            const source = rawCourses?.find((c: any) => c.id === newBaseId);
+                            if (source) {
+                              setTitle(source.title || '');
+                              setCategory(source.category || '');
+                              setTechnology(source.technology || '');
+                              setDescription(source.description || '');
+                              setImageUrl(source.thumbnailDataUrl || source.imageUrl || '');
+                              setPreviewVideoUrl(source.previewVideoUrl || '');
+                              setIsFree(source.isFree ?? true);
+                              setPrice(source.price || 0);
+                              setCurrency(source.currency || 'COP');
+                              toast({ title: "Datos importados", description: "Se ha copiado la información básica de la plantilla." });
+                            }
+                          }
+                        }}
+                      >
                         <SelectTrigger className="rounded-xl h-11 bg-white">
                           <SelectValue placeholder="Seleccionar un curso existente para clonar..." />
                         </SelectTrigger>
@@ -547,10 +589,12 @@ export default function AdminCoursesPage() {
                              </div>
                           )}
 
-                          <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm mt-2">
-                            <Label htmlFor="isActive" className="text-sm font-medium cursor-pointer">Publicar Inmediatamente</Label>
-                            <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" />
-                          </div>
+                          {!isBaseCourse && (
+                            <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm mt-2">
+                              <Label htmlFor="isActive" className="text-sm font-medium cursor-pointer">Publicar Inmediatamente</Label>
+                              <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" />
+                            </div>
+                          )}
 
                           <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-200 shadow-sm mt-2">
                              <div className="flex flex-col">
@@ -579,7 +623,9 @@ export default function AdminCoursesPage() {
                       ) : uploadingImage ? (
                         <><Loader2 className="h-4 w-4 animate-spin mr-2" />Procesando imagen...</>
                       ) : editingCourseId ? (
-                        'Guardar Cambios en el Curso'
+                        'Guardar Cambios'
+                      ) : isBaseCourse ? (
+                        'Crear Plantilla Base'
                       ) : (
                         'Publicar Nuevo Programa'
                       )}
@@ -591,8 +637,22 @@ export default function AdminCoursesPage() {
           </div>
         </header>
 
-        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-x-auto">
-          <Table>
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="flex justify-between items-center px-2">
+            <TabsList className="bg-slate-100 p-1 rounded-2xl h-12">
+              <TabsTrigger value="all" className="rounded-xl px-6 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Todos</TabsTrigger>
+              <TabsTrigger value="templates" className="rounded-xl px-6 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Plantillas Maestras</TabsTrigger>
+              <TabsTrigger value="cohorts" className="rounded-xl px-6 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Cohortes / Grupos</TabsTrigger>
+            </TabsList>
+            
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              Mostrando {courses.length} items
+            </div>
+          </div>
+
+          <TabsContent value={activeTab} className="mt-0">
+            <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-x-auto">
+              <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 border-none">
                 <TableHead className="pl-8 h-14">Curso</TableHead>
@@ -629,7 +689,14 @@ export default function AdminCoursesPage() {
                               )}
                             </div>
                           </div>
-                          <span className="text-[10px] text-muted-foreground font-normal">{course.category}</span>
+                          <div className="flex flex-col">
+                             <span className="text-[10px] text-muted-foreground font-normal">{course.category}</span>
+                             {course.clonedFrom && (
+                               <span className="text-[9px] text-purple-400 font-medium italic">
+                                 Base: {courseNamesMap[course.clonedFrom] || 'Cargando...'}
+                               </span>
+                             )}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -648,10 +715,12 @@ export default function AdminCoursesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {course.isActive ? (
-                            <Badge className="bg-emerald-500 text-white border-none rounded-lg text-[10px]">Activo</Badge>
-                        ) : (
-                            <Badge className="bg-slate-300 text-slate-700 border-none rounded-lg text-[10px]">Borrador</Badge>
+                        {!course.isBaseCourse && (
+                          course.isActive ? (
+                              <Badge className="bg-emerald-500 text-white border-none rounded-lg text-[10px]">Activo</Badge>
+                          ) : (
+                              <Badge className="bg-slate-300 text-slate-700 border-none rounded-lg text-[10px]">Borrador</Badge>
+                          )
                         )}
                         {course.isFree ? (
                           <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg text-[10px]">Gratis</Badge>
@@ -735,9 +804,10 @@ export default function AdminCoursesPage() {
                   </TableRow>
                 );
               })}
-            </TableBody>
-          </Table>
-        </div>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
