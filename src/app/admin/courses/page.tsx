@@ -802,9 +802,10 @@ export default function AdminCoursesPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-              </Table>
+                  );
+                })}
+              </TableBody>
+            </Table>
             </div>
           </TabsContent>
         </Tabs>
