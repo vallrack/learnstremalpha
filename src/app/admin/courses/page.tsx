@@ -374,20 +374,17 @@ export default function AdminCoursesPage() {
                 </Button>
               </Link>
             )}
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (open && !editingCourseId && !baseCourseId) {
-                resetForm();
-              } else if (!open) {
-                resetForm();
-              }
-            }}>
-              <DialogTrigger asChild>
-                <Button className="gap-2 rounded-xl h-11 shadow-lg shadow-primary/10">
-                  <Plus className="h-4 w-4" />
-                  Crear Curso
-                </Button>
-              </DialogTrigger>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <Button 
+                onClick={() => {
+                  resetForm();
+                  setIsDialogOpen(true);
+                }}
+                className="gap-2 rounded-xl h-11 shadow-lg shadow-primary/10"
+              >
+                <Plus className="h-4 w-4" />
+                Crear Curso
+              </Button>
               <DialogContent className="sm:max-w-[750px] rounded-3xl max-h-[90vh] overflow-y-auto">
                 <form onSubmit={handleFormSubmit}>
                   <DialogHeader>
@@ -407,6 +404,7 @@ export default function AdminCoursesPage() {
                         onValueChange={(val) => {
                           const newBaseId = val === 'none' ? null : val;
                           setBaseCourseId(newBaseId);
+                          if (newBaseId) setIsBaseCourse(false);
                           
                           if (newBaseId) {
                             const source = rawCourses?.find((c: any) => c.id === newBaseId);
