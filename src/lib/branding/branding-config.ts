@@ -13,6 +13,10 @@ export interface BrandingConfig {
   academyMonthlyPrice?: number;
   academyAnnualPrice?: number;
   academyCurrency?: string;
+  // ePayco settings
+  epaycoMerchantId?: string;
+  isEpaycoTestMode?: boolean;
+  epaycoDocsStatus?: Record<string, boolean>;
 }
 
 export const DEFAULT_BRANDING: BrandingConfig = {
