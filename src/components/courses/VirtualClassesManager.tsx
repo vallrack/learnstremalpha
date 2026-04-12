@@ -14,10 +14,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
 
 export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: string, isAuthorized: boolean }) {
   const db = useFirestore();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -79,7 +81,8 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
       updatedAt: serverTimestamp(),
       courseId,
       courseTitle: course?.title || 'Unknown Course',
-      instructorName: course?.instructorName || 'Unknown Instructor'
+      instructorName: course?.instructorName || 'Unknown Instructor',
+      instructorId: user?.uid // Guardamos el ID del instructor que crea/edita la clase
     };
 
     if (editingClassId) {

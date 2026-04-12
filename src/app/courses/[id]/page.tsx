@@ -285,6 +285,8 @@ function CourseDetailContent() {
                 groupId={progress?.groupId} 
                 hasValidAccess={hasValidAccess} 
                 profile={profile}
+                userId={user?.uid}
+                courseInstructorId={course.instructorId}
             />
           </div>
 
@@ -645,7 +647,7 @@ function InstructorBioSection({ profile }: { profile: any }) {
   );
 }
 
-function LiveClassesList({ courseId, groupId, hasValidAccess, profile }: { courseId: string, groupId?: string | null, hasValidAccess: boolean, profile: any }) {
+function LiveClassesList({ courseId, groupId, hasValidAccess, profile, userId, courseInstructorId }: { courseId: string, groupId?: string | null, hasValidAccess: boolean, profile: any, userId?: string, courseInstructorId?: string }) {
   const db = useFirestore();
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -697,11 +699,13 @@ function LiveClassesList({ courseId, groupId, hasValidAccess, profile }: { cours
           const isPaidOnly = accessType === 'paid';
           const hasIndividualAccess = profile?.purchasedClasses?.includes(vc.id);
           const isGlobalSubscriber = !!profile?.isPremiumSubscriber;
+          const isAdmin = profile?.role === 'admin';
+          const isAuthorOrInstructor = (userId && (userId === courseInstructorId || userId === vc.instructorId));
           
           let canAccess = hasValidAccess; // Default: Course students/Admins/Authors
           if (isFree) canAccess = true;
-          if (isPlanOnly) canAccess = isGlobalSubscriber || profile?.role === 'admin' || profile?.uid === vc.instructorId;
-          if (isPaidOnly) canAccess = hasIndividualAccess || profile?.role === 'admin' || profile?.uid === vc.instructorId;
+          if (isPlanOnly) canAccess = isGlobalSubscriber || isAdmin || isAuthorOrInstructor;
+          if (isPaidOnly) canAccess = hasIndividualAccess || isAdmin || isAuthorOrInstructor;
 
           return (
              <div key={vc.id} className={`p-5 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-4 transition-colors ${isPast ? 'bg-slate-50 border-slate-200 opacity-80' : 'bg-white border-slate-100 shadow-sm hover:border-primary/20'}`}>
