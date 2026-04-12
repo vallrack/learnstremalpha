@@ -50,7 +50,8 @@ function CheckoutContent() {
   const podcastId = searchParams.get('podcastId');
   const virtualClassId = searchParams.get('virtualClassId');
   const { toast } = useToast();
-  const { name, supportWhatsapp, academyCurrency, academyMonthlyPrice, academyAnnualPrice } = useBrand();
+  const brand = useBrand();
+  const { name, supportWhatsapp, academyCurrency, academyMonthlyPrice, academyAnnualPrice } = brand;
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState('');
