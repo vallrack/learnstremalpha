@@ -128,12 +128,16 @@ function CourseDetailContent() {
   const closingDate = course.closingDate instanceof Timestamp ? course.closingDate.toDate() : (course.closingDate ? new Date(course.closingDate) : null);
   const isExpired = closingDate && closingDate < new Date();
   
+  const isEnrolled = progress?.status === 'enrolled';
   const isAuthor = user?.uid === course.instructorId;
   const hasPurchased = profile?.purchasedCourses?.includes(id);
   const isFreeCourse = course.isFree === true;
   
-  // Acceso permitido si: Eres Admin, es el autor, compraste el curso, o tiene subscripción Premium global
-  const hasValidAccess = isPremium || isAuthor || hasPurchased;
+  // Acceso de "propietario" o pago completo (Admin, Autor, Comprador o Suscriptor Premium)
+  const hasFullAccess = isPremium || isAuthor || hasPurchased;
+  
+  // Acceso general al curso (Excel o compra)
+  const hasValidAccess = hasFullAccess || isEnrolled;
   
   // Acceso denegado si no tiene acceso básico y el curso no es gratis,
   // O si el curso ha expirado y no eres personal autorizado.
@@ -262,7 +266,12 @@ function CourseDetailContent() {
 
                 <section>
                   <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Contenido del Curso</h2>
-                  <CourseCurriculum courseId={id} hasValidAccess={hasValidAccess} isFreeCourse={isFreeCourse} />
+                  <CourseCurriculum 
+                    courseId={id} 
+                    hasFullAccess={hasFullAccess} 
+                    hasValidAccess={hasValidAccess} 
+                    isFreeCourse={isFreeCourse} 
+                  />
                 </section>
                 
                 <section>
@@ -359,7 +368,7 @@ function CourseDetailContent() {
   );
 }
 
-function CourseCurriculum({ courseId, hasValidAccess, isFreeCourse }: { courseId: string, hasValidAccess: boolean, isFreeCourse: boolean }) {
+function CourseCurriculum({ courseId, hasFullAccess, hasValidAccess, isFreeCourse }: { courseId: string, hasFullAccess: boolean, hasValidAccess: boolean, isFreeCourse: boolean }) {
   const db = useFirestore();
   const modulesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -389,7 +398,14 @@ function CourseCurriculum({ courseId, hasValidAccess, isFreeCourse }: { courseId
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-6">
-              <ModuleLessons courseId={courseId} moduleId={module.id} hasValidAccess={hasValidAccess} isFreeCourse={isFreeCourse} moduleIsPremium={!!module.isPremium} />
+              <ModuleLessons 
+                courseId={courseId} 
+                moduleId={module.id} 
+                hasFullAccess={hasFullAccess}
+                hasValidAccess={hasValidAccess} 
+                isFreeCourse={isFreeCourse} 
+                moduleIsPremium={!!module.isPremium} 
+              />
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -398,7 +414,7 @@ function CourseCurriculum({ courseId, hasValidAccess, isFreeCourse }: { courseId
   );
 }
 
-function ModuleLessons({ courseId, moduleId, hasValidAccess, isFreeCourse, moduleIsPremium }: { courseId: string, moduleId: string, hasValidAccess: boolean, isFreeCourse: boolean, moduleIsPremium: boolean }) {
+function ModuleLessons({ courseId, moduleId, hasFullAccess, hasValidAccess, isFreeCourse, moduleIsPremium }: { courseId: string, moduleId: string, hasFullAccess: boolean, hasValidAccess: boolean, isFreeCourse: boolean, moduleIsPremium: boolean }) {
   const db = useFirestore();
   const lessonsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -411,49 +427,57 @@ function ModuleLessons({ courseId, moduleId, hasValidAccess, isFreeCourse, modul
 
   return (
     <div className="space-y-2">
-      {lessons?.map((lesson) => (
-        <div key={lesson.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-muted/30 transition-colors group border border-transparent">
-          <div className="flex items-center gap-4">
-            <div className="bg-muted p-2.5 rounded-xl group-hover:bg-primary/10 transition-colors">
-              {lesson.type === 'challenge' ? (
-                <Code2 className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-              ) : (
-                <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-semibold group-hover:text-primary transition-colors text-foreground">
-                {lesson.title}
-              </p>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> {lesson.durationInMinutes || 10} min</span>
-                {lesson.isPremium ? (
-                  <Badge variant="outline" className="text-[10px] h-4 py-0 bg-amber-50 text-amber-600">Premium</Badge>
-                ) : isFreeCourse ? (
-                   <Badge variant="outline" className="text-[10px] h-4 py-0 bg-emerald-50 text-emerald-600 border-emerald-100 italic">Gratis</Badge>
-                ) : null}
+      {lessons?.map((lesson) => {
+        // Una actividad es "Paga" si es Premium y tiene precio
+        const isPaidActivity = (lesson.isPremium && (lesson.price || 0) > 0) || (moduleIsPremium && (lesson.price || 0) > 0);
+        
+        // Acceso si: Tienes acceso completo (compra/admin) O si es contenido estándar y estás matriculado/es gratis
+        const canAccess = hasFullAccess || (!isPaidActivity && (hasValidAccess || isFreeCourse));
+
+        return (
+          <div key={lesson.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-muted/30 transition-colors group border border-transparent">
+            <div className="flex items-center gap-4">
+              <div className="bg-muted p-2.5 rounded-xl group-hover:bg-primary/10 transition-colors">
+                {lesson.type === 'challenge' ? (
+                  <Code2 className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                ) : (
+                  <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-semibold group-hover:text-primary transition-colors text-foreground">
+                  {lesson.title}
+                </p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> {lesson.durationInMinutes || 10} min</span>
+                  {lesson.isPremium ? (
+                    <Badge variant="outline" className="text-[10px] h-4 py-0 bg-amber-50 text-amber-600">Premium</Badge>
+                  ) : isFreeCourse ? (
+                    <Badge variant="outline" className="text-[10px] h-4 py-0 bg-emerald-50 text-emerald-600 border-emerald-100 italic">Gratis</Badge>
+                  ) : null}
+                </div>
               </div>
             </div>
-          </div>
-          {(!hasValidAccess && (lesson.isPremium || moduleIsPremium || !isFreeCourse)) ? (
-            <Link href={`/checkout?courseId=${courseId}${lesson.isPremium ? `&moduleId=${moduleId}&lessonId=${lesson.id}` : moduleIsPremium ? `&moduleId=${moduleId}` : ''}`}>
-              <Button variant="ghost" size="sm" className="rounded-xl h-10 gap-2 text-amber-600 bg-amber-50 hover:bg-amber-100 hover:text-amber-700 font-bold border-amber-100 border transition-all hover:scale-105 px-4 shadow-sm shadow-amber-500/5">
-                <Lock className="h-3.5 w-3.5" />
-                <span className="text-[11px] font-black uppercase tracking-wider">
-                  {lesson.isPremium && lesson.price > 0 ? formatPrice(lesson.price, lesson.currency || 'COP') : 'Desbloquear'}
-                </span>
+            {!canAccess ? (
+              <Link href={`/checkout?courseId=${courseId}${lesson.isPremium ? `&moduleId=${moduleId}&lessonId=${lesson.id}` : moduleIsPremium ? `&moduleId=${moduleId}` : ''}`}>
+                <Button variant="ghost" size="sm" className="rounded-xl h-10 gap-2 text-amber-600 bg-amber-50 hover:bg-amber-100 hover:text-amber-700 font-bold border-amber-100 border transition-all hover:scale-105 px-4 shadow-sm shadow-amber-500/5">
+                  <Lock className="h-3.5 w-3.5" />
+                  <span className="text-[11px] font-black uppercase tracking-wider">
+                    {lesson.isPremium && lesson.price > 0 ? formatPrice(lesson.price, lesson.currency || 'COP') : 'Desbloquear'}
+                  </span>
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="ghost" size="sm" className={`rounded-lg h-9 gap-1 font-bold ${lesson.type === 'challenge' ? 'text-primary bg-primary/5 hover:bg-primary/10' : ''}`} asChild>
+                <Link href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${moduleId}`}>
+                  {lesson.type === 'challenge' ? 'Ir al Desafío' : 'Ver Clase'} 
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
               </Button>
-            </Link>
-          ) : (
-            <Button variant="ghost" size="sm" className={`rounded-lg h-9 gap-1 font-bold ${lesson.type === 'challenge' ? 'text-primary bg-primary/5 hover:bg-primary/10' : ''}`} asChild>
-               <Link href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${moduleId}`}>
-                 {lesson.type === 'challenge' ? 'Ir al Desafío' : 'Ver Clase'} 
-                 <ChevronRight className="h-4 w-4" />
-               </Link>
-            </Button>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

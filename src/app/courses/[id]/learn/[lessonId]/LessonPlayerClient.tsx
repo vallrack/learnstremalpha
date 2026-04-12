@@ -252,16 +252,28 @@ function LessonPlayerContent() {
   const isEnrolled = useMemo(() => {
     if (isUserLoading || !user || !profile) return false;
     if (profile.role === 'admin') return true;
-    return (courseId && profile.purchasedCourses?.includes(courseId)) || profile.isPremiumSubscriber;
-  }, [user, profile, courseId, isUserLoading]);
+    // También está matriculado si tiene el documento de progreso con status 'enrolled' (ej: importación Excel)
+    const isEnrolledInCollection = progress?.status === 'enrolled';
+    return (courseId && profile.purchasedCourses?.includes(courseId)) || profile.isPremiumSubscriber || isEnrolledInCollection;
+  }, [user, profile, courseId, isUserLoading, progress]);
+
+  const isPaidActivity = useMemo(() => {
+    return (isLessonPremium && (currentLesson?.price || 0) > 0) || (isModulePremium && (currentModule?.price || 0) > 0);
+  }, [isLessonPremium, currentLesson, isModulePremium, currentModule]);
 
   const hasValidAccess = useMemo(() => {
     // Si los datos base están cargando, consideramos que tiene acceso para evitar parpadeos de bloqueo
     if (isUserLoading || isCourseLoading) return true;
-    if (profile?.role === 'admin') return true;
+    if (profile?.role === 'admin' || isAuthor) return true;
     if (!course) return false;
+    
+    // Si es una actividad paga individualmente, requiere haber comprado (el curso, el módulo o la lección)
+    if (isPaidActivity) {
+      return hasPurchased || profile?.isPremiumSubscriber || profile?.role === 'admin';
+    }
+
     return isFreeCourse || isEnrolled || isPremium;
-  }, [course, isEnrolled, isPremium, profile, isUserLoading, isCourseLoading, isFreeCourse]);
+  }, [course, isEnrolled, isPremium, profile, isUserLoading, isCourseLoading, isFreeCourse, isAuthor, isPaidActivity, hasPurchased]);
 
   const finalizedAccess = useMemo(() => {
     if (isUserLoading || isCourseLoading) return true; // Mantener true durante carga
