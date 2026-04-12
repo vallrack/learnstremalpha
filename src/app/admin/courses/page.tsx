@@ -1,5 +1,6 @@
 'use client';
 
+// v1.1.2 - Sistema de Archivado y Pestañas
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
@@ -375,10 +376,14 @@ export default function AdminCoursesPage() {
             )}
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
-              if (!open) resetForm();
+              if (open && !editingCourseId && !baseCourseId) {
+                resetForm();
+              } else if (!open) {
+                resetForm();
+              }
             }}>
               <DialogTrigger asChild>
-                <Button onClick={() => resetForm()} className="gap-2 rounded-xl h-11 shadow-lg shadow-primary/10">
+                <Button className="gap-2 rounded-xl h-11 shadow-lg shadow-primary/10">
                   <Plus className="h-4 w-4" />
                   Crear Curso
                 </Button>
