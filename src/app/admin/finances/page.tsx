@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, DollarSign, WalletCards, Building2, Landmark, ShieldAlert, ArrowRightCircle, CheckCircle2, AlertCircle, Search, TrendingUp, CalendarRange, ChevronLeft, ChevronRight, Smartphone, CreditCard, BanknoteIcon, X, CheckCheck, ShieldCheck } from 'lucide-react';
+import { Loader2, DollarSign, WalletCards, Building2, Landmark, ShieldAlert, ArrowRightCircle, CheckCircle2, AlertCircle, Search, TrendingUp, CalendarRange, ChevronLeft, ChevronRight, Smartphone, CreditCard, BanknoteIcon, X, CheckCheck, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { WaitingHall } from '@/components/instructor/WaitingHall';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer } from 'recharts';
