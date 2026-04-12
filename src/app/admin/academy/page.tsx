@@ -317,13 +317,13 @@ export default function AcademySettings() {
                     className="rounded-2xl h-12 bg-slate-50 border-none shadow-none text-lg font-mono"
                     placeholder="Ej: 510XXX"
                   />
-                  <p className="text-[10px] text-slate-400 font-medium ml-1 uppercase tracking-wider">Lo encuentras en tu panel de ePayco en Configuración > Propiedades.</p>
+                  <p className="text-[10px] text-slate-400 font-medium ml-1 uppercase tracking-wider">Lo encuentras en tu panel de ePayco en Configuración &gt; Propiedades.</p>
                 </div>
 
                 <div className="flex items-center justify-between p-6 bg-slate-900 rounded-[2rem] text-white">
                    <div className="space-y-1">
                       <p className="font-bold text-lg flex items-center gap-2">
-                        < Zap className={`h-5 w-5 ${formData.isEpaycoTestMode ? 'text-amber-400 animate-pulse' : 'text-slate-500'}`} />
+                        <Zap className={`h-5 w-5 ${formData.isEpaycoTestMode ? 'text-amber-400 animate-pulse' : 'text-slate-500'}`} />
                         Modo de Pruebas de Pasarela
                       </p>
                       <p className="text-xs text-slate-400">Actívalo para realizar compras ficticias con tarjetas de prueba ePayco.</p>
