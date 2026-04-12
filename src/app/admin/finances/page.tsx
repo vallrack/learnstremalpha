@@ -240,11 +240,46 @@ export default function FinancesPage() {
 
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12 space-y-8">
 
-        {/* Header */}
+        {/* Global Finance Header */}
         <div>
           <h1 className="text-3xl font-headline font-bold text-slate-900">{isAdmin ? 'Dashboard Financiero Global' : 'Mis Ingresos'}</h1>
           <p className="text-muted-foreground mt-1">{isAdmin ? 'Monitorea el rendimiento de la plataforma y comisiones de instructores.' : 'Gestiona tus ganancias y método de retiro.'}</p>
         </div>
+
+        {/* ePayco Validation Banner (Admin only) */}
+        {isAdmin && (!profile?.epaycoMerchantId || Object.values(profile?.epaycoDocsStatus || {}).some(v => !v)) && (
+          <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-200 animate-in fade-in slide-in-from-top-4 duration-700 overflow-hidden relative group">
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+              <ShieldCheck className="w-32 h-32" />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+              <div className="bg-white/20 p-4 rounded-3xl backdrop-blur-md">
+                <AlertTriangle className="w-8 h-8 text-amber-300" />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h2 className="text-xl font-bold">Validación de Cuenta ePayco</h2>
+                <p className="text-indigo-100 text-sm mt-1">Recuerda completar la validación documental al 100% para poder retirar tus fondos.</p>
+                <div className="flex flex-wrap gap-2 mt-4 justify-center md:justify-start">
+                  {!profile?.epaycoMerchantId && <Badge className="bg-rose-500 text-white border-none">Falta Merchant ID</Badge>}
+                  {['rut', 'bank', 'id', 'camara'].map(docId => (
+                    !profile?.epaycoDocsStatus?.[docId] && (
+                      <Badge key={docId} variant="outline" className="border-indigo-400 text-indigo-100 uppercase text-[10px]">
+                        Pediente: {docId === 'bank' ? 'Banco' : docId === 'camara' ? 'Cámara' : docId}
+                      </Badge>
+                    )
+                  ))}
+                </div>
+              </div>
+              <Button 
+                variant="secondary" 
+                className="rounded-xl font-bold px-8 h-12 shadow-lg hover:shadow-indigo-500/50"
+                onClick={() => window.location.href = '/admin/academy'}
+              >
+                Configurar Pasarela
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Metric Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -374,6 +409,7 @@ export default function FinancesPage() {
                           <TableHead className="text-right">Bruto</TableHead>
                           <TableHead className="text-right">Plataforma</TableHead>
                           <TableHead className="text-right">Instructor</TableHead>
+                          <TableHead>IDs Comercio</TableHead>
                           <TableHead>Estado</TableHead>
                           {isAdmin && <TableHead></TableHead>}
                         </TableRow>
@@ -412,6 +448,18 @@ export default function FinancesPage() {
                               <TableCell className="text-right font-mono text-sm font-medium">${t.amount?.toLocaleString()}</TableCell>
                               <TableCell className="text-right font-mono text-xs text-rose-600">-${t.adminShare?.toLocaleString()}</TableCell>
                               <TableCell className="text-right font-mono text-sm text-emerald-600 font-bold">${t.instructorShare?.toLocaleString()}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-col gap-0.5">
+                                  <div className="flex items-center gap-1">
+                                    <Badge variant="outline" className="text-[8px] h-3 px-1 border-slate-200 text-slate-400">Plat: {t.academyMerchantId || 'Default'}</Badge>
+                                  </div>
+                                  {t.instructorMerchantId && (
+                                    <div className="flex items-center gap-1">
+                                      <Badge variant="outline" className="text-[8px] h-3 px-1 border-indigo-200 text-indigo-500">Inst: {t.instructorMerchantId}</Badge>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
                               <TableCell>
                                 {t.paidOut
                                   ? <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 border text-[10px] rounded-lg gap-1"><CheckCheck className="h-3 w-3" />Transferido</Badge>

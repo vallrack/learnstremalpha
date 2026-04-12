@@ -110,6 +110,8 @@ function CheckoutContent() {
     courseId && course ? (course.currency || 'COP') : 
     (academyCurrency || 'COP');
 
+  const academyMerchantId = brand.epaycoMerchantId || process.env.NEXT_PUBLIC_EPAYCO_MERCHANT_ID;
+
   const BASE_PRICE = 
     virtualClassId && virtualClassData ? (virtualClassData.price || 0) :
     podcastId && podcastData ? (podcastData.price || 0) :
@@ -235,7 +237,7 @@ function CheckoutContent() {
     try {
       const handler = (window as any).ePayco.checkout.configure({
         key: publicKey,
-        test: false // MODO PRODUCCIÓN ACTIVADO
+        test: !!brand.isEpaycoTestMode
       });
 
       const purchaseName = virtualClassId && virtualClassData ? `Clase en Vivo: ${virtualClassData.title}` :
@@ -272,15 +274,17 @@ function CheckoutContent() {
       };
 
       // CONFIGURACIÓN DE PAGO DIVIDIDO (70/30) SI HAY INSTRUCTOR CON ID CONFIGURADO
-      const appMerchantId = process.env.NEXT_PUBLIC_EPAYCO_MERCHANT_ID;
-      if (appMerchantId && instructorProfile?.epaycoMerchantId) {
+      // NO se hace split si el instructor es el administrador o si es el dueño de la academia
+      const isInstructorAdmin = instructorProfile?.role === 'admin' || instructorProfile?.email === 'varrack67@gmail.com' || instructorProfile?.email === 'vallrack67@gmail.com';
+      
+      if (academyMerchantId && instructorProfile?.epaycoMerchantId && !isInstructorAdmin) {
         const sharePercentage = instructorProfile.revenueSharePercentage || 70;
         const instructorAmount = Math.floor(finalPrice * (sharePercentage / 100));
         
         (data as any).splitpayment = "true";
-        (data as any).split_app_id = appMerchantId;
-        (data as any).split_merchant_id = appMerchantId;
-        (data as any).split_type = "01"; // Valor fijo para mayor precisión
+        (data as any).split_app_id = academyMerchantId;
+        (data as any).split_merchant_id = academyMerchantId;
+        (data as any).split_type = "01"; 
         (data as any).split_receivers = JSON.stringify([
           {
             id: instructorProfile.epaycoMerchantId,

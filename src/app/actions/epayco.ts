@@ -15,6 +15,10 @@ export async function verifyEpaycoTransaction(
   const isGuest = userId.startsWith('guest:');
   const guestEmail = isGuest ? userId.split(':')[1] : null;
   const actualUserId = isGuest ? null : userId;
+  const academyDoc = await adminDb.collection('settings').doc('branding').get();
+  const academyMerchantId = academyDoc.data()?.epaycoMerchantId || 'env_default';
+  let instructorMerchantId: string | undefined = undefined;
+  let instructorMerchantId: string | undefined = undefined;
 
   try {
     const response = await fetch(`https://secure.epayco.co/validation/v1/reference/${ref_payco}`);
@@ -77,6 +81,8 @@ export async function verifyEpaycoTransaction(
                 instructorShare: instructorCut,
                 adminShare: adminCut,
                 ref_payco,
+                academyMerchantId,
+                instructorMerchantId: instructorMerchantId || null,
                 createdAt: new Date(),
                 status: 'completed'
               });
@@ -215,9 +221,11 @@ export async function verifyEpaycoTransaction(
               if (instructorId) {
                 const instructorDoc = await adminDb.collection('users').doc(instructorId).get();
                 if (instructorDoc.exists) {
-                  revenueShare = instructorDoc.data()?.revenueSharePercentage ?? 
+                  const instData = instructorDoc.data();
+                  revenueShare = instData?.revenueSharePercentage ?? 
                                  courseData?.instructorRevenueShare ?? 
                                  70;
+                  instructorMerchantId = instData?.epaycoMerchantId;
                 } else {
                   revenueShare = courseData?.instructorRevenueShare ?? 70;
                 }
@@ -244,6 +252,8 @@ export async function verifyEpaycoTransaction(
                 instructorShare: instructorCut,
                 adminShare: adminCut,
                 ref_payco,
+                academyMerchantId,
+                instructorMerchantId: instructorMerchantId || null,
                 createdAt: new Date(),
                 status: 'completed'
               });

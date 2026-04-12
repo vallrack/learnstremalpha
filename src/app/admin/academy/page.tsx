@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useFirestore } from '@/firebase';
 import { useBrand } from '@/lib/branding/BrandingProvider';
 import { doc, setDoc } from 'firebase/firestore';
-import { Save, Globe, Palette, Mail, MessageCircle, Link, Loader2, PlayCircle, CreditCard, Calendar } from 'lucide-react';
+import { Save, Globe, Palette, Mail, MessageCircle, Link, Loader2, PlayCircle, CreditCard, Calendar, ShieldCheck, AlertTriangle, Zap, CheckCheck } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { SUPPORTED_CURRENCIES } from '@/lib/currency';
@@ -48,6 +48,9 @@ export default function AcademySettings() {
         isDemoEnabled: formData.isDemoEnabled,
         demoExpiration: formData.demoExpiration,
         academyCurrency: formData.academyCurrency,
+        epaycoMerchantId: formData.epaycoMerchantId,
+        isEpaycoTestMode: formData.isEpaycoTestMode,
+        epaycoDocsStatus: formData.epaycoDocsStatus,
       };
 
       if (formData.academyMonthlyPrice !== undefined) dataToSave.academyMonthlyPrice = Number(formData.academyMonthlyPrice);
@@ -284,6 +287,88 @@ export default function AcademySettings() {
                        placeholder="Ej: 2490000"
                      />
                    </div>
+                </div>
+             </CardContent>
+           </Card>
+
+           {/* Gateway Section */}
+           <Card className="rounded-[2.5rem] border-none shadow-sm overflow-hidden bg-white mt-8 border-2 border-indigo-100">
+             <CardHeader className="bg-indigo-50/30 border-b p-8">
+               <CardTitle className="flex items-center gap-2 text-xl text-indigo-900">
+                 <ShieldCheck className="h-6 w-6 text-indigo-500" />
+                 Pasarela de Pagos (ePayco)
+               </CardTitle>
+               <CardDescription>Configura los identificadores de tu cuenta para recibir el dinero de la plataforma.</CardDescription>
+             </CardHeader>
+             <CardContent className="p-8 space-y-6">
+                <div className="bg-amber-50 p-6 rounded-[1.5rem] border border-amber-200 flex gap-4 items-start">
+                  <div className="bg-amber-100 p-2 rounded-xl h-fit"><AlertTriangle className="h-5 w-5 text-amber-700" /></div>
+                  <div className="text-sm text-amber-900 space-y-1">
+                    <p className="font-bold">Nota sobre el destino de los fondos</p>
+                    <p>Si un curso o actividad es administrativa (no pertenece a un instructor externo), el 100% de la venta se enviará al ID de comercio que configures debajo.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="font-bold text-slate-700 ml-1">ID de Comercio (Merchant ID) de la Academia</Label>
+                  <Input 
+                    value={formData.epaycoMerchantId || ''} 
+                    onChange={e => setFormData({...formData, epaycoMerchantId: e.target.value})}
+                    className="rounded-2xl h-12 bg-slate-50 border-none shadow-none text-lg font-mono"
+                    placeholder="Ej: 510XXX"
+                  />
+                  <p className="text-[10px] text-slate-400 font-medium ml-1 uppercase tracking-wider">Lo encuentras en tu panel de ePayco en Configuración > Propiedades.</p>
+                </div>
+
+                <div className="flex items-center justify-between p-6 bg-slate-900 rounded-[2rem] text-white">
+                   <div className="space-y-1">
+                      <p className="font-bold text-lg flex items-center gap-2">
+                        < Zap className={`h-5 w-5 ${formData.isEpaycoTestMode ? 'text-amber-400 animate-pulse' : 'text-slate-500'}`} />
+                        Modo de Pruebas de Pasarela
+                      </p>
+                      <p className="text-xs text-slate-400">Actívalo para realizar compras ficticias con tarjetas de prueba ePayco.</p>
+                   </div>
+                   <Switch 
+                     checked={!!formData.isEpaycoTestMode} 
+                     onCheckedChange={checked => setFormData({...formData, isEpaycoTestMode: checked})}
+                     className="data-[state=checked]:bg-amber-500"
+                   />
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-indigo-50">
+                   <Label className="font-bold text-slate-700 ml-1 flex items-center gap-2">
+                      Estado de Validación en ePayco <span className="text-[10px] text-slate-400 font-normal">(Recordatorio Interno)</span>
+                   </Label>
+                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { id: 'rut', label: 'RUT' },
+                        { id: 'bank', label: 'Cert. Bancario' },
+                        { id: 'id', label: 'Cédula/ID' },
+                        { id: 'camara', label: 'Cámara Com.' }
+                      ].map(doc => (
+                        <Button 
+                          key={doc.id}
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const current = formData.epaycoDocsStatus || {};
+                            setFormData({
+                              ...formData, 
+                              epaycoDocsStatus: { ...current, [doc.id]: !current[doc.id] }
+                            });
+                          }}
+                          className={`rounded-xl h-12 text-xs font-bold transition-all ${
+                            formData.epaycoDocsStatus?.[doc.id] 
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-inner' 
+                              : 'bg-slate-50 border-slate-100 text-slate-400 opacity-60'
+                          }`}
+                        >
+                          {formData.epaycoDocsStatus?.[doc.id] ? <CheckCheck className="h-4 w-4 mr-2" /> : null}
+                          {doc.label}
+                        </Button>
+                      ))}
+                   </div>
+                   <p className="text-[10px] text-slate-400 text-center font-medium uppercase tracking-widest">Marca los documentos que ePayco ya te aprobó al 100%.</p>
                 </div>
              </CardContent>
            </Card>
