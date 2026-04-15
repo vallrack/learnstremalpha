@@ -95,7 +95,8 @@ export default function DashboardPage() {
     if (!userProgress || !allCourses) return [];
     return userProgress.map(progress => {
       const courseDetails = allCourses.find(c => c.id === progress.courseId);
-      return { ...progress, courseDetails };
+      const calculatedPercentage = progress.progressPercentage ?? (courseDetails?.totalLessons ? Math.round(((progress.completedLessons?.length || 0) / courseDetails.totalLessons) * 100) : 0);
+      return { ...progress, courseDetails, progressPercentage: calculatedPercentage };
     }).filter(item => item.courseDetails);
   }, [userProgress, allCourses]);
 

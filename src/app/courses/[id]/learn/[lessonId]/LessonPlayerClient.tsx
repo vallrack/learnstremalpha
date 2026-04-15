@@ -161,15 +161,20 @@ function LessonPlayerContent() {
     const isAlreadyCompleted = currentCompleted.includes(lessonId);
 
     if (!isAlreadyCompleted) {
+      const total = course?.totalLessons || totalLessons;
+      const newCount = currentCompleted.length + 1;
+      const percentage = total > 0 ? Math.min(100, Math.round((newCount / total) * 100)) : 0;
+
       await setDoc(progressRef!, {
         courseId,
         completedLessons: arrayUnion(lessonId),
         lastLessonId: lessonId,
+        progressPercentage: percentage,
         updatedAt: serverTimestamp(),
         status: 'in-progress'
       }, { merge: true });
       
-      toast({ title: "¡Lección completada!", description: "Tu progreso se ha guardado." });
+      toast({ title: "¡Lección completada!", description: `Progreso: ${percentage}%` });
       router.refresh();
     }
   };
@@ -409,17 +414,17 @@ function LessonPlayerContent() {
             <div className="flex items-center justify-between mb-1">
                 <h3 className="font-headline font-bold text-slate-800 text-sm italic">Tu progreso</h3>
                 <span className="text-primary font-black text-xs bg-primary/10 px-2 py-1 rounded-lg">
-                    {totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%
+                    {course?.totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / course.totalLessons) * 100) : totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%
                 </span>
             </div>
             <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden shadow-inner">
                 <div 
                     className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]" 
-                    style={{ width: `${totalLessons > 0 ? Math.min(100, Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100)) : 0}%` }}
+                    style={{ width: `${course?.totalLessons > 0 ? Math.min(100, Math.round(((progress?.completedLessons?.length || 0) / course.totalLessons) * 100)) : totalLessons > 0 ? Math.min(100, Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100)) : 0}%` }}
                 />
             </div>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
-                {progress?.completedLessons?.length || 0} de {totalLessons} lecciones completadas
+                {progress?.completedLessons?.length || 0} de {course.totalLessons || totalLessons} lecciones completadas
             </p>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -445,17 +450,17 @@ function LessonPlayerContent() {
                             <div className="flex items-center justify-between mb-4">
                                 <SheetTitle className="font-headline font-bold text-slate-800 text-lg">Progreso del Curso</SheetTitle>
                                 <span className="text-primary font-black text-xs bg-primary/10 px-2 py-1 rounded-lg">
-                                    {totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%
+                                    {course?.totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / course.totalLessons) * 100) : totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%
                                 </span>
                             </div>
                             <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden shadow-inner mb-2">
                                 <div 
                                     className="h-full bg-primary transition-all duration-700" 
-                                    style={{ width: `${totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%` }}
+                                    style={{ width: `${course?.totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / course.totalLessons) * 100) : totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%` }}
                                 />
                             </div>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                {progress?.completedLessons?.length || 0} de {totalLessons} lecciones completadas
+                                {progress?.completedLessons?.length || 0} de {course.totalLessons || totalLessons} lecciones completadas
                             </p>
                         </SheetHeader>
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -565,7 +570,7 @@ function LessonPlayerContent() {
                   </div>
                   {!isGuest && (
                     <>
-                      {totalLessons > 0 && (progress?.completedLessons?.length || 0) >= totalLessons ? (
+                      {(course?.totalLessons || totalLessons) > 0 && (progress?.completedLessons?.length || 0) >= (course?.totalLessons || totalLessons) ? (
                         <Button 
                           onClick={handleFinalizeCourse}
                           disabled={progress?.status === 'completed'}

@@ -23,8 +23,10 @@ import {
   HelpCircle,
   CheckCircle2,
   Mic2,
-  Copy
+  Copy,
+  RefreshCw
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { cloneCourseContent } from '@/lib/course-duplication';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
@@ -70,6 +72,38 @@ export default function CourseContentAdminPage() {
   const courseId = params.id as string;
   const db = useFirestore();
   const { user } = useUser();
+  const { toast } = useToast();
+
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  const recalculateCourseStats = async () => {
+    if (!db || !courseId) return;
+    setIsRecalculating(true);
+    try {
+      const { getDocs, collection } = await import('firebase/firestore');
+      const modsSnap = await getDocs(collection(db, 'courses', courseId, 'modules'));
+      const totalModules = modsSnap.size;
+      
+      let totalLessons = 0;
+      for (const mod of modsSnap.docs) {
+        const lessonsSnap = await getDocs(collection(db, 'courses', courseId, 'modules', mod.id, 'lessons'));
+        totalLessons += lessonsSnap.size;
+      }
+      
+      await updateDocumentNonBlocking(doc(db, 'courses', courseId), {
+        totalModules,
+        totalLessons,
+        updatedAt: serverTimestamp()
+      });
+      
+      toast({ title: "Estadísticas actualizadas", description: `Módulos: ${totalModules}, Lecciones: ${totalLessons}` });
+    } catch (err) {
+      console.error("Error recalculating stats:", err);
+      toast({ variant: "destructive", title: "Error", description: "No se pudieron actualizar las estadísticas." });
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
 
   const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<any>(null);
@@ -166,6 +200,7 @@ export default function CourseContentAdminPage() {
     }
     setIsModuleDialogOpen(false);
     resetModuleForm();
+    setTimeout(recalculateCourseStats, 1000); // Dar tiempo a que Firestore se actualice
     router.refresh();
   };
 
@@ -182,6 +217,7 @@ export default function CourseContentAdminPage() {
     if (!db || !isAuthorized) return;
     if (confirm('¿Estás seguro de eliminar este módulo y todo su contenido?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', courseId, 'modules', moduleId));
+      setTimeout(recalculateCourseStats, 1000);
       router.refresh();
     }
   };
@@ -215,6 +251,16 @@ export default function CourseContentAdminPage() {
             </div>
             
             <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="rounded-xl h-11 w-11 text-muted-foreground hover:text-primary transition-all"
+                onClick={recalculateCourseStats}
+                disabled={isRecalculating}
+              >
+                <RefreshCw className={`h-4 w-4 ${isRecalculating ? 'animate-spin' : ''}`} />
+              </Button>
+
               {isAuthorized && course && <BulkEnrollmentModal courseId={courseId} courseTitle={course.title} />}
               
               <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
@@ -406,7 +452,7 @@ export default function CourseContentAdminPage() {
                         </div>
                       </div>
                       <AccordionContent className="pb-6 border-t pt-4">
-                        <LessonManager course={course} moduleId={module.id} isAuthorized={isAuthorized} />
+                        <LessonManager course={course} moduleId={module.id} isAuthorized={isAuthorized} onContentChange={recalculateCourseStats} />
                       </AccordionContent>
                     </AccordionItem>
                   ))}
@@ -428,7 +474,7 @@ export default function CourseContentAdminPage() {
   );
 }
 
-function LessonManager({ course, moduleId, isAuthorized }: { course: any, moduleId: string, isAuthorized: boolean }) {
+function LessonManager({ course, moduleId, isAuthorized, onContentChange }: { course: any, moduleId: string, isAuthorized: boolean, onContentChange?: () => void }) {
   const router = useRouter();
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -563,6 +609,7 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
 
       setIsDialogOpen(false);
       resetForm();
+      if (onContentChange) setTimeout(onContentChange, 1000);
       router.refresh();
     } catch (err: any) {
       console.error("Error saving lesson:", err);
@@ -611,6 +658,7 @@ function LessonManager({ course, moduleId, isAuthorized }: { course: any, module
     if (!db || !isAuthorized) return;
     if (confirm('¿Eliminar lección?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lessonId));
+      if (onContentChange) setTimeout(onContentChange, 1000);
       router.refresh();
     }
   };
