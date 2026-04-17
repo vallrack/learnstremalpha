@@ -50,20 +50,29 @@ export async function POST(req: NextRequest) {
         adminDb.collectionGroup('courseProgress').get()
     ]);
 
-    // Mapear conteos por Usuario
-    const userChallengesCount: Record<string, number> = {};
+    // Mapear conteos por Usuario (Deduplicando por ID de reto para evitar farmeo)
+    const userChallengesIds: Record<string, Set<string>> = {};
     challengesSnap.docs.forEach(doc => {
         const data = doc.data();
-        if (data.passed === true) { // Filtrar en memoria para evitar error de índice
+        if (data.passed === true && data.challengeId) { 
             const uid = doc.ref.parent.parent?.id;
-            if (uid) userChallengesCount[uid] = (userChallengesCount[uid] || 0) + 1;
+            if (uid) {
+                if (!userChallengesIds[uid]) userChallengesIds[uid] = new Set();
+                userChallengesIds[uid].add(data.challengeId);
+            }
         }
     });
 
-    const userAchievementsCount: Record<string, number> = {};
+    const userAchievementsIds: Record<string, Set<string>> = {};
     achievementsSnap.docs.forEach(doc => {
+        const data = doc.data();
+        const challengeId = data.challengeId;
         const uid = doc.ref.parent.parent?.id;
-        if (uid) userAchievementsCount[uid] = (userAchievementsCount[uid] || 0) + 1;
+        
+        if (uid && challengeId) {
+            if (!userAchievementsIds[uid]) userAchievementsIds[uid] = new Set();
+            userAchievementsIds[uid].add(challengeId);
+        }
     });
 
     const userProgressList: Record<string, any[]> = {};
@@ -109,10 +118,10 @@ export async function POST(req: NextRequest) {
           }
       }
 
-      // B. Recalcular XP Total (Fórmula Dashboard)
-      // XP = (Cursos Completados * 500) + (Retos Pasados * 100) + (Insignias * 250)
-      const passedChallenges = userChallengesCount[uid] || 0;
-      const totalAchievements = userAchievementsCount[uid] || 0;
+      // B. Recalcular XP Total (Fórmula Dashboard - Con Deduplicación)
+      // XP = (Cursos Completados * 500) + (Retos Pasados Únicos * 100) + (Insignias Únicas * 250)
+      const passedChallenges = userChallengesIds[uid]?.size || 0;
+      const totalAchievements = userAchievementsIds[uid]?.size || 0;
       
       const calculatedXp = (completedCoursesCount * 500) + (passedChallenges * 100) + (totalAchievements * 250);
       
