@@ -167,6 +167,21 @@ function ChallengeContent() {
 
   const h5pTypes = ['quiz', 'dragdrop', 'sortable', 'flashcard', 'swipe', 'wordsearch', 'interactive-video'];
   
+  const courseId = searchParams.get('courseId');
+  const lessonId = searchParams.get('lessonId');
+
+  const courseRef = useMemoFirebase(() => {
+    if (!db || !courseId) return null;
+    return doc(db, 'courses', courseId);
+  }, [db, courseId]);
+  const { data: course } = useDoc(courseRef);
+
+  const progressSnapRef = useMemoFirebase(() => {
+    if (!db || !user?.uid || !courseId) return null;
+    return doc(db, 'users', user.uid, 'courseProgress', courseId);
+  }, [db, user?.uid, courseId]);
+  const { data: currentProgress } = useDoc(progressSnapRef);
+
   const sandpackTemplate = challenge ? getSandpackTemplate(challenge.technology) : null;
 
   useEffect(() => {
@@ -440,20 +455,25 @@ function ChallengeContent() {
         toast({ title: "¡Insignia Desbloqueada!", description: evaluation.awardedBadge.title });
       }
 
-      // --- LOGICA DE CURSO: Marcar lecciÃ³n completada ---
-      const courseId = searchParams.get('courseId');
-      const lessonId = searchParams.get('lessonId');
-      
+      // --- LOGICA DE CURSO: Marcar lección completada ---
       if (courseId && lessonId && evaluation.passed) {
+        const currentCompleted = currentProgress?.completedLessons || [];
+        const isAlreadyCompleted = currentCompleted.includes(lessonId);
+        
+        const total = course?.totalLessons || 0;
+        const newCount = isAlreadyCompleted ? currentCompleted.length : currentCompleted.length + 1;
+        const percentage = total > 0 ? Math.min(100, Math.round((newCount / total) * 100)) : 0;
+
         const progressRef = doc(db, 'users', user.uid, 'courseProgress', courseId);
         setDoc(progressRef, {
           courseId,
           completedLessons: arrayUnion(lessonId),
           lastLessonId: lessonId,
+          progressPercentage: percentage,
           updatedAt: serverTimestamp(),
           status: 'in-progress'
         }, { merge: true }).then(() => {
-          toast({ title: "¡Lección completada!", description: "Tu progreso en el curso se ha guardado." });
+          toast({ title: "¡Lección completada!", description: `Progreso: ${percentage}%` });
         }).catch(err => console.error("Error saving course progress from challenge:", err));
       }
     }

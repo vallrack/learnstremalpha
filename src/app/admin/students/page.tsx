@@ -59,6 +59,8 @@ export default function AdminStudentsPage() {
   const [filterCourseId, setFilterCourseId] = useState<string>('all');
   const [enrolledUserIds, setEnrolledUserIds] = useState<string[] | null>(null);
   const [isLoadingFilter, setIsLoadingFilter] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { user: currentUser } = useUser();
 
   const usersQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -103,6 +105,38 @@ export default function AdminStudentsPage() {
     fetchEnrolled();
   }, [db, filterCourseId, toast]);
 
+  const handleSyncAllProgress = async () => {
+    if (!currentUser || isSyncing) return;
+    
+    setIsSyncing(true);
+    try {
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/recalculate-all-progress', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error('Error al sincronizar indicadores');
+
+      const data = await res.json();
+      toast({
+        title: "Sincronización Completada",
+        description: `Se actualizaron ${data.results.updated} registros de progreso correctamente.`
+      });
+      router.refresh();
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Fallo de Sincronización",
+        description: err.message
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Filtramos para mostrar usuarios registrados y NO administradores (para evitar auto-modificación accidental)
   const filteredStudents = students?.filter(s => {
     const hasEmail = !!s.email;
@@ -139,6 +173,15 @@ export default function AdminStudentsPage() {
               </div>
               
               <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                <Button 
+                  onClick={handleSyncAllProgress} 
+                  disabled={isSyncing}
+                  variant="outline" 
+                  className="rounded-xl h-11 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 gap-2 whitespace-nowrap"
+                >
+                  {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
+                  {isSyncing ? 'Sincronizando...' : 'Recalcular Progresos'}
+                </Button>
                 <div className="w-full sm:w-64">
                   <Select value={filterCourseId} onValueChange={setFilterCourseId}>
                     <SelectTrigger className="rounded-xl h-11 border-slate-200">
