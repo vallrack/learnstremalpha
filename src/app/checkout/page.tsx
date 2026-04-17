@@ -134,15 +134,27 @@ function CheckoutContent() {
 
 
   useEffect(() => {
-    // Solo redirigir si NO es un podcast y no hay usuario
-    if (!isUserLoading && !user && !podcastId && !virtualClassId) {
-      router.push('/login');
+    // Si los datos base están cargando, esperamos
+    if (isUserLoading || isCourseLoading) return;
+
+    // Si no hay usuario conectado, verificamos si permitimos la compra como invitado
+    if (!user) {
+      // Se permite invitado para: Podcasts, Clases Virtuales, o Módulos/Lecciones Premium en un curso marcado como GRATIS
+      const isFreeCourseWithPaidContent = course?.isFree && (moduleId || lessonId);
+      const isGuestAllowed = !!podcastId || !!virtualClassId || !!isFreeCourseWithPaidContent;
+
+      if (!isGuestAllowed) {
+        console.log("Checkout: Redirecting to login because guest is not allowed for this content type.");
+        router.push('/login');
+        return;
+      }
     }
+
     // Si ya es premium, redirigir al dashboard (a menos que compre un curso/podcast/clase específico)
     if (!courseId && !podcastId && !challengeId && !virtualClassId && profile?.isPremiumSubscriber) {
       router.push('/dashboard');
     }
-  }, [user, isUserLoading, router, profile, courseId, podcastId, challengeId, virtualClassId]);
+  }, [user, isUserLoading, isCourseLoading, course, router, profile, courseId, moduleId, lessonId, podcastId, challengeId, virtualClassId]);
 
   // Safety check to avoid ePayco script stuck loading
   useEffect(() => {

@@ -271,6 +271,7 @@ function CourseDetailContent() {
                     hasFullAccess={hasFullAccess} 
                     hasValidAccess={hasValidAccess} 
                     isFreeCourse={isFreeCourse} 
+                    purchasedModules={profile?.purchasedModules || []}
                   />
                 </section>
                 
@@ -370,7 +371,7 @@ function CourseDetailContent() {
   );
 }
 
-function CourseCurriculum({ courseId, hasFullAccess, hasValidAccess, isFreeCourse }: { courseId: string, hasFullAccess: boolean, hasValidAccess: boolean, isFreeCourse: boolean }) {
+function CourseCurriculum({ courseId, hasFullAccess, hasValidAccess, isFreeCourse, purchasedModules }: { courseId: string, hasFullAccess: boolean, hasValidAccess: boolean, isFreeCourse: boolean, purchasedModules: string[] }) {
   const db = useFirestore();
   const modulesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -384,26 +385,50 @@ function CourseCurriculum({ courseId, hasFullAccess, hasValidAccess, isFreeCours
   return (
     <div id="curriculum">
       <Accordion type="single" collapsible className="w-full space-y-4">
-        {modules?.map((module, index) => (
+        {modules?.map((module, index) => {
+          const hasModuleAccess = hasFullAccess || purchasedModules.includes(module.id);
+          return (
           <AccordionItem key={module.id} value={module.id} className="bg-white border rounded-2xl overflow-hidden px-4 shadow-sm">
-            <AccordionTrigger className="hover:no-underline py-6">
-              <div className="flex flex-col items-start text-left gap-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {index + 1}</span>
-                  {module.isPremium ? (
-                    <Badge variant="outline" className="text-[10px] h-4 py-0 bg-amber-50 text-amber-600 border-amber-200">Premium</Badge>
-                  ) : isFreeCourse ? (
-                    <Badge variant="outline" className="text-[10px] h-4 py-0 bg-emerald-50 text-emerald-600 border-emerald-200">Acceso Libre</Badge>
-                  ) : null}
+            <AccordionTrigger className="hover:no-underline py-6 focus-visible:ring-0 focus-visible:ring-offset-0 outline-none border-none group">
+              <div className="flex items-center justify-between w-full pr-4">
+                <div className="flex flex-col items-start text-left gap-1">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {index + 1}</span>
+                    {module.isPremium ? (
+                      <Badge variant="outline" className={`text-[10px] h-5 py-0 border-amber-200 gap-1.5 px-2 ${hasModuleAccess ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                        {hasModuleAccess ? <CheckCircle2 className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
+                        {hasModuleAccess ? 'Desbloqueado' : 'Premium'}
+                      </Badge>
+                    ) : isFreeCourse ? (
+                      <Badge variant="outline" className="text-[10px] h-5 py-0 bg-emerald-50 text-emerald-600 border-emerald-200">Acceso Libre</Badge>
+                    ) : null}
+                  </div>
+                  <span className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">{module.title}</span>
                 </div>
-                <span className="text-lg font-bold text-foreground">{module.title}</span>
+
+                {module.isPremium && !hasModuleAccess && (
+                  <Link 
+                    href={`/checkout?courseId=${courseId}&moduleId=${module.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="hidden md:block"
+                  >
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="rounded-xl h-9 gap-2 text-amber-600 bg-amber-50 hover:bg-amber-100 border-amber-200 border font-bold animate-in fade-in"
+                    >
+                      <Zap className="h-3.5 w-3.5" />
+                      Desbloquear
+                    </Button>
+                  </Link>
+                )}
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-6">
               <ModuleLessons 
                 courseId={courseId} 
                 moduleId={module.id} 
-                hasFullAccess={hasFullAccess}
+                hasFullAccess={hasModuleAccess}
                 hasValidAccess={hasValidAccess} 
                 isFreeCourse={isFreeCourse} 
                 moduleIsPremium={!!module.isPremium} 
@@ -430,10 +455,11 @@ function ModuleLessons({ courseId, moduleId, hasFullAccess, hasValidAccess, isFr
   return (
     <div className="space-y-2">
       {lessons?.map((lesson) => {
-        // Una actividad es "Paga" si es Premium y tiene precio
-        const isPaidActivity = (lesson.isPremium && (lesson.price || 0) > 0) || (moduleIsPremium && (lesson.price || 0) > 0);
+        // Una actividad es "Paga" si es Premium (ya sea la lección o el módulo completo)
+        const isPaidActivity = !!lesson.isPremium || !!moduleIsPremium;
         
-        // Acceso si: Tienes acceso completo (compra/admin) O si es contenido estándar y estás matriculado/es gratis
+        // Acceso si: Tienes acceso completo (Admin/Autor/Compra del curso) 
+        // O si NO es una actividad paga y tienes acceso válido (matriculado) o es curso gratis
         const canAccess = hasFullAccess || (!isPaidActivity && (hasValidAccess || isFreeCourse));
 
         return (
