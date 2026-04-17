@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     let updatedUsersCount = 0;
     let totalProcessed = 0;
 
-    const batch = adminDb.batch();
+    let batch = adminDb.batch();
     let batchSize = 0;
 
     for (const userDoc of usersSnap.docs) {
@@ -124,8 +124,8 @@ export async function POST(req: NextRequest) {
       // Commit periódico para evitar el límite de 500 de Firestore
       if (batchSize >= 450) {
           await batch.commit();
-          // Reiniciar batch (no se puede reutilizar)
-          // Nota: El modelo de batch de admin requiere crear uno nuevo
+          batch = adminDb.batch();
+          batchSize = 0;
       }
     }
 
