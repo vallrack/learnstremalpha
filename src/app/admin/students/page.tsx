@@ -341,10 +341,29 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
     }
   };
 
-  const enrichedEnrollments = enrollments?.map(enr => {
-    const course = allCourses.find(c => c.id === enr.courseId);
-    return { ...enr, course };
-  }).filter(e => e.course) || [];
+  const enrichedEnrollments = useMemo(() => {
+    if (!enrollments || !allCourses) return [];
+    
+    // 1. Mapear con datos del curso
+    const enriched = enrollments.map(enr => {
+      const course = allCourses.find(c => c.id === enr.courseId);
+      return { ...enr, course };
+    }).filter(e => e.course);
+
+    // 2. Deduplicar por courseId para evitar fallos visuales de registros dobles
+    const uniqueByCourse: Record<string, any> = {};
+    enriched.forEach(enr => {
+      const courseId = enr.courseId;
+      const existing = uniqueByCourse[courseId];
+      
+      // Priorizar el registro que tenga mayor progreso si hay duplicados
+      if (!existing || (enr.progressPercentage || 0) > (existing.progressPercentage || 0)) {
+        uniqueByCourse[courseId] = enr;
+      }
+    });
+
+    return Object.values(uniqueByCourse);
+  }, [enrollments, allCourses]);
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
