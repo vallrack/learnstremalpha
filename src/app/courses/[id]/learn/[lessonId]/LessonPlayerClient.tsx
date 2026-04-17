@@ -189,6 +189,11 @@ function LessonPlayerContent() {
         progressPercentage: 100
       });
 
+      // Bono automático para el Ranking (500 XP por graduación)
+      updateDocumentNonBlocking(doc(db, 'users', user.uid), {
+        xp: increment(500)
+      });
+
       // Crear Certificado Verificable Oficial
       const certRef = doc(db, 'certificates', `${user.uid}_${courseId}`);
       await setDoc(certRef, {

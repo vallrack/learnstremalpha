@@ -441,18 +441,23 @@ function ChallengeContent() {
         submittedAt: serverTimestamp()
       });
 
-      // Actualizar XP (100 por completar, 200 si pasa)
+      // Actualizar XP (100 por completar/pasar para coincidir con la fórmula del Dashboard)
       updateDocumentNonBlocking(doc(db, 'users', user.uid), {
-        xp: increment(evaluation.passed ? 200 : 100)
+        xp: increment(100)
       });
 
       if (evaluation.awardedBadge) {
+        // Bono adicional por insignia (250 XP) para Ranking automático
+        updateDocumentNonBlocking(doc(db, 'users', user.uid), {
+          xp: increment(250)
+        });
+        
         addDocumentNonBlocking(collection(db, 'users', user.uid, 'achievements'), {
           ...evaluation.awardedBadge,
           challengeId: challenge!.id,
           unlockedAt: serverTimestamp(),
         });
-        toast({ title: "¡Insignia Desbloqueada!", description: evaluation.awardedBadge.title });
+        toast({ title: "¡Insignia Desbloqueada!", description: `${evaluation.awardedBadge.title} (+250 XP Ranking)` });
       }
 
       // --- LOGICA DE CURSO: Marcar lección completada ---
