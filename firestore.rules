@@ -66,7 +66,7 @@ service cloud.firestore {
         ) &&
         (!request.resource.data.keys().hasAny(['isPremiumSubscriber']) || request.resource.data.isPremiumSubscriber == false)
       );
-      allow update: if isAdmin() || (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isPremiumSubscriber', 'premiumUpdatedAt', 'lastEpaycoRef'])));
+      allow update: if isAdmin() || (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isPremiumSubscriber', 'premiumUpdatedAt', 'lastEpaycoRef', 'purchasedCourses', 'purchasedModules', 'purchasedLessons', 'purchasedChallenges', 'purchasedPodcasts', 'purchasedClasses'])));
       allow delete: if isAdmin();
 
       match /courseProgress/{courseId} {

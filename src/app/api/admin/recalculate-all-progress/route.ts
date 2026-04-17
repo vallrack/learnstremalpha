@@ -33,14 +33,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
     }
 
-    // 2. Mapear total de lecciones por curso
+    // 2. Mapear estructura de cursos (Lecciones y Módulos)
     const coursesSnap = await adminDb.collection('courses').get();
-    const courseLessonsMap: Record<string, number> = {};
+    const courseStructure: Record<string, { totalLessons: number, modules: any[] }> = {};
     
-    coursesSnap.docs.forEach(doc => {
-      const data = doc.data();
-      courseLessonsMap[doc.id] = data.totalLessons || 0;
-    });
+    // Obtener todos los módulos de todos los cursos para el cálculo de XP
+    for (const cDoc of coursesSnap.docs) {
+        const modulesSnap = await cDoc.ref.collection('modules').get();
+        courseStructure[cDoc.id] = {
+            totalLessons: cDoc.data().totalLessons || 0,
+            modules: modulesSnap.docs.map(m => ({ id: m.id, ...m.data() }))
+        };
+    }
 
     // 3. Obtener datos globales para el cálculo de XP (Collection Groups)
     // Esto es más eficiente que consultar por usuario si hay muchos usuarios
@@ -99,17 +103,28 @@ export async function POST(req: NextRequest) {
       const userData = userDoc.data();
       const userProgs = userProgressList[uid] || [];
       
-      // A. Recalcular Progreso de cada curso
+      // A. Recalcular Progreso de cada curso y Módulos Completados
       let completedCoursesCount = 0;
+      let completedModulesCount = 0;
+
       for (const prog of userProgs) {
           const courseId = prog.data.courseId;
-          const completedCount = (prog.data.completedLessons || []).length;
-          const total = courseLessonsMap[courseId] || 0;
+          const structure = courseStructure[courseId];
+          const completedLessons = prog.data.completedLessons || [];
+          const total = structure?.totalLessons || 0;
           
           if (prog.data.status === 'completed') completedCoursesCount++;
 
+          // Calcular módulos completados
+          if (structure?.modules && structure.modules.length > 0) {
+              const modWeight = 100 / structure.modules.length;
+              const currentPerc = total > 0 ? (completedLessons.length / total) * 100 : 0;
+              // Si tiene 5 módulos y 40% de progreso, tiene 2 módulos completos
+              completedModulesCount += Math.floor(currentPerc / modWeight);
+          }
+
           if (total > 0) {
-              const newPerc = Math.min(100, Math.round((completedCount / total) * 100));
+              const newPerc = Math.min(100, Math.round((completedLessons.length / total) * 100));
               if (newPerc !== (prog.data.progressPercentage || 0)) {
                   batch.update(prog.ref, { progressPercentage: newPerc, updatedAt: new Date() });
                   batchSize++;
@@ -118,12 +133,12 @@ export async function POST(req: NextRequest) {
           }
       }
 
-      // B. Recalcular XP Total (Fórmula Dashboard - Con Deduplicación)
-      // XP = (Cursos Completados * 500) + (Retos Pasados Únicos * 100) + (Insignias Únicas * 250)
+      // B. Recalcular XP Total (Fórmula Evolucionada v3.0)
+      // XP = (Cursos * 500) + (Módulos * 100) + (Retos * 100) + (Insignias * 250)
       const passedChallenges = userChallengesIds[uid]?.size || 0;
       const totalAchievements = userAchievementsIds[uid]?.size || 0;
       
-      const calculatedXp = (completedCoursesCount * 500) + (passedChallenges * 100) + (totalAchievements * 250);
+      const calculatedXp = (completedCoursesCount * 500) + (completedModulesCount * 100) + (passedChallenges * 100) + (totalAchievements * 250);
       
       if (calculatedXp !== (userData.xp || 0)) {
           batch.update(userDoc.ref, { xp: calculatedXp, lastSyncAt: new Date() });

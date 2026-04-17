@@ -20,6 +20,16 @@ export async function verifyEpaycoTransaction(
   let instructorMerchantId: string | undefined = undefined;
 
   try {
+    // 1. Verificar si la transacción ya fue procesada (Evitar ataques de Replay)
+    const existingTrans = await adminDb.collection('transactions')
+      .where('ref_payco', '==', ref_payco)
+      .limit(1)
+      .get();
+    
+    if (!existingTrans.empty) {
+      return { success: false, message: 'Esta transacción ya ha sido procesada anteriormente.' };
+    }
+
     const response = await fetch(`https://secure.epayco.co/validation/v1/reference/${ref_payco}`);
     const result = await response.json();
 

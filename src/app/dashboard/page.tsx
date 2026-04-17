@@ -106,7 +106,7 @@ export default function DashboardPage() {
   const completedCount = enrolledCourses.filter(c => c.status === 'completed').length;
   const passedChallenges = submissions?.filter(s => s.passed).length || 0;
   const xp = (completedCount * 500) + (passedChallenges * 100) + ((achievements?.length || 0) * 250);
-  const level = Math.floor(xp / 1000) + 1;
+  const level = Math.floor(Math.sqrt((xp || 0) / 100)) + 1;
   const xpInCurrentLevel = xp % 1000;
 
   const displayName = profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Estudiante';
