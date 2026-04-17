@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     // 3. Obtener datos globales para el cálculo de XP (Collection Groups)
     // Esto es más eficiente que consultar por usuario si hay muchos usuarios
     const [challengesSnap, achievementsSnap, progressSnap] = await Promise.all([
-        adminDb.collectionGroup('challenge_submissions').where('passed', '==', true).get(),
+        adminDb.collectionGroup('challenge_submissions').get(),
         adminDb.collectionGroup('achievements').get(),
         adminDb.collectionGroup('courseProgress').get()
     ]);
@@ -53,8 +53,11 @@ export async function POST(req: NextRequest) {
     // Mapear conteos por Usuario
     const userChallengesCount: Record<string, number> = {};
     challengesSnap.docs.forEach(doc => {
-        const uid = doc.ref.parent.parent?.id;
-        if (uid) userChallengesCount[uid] = (userChallengesCount[uid] || 0) + 1;
+        const data = doc.data();
+        if (data.passed === true) { // Filtrar en memoria para evitar error de índice
+            const uid = doc.ref.parent.parent?.id;
+            if (uid) userChallengesCount[uid] = (userChallengesCount[uid] || 0) + 1;
+        }
     });
 
     const userAchievementsCount: Record<string, number> = {};
