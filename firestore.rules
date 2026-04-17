@@ -157,7 +157,10 @@ service cloud.firestore {
                                   hasPurchased('courses', courseId) || 
                                   hasPurchased('modules', moduleId) || 
                                   hasPurchased('lessons', lessonId) ||
-                                  get(/databases/$(database)/documents/courses/$(courseId)).data.isFree == true;
+                                  (
+                                    get(/databases/$(database)/documents/courses/$(courseId)).data.get('isFree', false) == true &&
+                                    get(/databases/$(database)/documents/courses/$(courseId)/modules/$(moduleId)).data.get('isPremium', false) == false
+                                  );
                 }
 
                 match /resources/{resourceId} {
