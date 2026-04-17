@@ -435,7 +435,8 @@ function CourseCurriculum({ courseId, hasFullAccess, hasValidAccess, isFreeCours
               />
             </AccordionContent>
           </AccordionItem>
-        ))}
+          );
+        })}
       </Accordion>
     </div>
   );
