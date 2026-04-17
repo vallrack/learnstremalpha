@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { PodcastPlayer } from "@/components/podcasts/PodcastPlayer";
 import Link from 'next/link';
-import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
+import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, orderBy, serverTimestamp, setDoc, where, updateDoc, arrayUnion, getDoc, getDocs, addDoc, increment, deleteDoc } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
