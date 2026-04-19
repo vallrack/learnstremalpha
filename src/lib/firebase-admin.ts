@@ -7,9 +7,12 @@ let adminApp: App;
 
 if (apps.length === 0) {
   const projectId = process.env.FIREBASE_PROJECT_ID || 
-                    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 
-                    'devforge-academy';
+                    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   
+  if (!projectId) {
+    console.error("FIREBASE_PROJECT_ID is not defined. Firebase Admin initialization may fail.");
+  }
+
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -23,7 +26,6 @@ if (apps.length === 0) {
       });
     } catch (error) {
        console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:", error);
-       // Fallback to simpler init
        adminApp = initializeApp({ projectId });
     }
   } else if (clientEmail && privateKey) {
@@ -48,6 +50,7 @@ if (apps.length === 0) {
       });
     }
   }
+
 } else {
   adminApp = apps[0];
 }

@@ -153,12 +153,13 @@ export default function CourseContentAdminPage() {
   const { data: sourceModules } = useCollection(sourceModulesQuery);
 
   const handleImport = async () => {
-    if (!db || !importSourceId || importSelectedModules.length === 0 || !user?.uid) return;
-
-    setIsImporting(true);
     try {
       const startOrder = (modules?.length || 0);
-      await cloneCourseContent(db, importSourceId, courseId, user.uid, {
+      const idToken = await (auth?.currentUser?.getIdToken() || user?.getIdToken());
+      
+      if (!idToken) throw new Error("No se pudo obtener el token de autenticación");
+
+      await cloneCourseContent(idToken, importSourceId, courseId, user.uid, {
         moduleIds: importSelectedModules,
         startOrderIndex: startOrder
       });

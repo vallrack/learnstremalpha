@@ -297,7 +297,10 @@ export default function AdminCoursesPage() {
           setIsCloning(true);
           try {
             toast({ title: "Clonando contenido...", description: "Estamos trayendo los módulos y lecciones del curso base." });
-            await cloneCourseContent(db, baseCourseId, docRef.id, activeUser.uid);
+            const idToken = await (activeUser?.getIdToken());
+            if (!idToken) throw new Error("No se pudo obtener el token de autenticación");
+            
+            await cloneCourseContent(idToken, baseCourseId, docRef.id, activeUser.uid);
             toast({ title: "¡Clonación exitosa!", description: "El contenido ha sido replicado correctamente." });
           } catch (cloneErr) {
             console.error("Error cloning content:", cloneErr);

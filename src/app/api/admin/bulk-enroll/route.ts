@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
     
     const userData = userDoc.data();
-    if (userData?.role !== 'admin' && userData?.role !== 'instructor' && decodedToken.email !== 'demo@learnstream.ai') {
+    if (userData?.role !== 'admin' && userData?.role !== 'instructor') {
       return NextResponse.json({ error: 'Permisos insuficientes para realizar esta acción' }, { status: 403 });
     }
 
@@ -46,91 +46,94 @@ export async function POST(req: NextRequest) {
       errors: [] as string[]
     };
 
-    for (const student of students) {
-      try {
-        const { email, name } = student;
-        if (!email) {
-          results.failed++;
-          results.errors.push(`Falta el email para el estudiante ${name || 'Desconocido'}`);
-          continue;
-        }
-
-        let uid;
-        const tempPassword = ((name?.split(' ')[0] || 'User').normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "") + Math.floor(1000 + Math.random() * 9000) + '!').trim();
-        
+    // Procesar en lotes de 5 para optimizar velocidad sin saturar el servicio de correo
+    const batchSize = 5;
+    for (let i = 0; i < students.length; i += batchSize) {
+      const batch = students.slice(i, i + batchSize);
+      
+      await Promise.all(batch.map(async (student: any) => {
         try {
-          const userRecord = await adminAuth.getUserByEmail(email);
-          uid = userRecord.uid;
-          
-          // Actualizar contraseña para usuarios existentes por si acaso no les llega el correo
-          await adminAuth.updateUser(uid, { password: tempPassword });
-          
-          // Guardar la clave temporal en Firestore para que el admin la vea
-          await adminDb.collection('users').doc(uid).set({
-            tempPassword: tempPassword,
-            displayName: name || userRecord.displayName || email.split('@')[0],
-          }, { merge: true });
-
-        } catch (error: any) {
-          if (error.code === 'auth/user-not-found') {
-            const newUser = await adminAuth.createUser({
-              email: email,
-              password: tempPassword,
-              displayName: name || email.split('@')[0],
-            });
-            uid = newUser.uid;
-
-            await adminDb.collection('users').doc(uid).set({
-              email: email,
-              displayName: name || email.split('@')[0],
-              tempPassword: tempPassword, // Guardamos la clave para el admin
-              role: 'student',
-              isActive: true,
-              profileImageUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${name || email}&backgroundColor=0f172a,1d4ed8,047857&textColor=ffffff`,
-              createdAt: FieldValue.serverTimestamp(),
-            });
-          } else {
-            throw error;
+          const { email, name } = student;
+          if (!email) {
+            results.failed++;
+            results.errors.push(`Falta el email para el estudiante ${name || 'Desconocido'}`);
+            return;
           }
-        }
 
-        const progressRef = adminDb.collection('users').doc(uid).collection('courseProgress').doc(courseId);
-        
-        const progressDoc = await progressRef.get();
-        if (!progressDoc.exists) {
-            await progressRef.set({
-                courseId: courseId,
-                status: 'enrolled',
-                progressPercentage: 0,
-                completedLessons: [],
-                enrollmentDate: FieldValue.serverTimestamp(),
-                lastAccessedAt: FieldValue.serverTimestamp(),
-                groupId: groupId || null,
-            });
-        } else {
-            if (groupId) {
-              await progressRef.update({ groupId });
+          let uid;
+          const tempPassword = ((name?.split(' ')[0] || 'User').normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "") + Math.floor(1000 + Math.random() * 9000) + '!').trim();
+          
+          try {
+            const userRecord = await adminAuth.getUserByEmail(email);
+            uid = userRecord.uid;
+            
+            await adminAuth.updateUser(uid, { password: tempPassword });
+            
+            await adminDb.collection('users').doc(uid).set({
+              tempPassword: tempPassword,
+              displayName: name || userRecord.displayName || email.split('@')[0],
+            }, { merge: true });
+
+          } catch (error: any) {
+            if (error.code === 'auth/user-not-found') {
+              const newUser = await adminAuth.createUser({
+                email: email,
+                password: tempPassword,
+                displayName: name || email.split('@')[0],
+              });
+              uid = newUser.uid;
+
+              await adminDb.collection('users').doc(uid).set({
+                email: email,
+                displayName: name || email.split('@')[0],
+                tempPassword: tempPassword,
+                role: 'student',
+                isActive: true,
+                profileImageUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${name || email}&backgroundColor=0f172a,1d4ed8,047857&textColor=ffffff`,
+                createdAt: FieldValue.serverTimestamp(),
+              });
+            } else {
+              throw error;
             }
+          }
+
+          const progressRef = adminDb.collection('users').doc(uid).collection('courseProgress').doc(courseId);
+          const progressDoc = await progressRef.get();
+          
+          if (!progressDoc.exists) {
+              await progressRef.set({
+                  courseId: courseId,
+                  status: 'enrolled',
+                  progressPercentage: 0,
+                  completedLessons: [],
+                  enrollmentDate: FieldValue.serverTimestamp(),
+                  lastAccessedAt: FieldValue.serverTimestamp(),
+                  groupId: groupId || null,
+              });
+          } else {
+              if (groupId) {
+                await progressRef.update({ groupId });
+              }
+          }
+          
+          try {
+            await emailService.sendBulkWelcomeEmail({
+              email,
+              name: name || email.split('@')[0],
+              password: tempPassword,
+              courseTitle
+            });
+          } catch (emailErr) {
+            console.error(`Error enviando correo a ${email}:`, emailErr);
+            results.errors.push(`Correo no enviado a ${email}: El servidor de correos no respondió.`);
+          }
+          
+          results.success++;
+        } catch (err: any) {
+          results.failed++;
+          results.errors.push(`Error con ${student.email}: ${err.message}`);
         }
-        
-        // Intentar enviar correo de bienvenida con los accesos
-        try {
-          await emailService.sendBulkWelcomeEmail({
-            email,
-            name: name || email.split('@')[0],
-            password: tempPassword,
-            courseTitle
-          });
-        } catch (emailErr) {
-          console.error(`Error enviando correo a ${email}:`, emailErr);
-          results.errors.push(`Correo no enviado a ${email}: El servidor de correos no respondió.`);
-        }
-        
-        results.success++;
-      } catch (err: any) {
-        results.failed++;
-        results.errors.push(`Error con ${student.email}: ${err.message}`);
-      }
+      }));
     }
 
     return NextResponse.json({
