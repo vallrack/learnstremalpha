@@ -155,13 +155,19 @@ export default function CourseContentAdminPage() {
   const { data: sourceModules } = useCollection(sourceModulesQuery);
 
   const handleImport = async () => {
+    if (!importSourceId || importSelectedModules.length === 0 || !user?.uid) return;
+
+    const sourceId = importSourceId;
+    const instructorId = user.uid;
+
+    setIsImporting(true);
     try {
       const startOrder = (modules?.length || 0);
       const idToken = await (auth?.currentUser?.getIdToken() || user?.getIdToken());
       
       if (!idToken) throw new Error("No se pudo obtener el token de autenticación");
 
-      await cloneCourseContent(idToken, importSourceId, courseId, user.uid, {
+      await cloneCourseContent(idToken, sourceId, courseId, instructorId, {
         moduleIds: importSelectedModules,
         startOrderIndex: startOrder
       });
@@ -169,9 +175,10 @@ export default function CourseContentAdminPage() {
       setImportSourceId(null);
       setImportSelectedModules([]);
       router.refresh();
-      // Nota: toast se disparará si hay un hook de toast disponible, pero aquí usamos las alertas estándar
-    } catch (error) {
+      toast({ title: "Contenido importado", description: "Los módulos se han copiado exitosamente." });
+    } catch (error: any) {
       console.error("Error importing modules:", error);
+      toast({ variant: "destructive", title: "Error", description: error.message });
     } finally {
       setIsImporting(false);
     }
