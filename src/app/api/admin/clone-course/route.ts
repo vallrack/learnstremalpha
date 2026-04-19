@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
 
             // Clonar Premium Data
             const premiumSnap = await modulesRef.doc(originalModuleId).collection('lessons').doc(originalLessonId).collection('premium').doc('data').get();
-            if (premiumSnap.exists()) {
+            if (premiumSnap.exists) {
                 await adminDb.collection('courses').doc(targetCourseId).collection('modules').doc(newModuleId).collection('lessons').doc(newLessonId).collection('premium').doc('data').set({
                     ...premiumSnap.data(),
                     updatedAt: FieldValue.serverTimestamp()
