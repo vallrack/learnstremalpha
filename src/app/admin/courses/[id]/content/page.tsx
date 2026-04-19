@@ -36,6 +36,7 @@ import {
   useFirestore, 
   useStorage,
   useUser,
+  useAuth,
   useMemoFirebase, 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking, 
@@ -72,6 +73,7 @@ export default function CourseContentAdminPage() {
   const courseId = params.id as string;
   const db = useFirestore();
   const { user } = useUser();
+  const auth = useAuth();
   const { toast } = useToast();
 
   const [isRecalculating, setIsRecalculating] = useState(false);
