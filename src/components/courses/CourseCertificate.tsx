@@ -49,16 +49,12 @@ export function CourseCertificate({
 
         {/* Cabecera con Logos y Título */}
         <header className="relative z-10 w-full flex items-center justify-between px-6 pt-2">
-          {/* USAMOS next/image SIN unoptimized para que el proxy de Next maneje el CORS, 
-              pero CON priority para que no use lazy loading en impresión */}
           <div className="flex items-center justify-center w-16 h-16 shrink-0 print-image-container">
-            <Image 
-              src={dpLogoUrl} 
+            {/* Usamos img tag nativo con proxy Next.js y maxWidth/maxHeight para compatibilidad con html2canvas */}
+            <img 
+              src={`/_next/image?url=${encodeURIComponent(dpLogoUrl)}&w=256&q=100`} 
               alt="DProgramadores Logo" 
-              width={64}
-              height={64}
-              priority
-              style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+              style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
             />
           </div>
           
@@ -72,13 +68,10 @@ export function CourseCertificate({
           </div>
 
           <div className="flex items-center justify-center w-24 h-24 shrink-0 print-image-container">
-            <Image 
-              src={platformLogoUrl} 
+            <img 
+              src={`/_next/image?url=${encodeURIComponent(platformLogoUrl)}&w=256&q=100`} 
               alt={`${name} Logo`} 
-              width={96}
-              height={96}
-              priority
-              style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+              style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
             />
           </div>
         </header>
@@ -145,13 +138,10 @@ export function CourseCertificate({
 
           <div className="flex flex-col items-center gap-1 border-t border-slate-200 pt-2 print-element">
              <div className="flex items-center justify-center w-32 h-10 shrink-0 print-image-container">
-               <Image 
-                 src={signatureUrl} 
+               <img 
+                 src={`/_next/image?url=${encodeURIComponent(signatureUrl)}&w=256&q=100`} 
                  alt="Firma Director" 
-                 width={128}
-                 height={40}
-                 priority
-                 style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+                 style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
                />
              </div>
              <div className="text-center">
