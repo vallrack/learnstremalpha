@@ -36,8 +36,8 @@ import {
   SandpackPreview,
   useSandpack,
 } from "@codesandbox/sandpack-react";
-import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection, serverTimestamp, increment, setDoc, arrayUnion } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, increment, setDoc, arrayUnion, query, orderBy, getDocs } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, useCollection } from '@/firebase';
 import { evaluateChallenge, type EvaluateChallengeOutput } from '@/ai/flows/evaluate-challenge';
 import { evaluateWithExternalAI } from '@/app/actions/ai-generation';
 import { WordSearchGame } from '@/components/challenges/WordSearchGame';
