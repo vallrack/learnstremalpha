@@ -51,13 +51,14 @@ export function CourseCertificate({
         <header className="relative z-10 w-full flex items-center justify-between px-6 pt-2">
           {/* USAMOS next/image SIN unoptimized para que el proxy de Next maneje el CORS, 
               pero CON priority para que no use lazy loading en impresión */}
-          <div className="relative w-16 h-16 print-image-container">
+          <div className="flex items-center justify-center w-16 h-16 shrink-0 print-image-container">
             <Image 
               src={dpLogoUrl} 
               alt="DProgramadores Logo" 
-              fill 
+              width={64}
+              height={64}
               priority
-              className="object-contain" 
+              style={{ objectFit: 'contain', width: '100%', height: '100%' }}
             />
           </div>
           
@@ -70,13 +71,14 @@ export function CourseCertificate({
             </p>
           </div>
 
-          <div className="relative w-24 h-24 flex items-center justify-center print-image-container">
+          <div className="flex items-center justify-center w-24 h-24 shrink-0 print-image-container">
             <Image 
               src={platformLogoUrl} 
               alt={`${name} Logo`} 
-              fill 
+              width={96}
+              height={96}
               priority
-              className="object-contain" 
+              style={{ objectFit: 'contain', width: '100%', height: '100%' }}
             />
           </div>
         </header>
@@ -94,11 +96,11 @@ export function CourseCertificate({
             <p className="text-sm leading-relaxed text-slate-600">
               Ha completado satisfactoriamente el programa de formación profesional en:
             </p>
-            <div className="space-y-1">
+            <div className="space-y-3">
               <h3 className="text-2xl font-headline font-bold text-slate-900 leading-tight">
                 {courseTitle}
               </h3>
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-2 mt-2">
                  <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-bold px-2 py-0 h-5 text-[10px] print-element">
                    Tecnología: {technology}
                  </Badge>
@@ -142,13 +144,14 @@ export function CourseCertificate({
           </div>
 
           <div className="flex flex-col items-center gap-1 border-t border-slate-200 pt-2 print-element">
-             <div className="relative w-32 h-10 print-image-container">
+             <div className="flex items-center justify-center w-32 h-10 shrink-0 print-image-container">
                <Image 
                  src={signatureUrl} 
                  alt="Firma Director" 
-                 fill 
+                 width={128}
+                 height={40}
                  priority
-                 className="object-contain" 
+                 style={{ objectFit: 'contain', width: '100%', height: '100%' }}
                />
              </div>
              <div className="text-center">
