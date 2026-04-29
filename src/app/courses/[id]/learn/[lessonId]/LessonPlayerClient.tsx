@@ -638,8 +638,8 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
 
   const discussionsQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'courses', courseId, 'discussions'), where('lessonId', '==', lessonId), orderBy('createdAt', 'desc'));
-  }, [db, courseId, lessonId]);
+    return query(collection(db, 'lesson_discussions'), where('lessonId', '==', lessonId), orderBy('createdAt', 'desc'));
+  }, [db, lessonId]);
   const { data: discussions } = useCollection(discussionsQuery);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -647,7 +647,8 @@ function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: 
     if (!db || !user || !newComment.trim()) return;
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'courses', courseId, 'discussions'), {
+      await addDoc(collection(db, 'lesson_discussions'), {
+        courseId,
         lessonId,
         userId: user.uid,
         userName: profile?.displayName || user.email?.split('@')[0] || 'Estudiante',
