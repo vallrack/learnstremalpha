@@ -28,7 +28,7 @@ export function CourseCertificate({
   instructorName,
   certificateId = "PREVIEW-ID",
 }: CourseCertificateProps) {
-  const logoUrl = "https://dprogramadores.com.co/img/logoD.png";
+  const dpLogoUrl = "https://dprogramadores.com.co/img/logoD.png";
   const signatureUrl = "https://drive.google.com/uc?export=view&id=1w2nzR-tylvAKiHe02fzdTKpRD7icoJua";
   const { name, logoUrl: platformLogoUrl, domain } = useBrand();
   const effectiveInstructorName = instructorName || `Experto ${name}`;
@@ -39,7 +39,7 @@ export function CourseCertificate({
 
   return (
     <>
-      <div className="relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl certificate-container">
+      <div className="certificate-container relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl">
         {/* Elementos decorativos de fondo */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-slate-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 print-element" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2 opacity-30 print-element" />
@@ -49,9 +49,11 @@ export function CourseCertificate({
 
         {/* Cabecera con Logos y Título */}
         <header className="relative z-10 w-full flex items-center justify-between px-6 pt-2">
+          {/* USAMOS next/image SIN unoptimized para que el proxy de Next maneje el CORS, 
+              pero CON priority para que no use lazy loading en impresión */}
           <div className="relative w-16 h-16 print-image-container">
             <Image 
-              src={logoUrl} 
+              src={dpLogoUrl} 
               alt="DProgramadores Logo" 
               fill 
               priority
@@ -171,6 +173,7 @@ export function CourseCertificate({
           <Award className="w-64 h-64" />
         </div>
       </div>
+      
       <style jsx>{`
         @media print {
           @page {
@@ -191,17 +194,6 @@ export function CourseCertificate({
           .print-element {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-          }
-          /* Ensure Next.js images are visible */
-          .print-image-container img {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-          }
-          .print-image-container span {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
           }
         }
       `}</style>
