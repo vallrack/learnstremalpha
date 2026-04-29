@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Crown, ShieldCheck, Award, Calendar, User } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -27,7 +28,7 @@ export function CourseCertificate({
   instructorName,
   certificateId = "PREVIEW-ID",
 }: CourseCertificateProps) {
-  const dpLogoUrl = "https://dprogramadores.com.co/img/logoD.png";
+  const logoUrl = "https://dprogramadores.com.co/img/logoD.png";
   const signatureUrl = "https://drive.google.com/uc?export=view&id=1w2nzR-tylvAKiHe02fzdTKpRD7icoJua";
   const { name, logoUrl: platformLogoUrl, domain } = useBrand();
   const effectiveInstructorName = instructorName || `Experto ${name}`;
@@ -38,23 +39,23 @@ export function CourseCertificate({
 
   return (
     <>
-      <div className="certificate-container relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl certificate-container">
+        {/* Elementos decorativos de fondo */}
+        <div className="absolute top-0 right-0 w-48 h-48 bg-slate-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 print-element" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2 opacity-30 print-element" />
         
-        {/* Background decorations */}
-        <div className="absolute top-0 right-0 w-48 h-48 bg-slate-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 print-bg" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2 opacity-30 print-bg" />
-        
-        {/* Inner border */}
-        <div className="absolute inset-2 border border-slate-200 pointer-events-none print-border" />
+        {/* Marco académico interno */}
+        <div className="absolute inset-2 border border-slate-200 pointer-events-none print-element" />
 
-        {/* Header with Logos */}
+        {/* Cabecera con Logos y Título */}
         <header className="relative z-10 w-full flex items-center justify-between px-6 pt-2">
-          
-          <div className="relative w-16 h-16 flex-shrink-0">
-            <img 
-              src={dpLogoUrl} 
+          <div className="relative w-16 h-16 print-image-container">
+            <Image 
+              src={logoUrl} 
               alt="DProgramadores Logo" 
-              className="w-full h-full object-contain print-img" 
+              fill 
+              priority
+              className="object-contain" 
             />
           </div>
           
@@ -67,17 +68,18 @@ export function CourseCertificate({
             </p>
           </div>
 
-          <div className="relative w-24 h-24 flex-shrink-0">
-            <img 
+          <div className="relative w-24 h-24 flex items-center justify-center print-image-container">
+            <Image 
               src={platformLogoUrl} 
               alt={`${name} Logo`} 
-              className="w-full h-full object-contain print-img" 
+              fill 
+              priority
+              className="object-contain" 
             />
           </div>
-
         </header>
 
-        {/* Main Body */}
+        {/* Cuerpo Principal del Certificado */}
         <main className="relative z-10 flex flex-col items-center gap-2 py-2">
           <div className="space-y-1">
             <p className="text-sm italic font-serif text-slate-500">Este diploma certifica que</p>
@@ -95,15 +97,15 @@ export function CourseCertificate({
                 {courseTitle}
               </h3>
               <div className="flex items-center justify-center gap-2">
-                 <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-bold px-2 py-0 h-5 text-[10px] print-badge">
+                 <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-bold px-2 py-0 h-5 text-[10px] print-element">
                    Tecnología: {technology}
                  </Badge>
                  {isPremium ? (
-                   <Badge className="bg-amber-100 text-amber-700 border-amber-200 font-bold px-2 py-0 h-5 text-[10px] gap-1 print-badge">
+                   <Badge className="bg-amber-100 text-amber-700 border-amber-200 font-bold px-2 py-0 h-5 text-[10px] gap-1 print-element">
                      <Crown className="h-3 w-3" /> Nivel Profesional Premium
                    </Badge>
                  ) : (
-                   <Badge variant="outline" className="border-slate-200 text-slate-500 font-bold px-2 py-0 h-5 text-[10px] print-badge">
+                   <Badge variant="outline" className="border-slate-200 text-slate-500 font-bold px-2 py-0 h-5 text-[10px] print-element">
                      Nivel Fundamental
                    </Badge>
                  )}
@@ -111,11 +113,9 @@ export function CourseCertificate({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100 print-bg">
+          <div className="flex items-center gap-2 mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100 print-element">
             <User className="h-3.5 w-3.5 text-slate-400" />
-            <span className="text-[11px] font-bold text-slate-600">
-              Instructor a cargo: <span className="text-primary">{effectiveInstructorName}</span>
-            </span>
+            <span className="text-[11px] font-bold text-slate-600">Instructor a cargo: <span className="text-primary">{effectiveInstructorName}</span></span>
           </div>
 
           <p className="text-[10px] text-slate-400 max-w-lg leading-relaxed px-4">
@@ -126,7 +126,7 @@ export function CourseCertificate({
           </p>
         </main>
 
-        {/* Footer with Signature and QR */}
+        {/* Pie de página con Firma y Seguridad */}
         <footer className="relative z-10 w-full grid grid-cols-3 items-end pb-4 px-6">
           <div className="flex flex-col items-start gap-1 text-left">
             <div className="flex items-center gap-1.5 text-[8px] font-bold text-slate-400 uppercase">
@@ -139,64 +139,69 @@ export function CourseCertificate({
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-1 border-t border-slate-200 pt-2">
-            <div className="relative w-32 h-10 flex-shrink-0">
-              <img 
-                src={signatureUrl} 
-                alt="Firma Director" 
-                className="w-full h-full object-contain print-img" 
-              />
-            </div>
-            <div className="text-center">
-              <p className="text-xs font-bold text-slate-900">Daniel Morales</p>
-              <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wide">Director Académico</p>
-            </div>
+          <div className="flex flex-col items-center gap-1 border-t border-slate-200 pt-2 print-element">
+             <div className="relative w-32 h-10 print-image-container">
+               <Image 
+                 src={signatureUrl} 
+                 alt="Firma Director" 
+                 fill 
+                 priority
+                 className="object-contain" 
+               />
+             </div>
+             <div className="text-center">
+               <p className="text-xs font-bold text-slate-900">Daniel Morales</p>
+               <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wide">Director Académico</p>
+             </div>
           </div>
 
           <div className="flex flex-col items-end gap-2">
-            <div className="bg-white p-1 rounded-sm border shadow-sm print-qr-container">
+            <div className="bg-white p-1 rounded-sm border shadow-sm print-element">
               <QRCodeSVG value={verifyUrl} size={64} level="Q" />
             </div>
-            <div className="bg-slate-900 px-2 py-1 rounded w-[72px] text-center text-white flex flex-col items-center justify-center print-dark-badge">
+            <div className="bg-slate-900 px-2 py-1 rounded w-[72px] text-center text-white flex flex-col items-center justify-center print-element">
               <ShieldCheck className="h-3 w-3 text-emerald-400 mb-0.5" />
               <p className="text-[5px] font-bold uppercase leading-none">Escanear para verificar</p>
             </div>
           </div>
         </footer>
 
-        {/* Security Watermark */}
+        {/* Marca de agua de seguridad */}
         <div className="absolute bottom-6 left-6 pointer-events-none opacity-[0.02] rotate-[-20deg]">
           <Award className="w-64 h-64" />
         </div>
       </div>
-
       <style jsx>{`
         @media print {
           @page {
             size: landscape;
             margin: 0;
           }
-          body {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
           .certificate-container {
+            box-shadow: none !important;
+            border-width: 12px !important;
             width: 100vw !important;
             height: 100vh !important;
             max-width: none !important;
-            box-shadow: none !important;
-            border-width: 12px !important;
+            max-height: none !important;
             margin: 0 !important;
-            page-break-inside: avoid;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
-          .print-img {
+          .print-element {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          /* Ensure Next.js images are visible */
+          .print-image-container img {
             display: block !important;
             visibility: visible !important;
             opacity: 1 !important;
-            max-width: 100% !important;
           }
-          .print-bg {
-            background-color: inherit !important; /* Force background rendering if possible */
+          .print-image-container span {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
           }
         }
       `}</style>
