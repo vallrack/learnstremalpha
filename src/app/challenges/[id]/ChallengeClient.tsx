@@ -164,6 +164,8 @@ function ChallengeContent() {
   const [guiData, setGUIData] = useState<{ components: any[], windowTitle: string, width?: number, height?: number } | null>(null);
   const [guiTheme, setGUITheme] = useState<'retro' | 'modern'>('modern');
   const [showHtmlPreview, setShowHtmlPreview] = useState(false);
+  const [totalAccessibleLessons, setTotalAccessibleLessons] = useState(0);
+  const [totalGlobalLessons, setTotalGlobalLessons] = useState(0);
 
   const h5pTypes = ['quiz', 'dragdrop', 'sortable', 'flashcard', 'swipe', 'wordsearch', 'interactive-video'];
   
@@ -183,6 +185,52 @@ function ChallengeContent() {
   const { data: currentProgress } = useDoc(progressSnapRef);
 
   const sandpackTemplate = challenge ? getSandpackTemplate(challenge.technology) : null;
+
+  const modulesQuery = useMemoFirebase(() => {
+    if (!db || !courseId) return null;
+    return query(collection(db, 'courses', courseId, 'modules'), orderBy('orderIndex', 'asc'));
+  }, [db, courseId]);
+  const { data: modules } = useCollection(modulesQuery);
+
+  useEffect(() => {
+    if (!db || !courseId || !modules || isUserLoading) return;
+    const fetchCounts = async () => {
+      if (!db) return;
+      let totalGlobal = 0;
+      let totalAccessible = 0;
+      
+      for (const mod of modules) {
+        const q = query(collection(db, 'courses', courseId, 'modules', mod.id, 'lessons'));
+        const snap = await getDocs(q);
+        const lessonsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        totalGlobal += lessonsData.length;
+        
+        for (const lesson of lessonsData) {
+          const isLessonPremium = !!(lesson as any).isPremium;
+          const isModulePremium = !!mod.isPremium;
+          const isPaidActivity = (isLessonPremium && ((lesson as any).price || 0) > 0) || (isModulePremium && (mod.price || 0) > 0);
+          
+          let hasAccess = false;
+          if (profile?.role === 'admin' || user?.uid === course?.instructorId) {
+            hasAccess = true;
+          } else if (isPaidActivity) {
+            const hasPurchased = (profile?.purchasedCourses?.includes(courseId)) || (profile?.purchasedModules?.includes(mod.id)) || (profile?.purchasedLessons?.includes(lesson.id));
+            hasAccess = hasPurchased || profile?.isPremiumSubscriber;
+          } else {
+            hasAccess = course?.isFree || (profile?.purchasedCourses?.includes(courseId)) || profile?.isPremiumSubscriber || currentProgress?.status === 'enrolled';
+          }
+
+          if (hasAccess) {
+            totalAccessible++;
+          }
+        }
+      }
+      setTotalGlobalLessons(totalGlobal);
+      setTotalAccessibleLessons(totalAccessible);
+    };
+    fetchCounts();
+  }, [db, courseId, modules, profile, user?.uid, course?.instructorId, course?.isFree, isUserLoading, currentProgress?.status]);
 
   useEffect(() => {
     if (challenge) setCode(challenge.initialCode || '');
@@ -465,7 +513,7 @@ function ChallengeContent() {
         const currentCompleted = currentProgress?.completedLessons || [];
         const isAlreadyCompleted = currentCompleted.includes(lessonId);
         
-        const total = course?.totalLessons || 0;
+        const total = totalAccessibleLessons || course?.totalLessons || 0;
         const newCount = isAlreadyCompleted ? currentCompleted.length : currentCompleted.length + 1;
         const percentage = total > 0 ? Math.min(100, Math.round((newCount / total) * 100)) : 0;
 

@@ -109,7 +109,14 @@ export default function VerifyCertificatePage() {
                       <ShieldCheck className="h-10 w-10 text-white" />
                     </div>
                     <h1 className="text-3xl font-headline font-extrabold mb-2">Credencial Válida</h1>
-                    <p className="text-emerald-50 font-medium">Emitida oficialmente por LearnStream</p>
+                    <div className="flex flex-col gap-1 items-center">
+                      <p className="text-emerald-50 font-medium">Emitida oficialmente por LearnStream</p>
+                      {certData.type === 'full' ? (
+                        <Badge className="bg-amber-400 text-amber-900 border-none font-black px-3 py-1 animate-pulse">CERTIFICADO PREMIUM / FULL</Badge>
+                      ) : (
+                        <Badge className="bg-emerald-100 text-emerald-800 border-none font-bold px-3 py-1">CERTIFICADO BÁSICO (CONTENIDO GRATUITO)</Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
 

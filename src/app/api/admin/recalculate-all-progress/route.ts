@@ -35,26 +35,31 @@ export async function POST(req: NextRequest) {
 
     // 2. Mapear estructura de cursos (Lecciones y Módulos)
     const coursesSnap = await adminDb.collection('courses').get();
-    const courseStructure: Record<string, { totalLessons: number, modules: any[] }> = {};
+    const courseStructure: Record<string, any> = {};
     
-    // Obtener todos los módulos de todos los cursos para el cálculo de XP
+    // Obtener todos los módulos y lecciones de todos los cursos para el cálculo de XP y progreso refinado
     for (const cDoc of coursesSnap.docs) {
         const modulesSnap = await cDoc.ref.collection('modules').get();
+        const lessonsSnap = await adminDb.collectionGroup('lessons').where('courseId', '==', cDoc.id).get();
+        
         courseStructure[cDoc.id] = {
+            id: cDoc.id,
+            isFree: cDoc.data().isFree ?? true,
             totalLessons: cDoc.data().totalLessons || 0,
-            modules: modulesSnap.docs.map(m => ({ id: m.id, ...m.data() }))
+            instructorId: cDoc.data().instructorId,
+            modules: modulesSnap.docs.map(m => ({ id: m.id, ...m.data() })),
+            lessons: lessonsSnap.docs.map(l => ({ id: l.id, ...l.data() }))
         };
     }
 
     // 3. Obtener datos globales para el cálculo de XP (Collection Groups)
-    // Esto es más eficiente que consultar por usuario si hay muchos usuarios
     const [challengesSnap, achievementsSnap, progressSnap] = await Promise.all([
         adminDb.collectionGroup('challenge_submissions').get(),
         adminDb.collectionGroup('achievements').get(),
         adminDb.collectionGroup('courseProgress').get()
     ]);
 
-    // Mapear conteos por Usuario (Deduplicando por ID de reto para evitar farmeo)
+    // Mapear conteos por Usuario
     const userChallengesIds: Record<string, Set<string>> = {};
     challengesSnap.docs.forEach(doc => {
         const data = doc.data();
@@ -100,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     for (const userDoc of usersSnap.docs) {
       const uid = userDoc.id;
-      const userData = userDoc.data();
+      const userData = userDoc.data() || {};
       const userProgs = userProgressList[uid] || [];
       
       // A. Recalcular Progreso de cada curso y Módulos Completados
@@ -110,8 +115,32 @@ export async function POST(req: NextRequest) {
       for (const prog of userProgs) {
           const courseId = prog.data.courseId;
           const structure = courseStructure[courseId];
+          const totalGlobal = structure?.totalLessons || 0;
+          let totalAccessible = 0;
           const completedLessons = prog.data.completedLessons || [];
-          const total = structure?.totalLessons || 0;
+
+          if (structure) {
+            for (const lesson of structure.lessons || []) {
+                const mod = (structure.modules as any[]).find(m => m.id === lesson.moduleId);
+                const isLessonPremium = !!lesson.isPremium;
+                const isModulePremium = !!mod?.isPremium;
+                const isPaidActivity = (isLessonPremium && (lesson.price || 0) > 0) || (isModulePremium && (mod?.price || 0) > 0);
+                
+                let hasAccess = false;
+                if (userData.role === 'admin' || uid === structure.instructorId) {
+                    hasAccess = true;
+                } else if (isPaidActivity) {
+                    const hasPurchased = (userData.purchasedCourses?.includes(courseId)) || (userData.purchasedModules?.includes(lesson.moduleId)) || (userData.purchasedLessons?.includes(lesson.id));
+                    hasAccess = hasPurchased || userData.isPremiumSubscriber;
+                } else {
+                    hasAccess = structure.isFree || (userData.purchasedCourses?.includes(courseId)) || userData.isPremiumSubscriber || prog.data.status === 'enrolled';
+                }
+
+                if (hasAccess) totalAccessible++;
+            }
+          }
+
+          const total = totalAccessible || totalGlobal;
           
           if (prog.data.status === 'completed') completedCoursesCount++;
 
@@ -119,7 +148,6 @@ export async function POST(req: NextRequest) {
           if (structure?.modules && structure.modules.length > 0) {
               const modWeight = 100 / structure.modules.length;
               const currentPerc = total > 0 ? (completedLessons.length / total) * 100 : 0;
-              // Si tiene 5 módulos y 40% de progreso, tiene 2 módulos completos
               completedModulesCount += Math.floor(currentPerc / modWeight);
           }
 
@@ -134,7 +162,6 @@ export async function POST(req: NextRequest) {
       }
 
       // B. Recalcular XP Total (Fórmula Evolucionada v3.0)
-      // XP = (Cursos * 500) + (Módulos * 100) + (Retos * 100) + (Insignias * 250)
       const passedChallenges = userChallengesIds[uid]?.size || 0;
       const totalAchievements = userAchievementsIds[uid]?.size || 0;
       
@@ -148,7 +175,6 @@ export async function POST(req: NextRequest) {
 
       totalProcessed++;
 
-      // Commit periódico para evitar el límite de 500 de Firestore
       if (batchSize >= 450) {
           await batch.commit();
           batch = adminDb.batch();
@@ -157,8 +183,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (batchSize > 0) {
-        // En una implementación real con muchos datos, usaríamos un manejador de lotes más robusto
-        // Para este volumen, ejecutamos el batch final
         await batch.commit();
     }
 
@@ -171,7 +195,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-} catch (error: any) {
+  } catch (error: any) {
     console.error('Recalculate Progress Error:', error);
     return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 });
   }

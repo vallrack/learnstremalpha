@@ -128,6 +128,7 @@ function LessonPlayerContent() {
   const [premiumData, setPremiumData] = useState<any>(null);
   const [isLoadingPremium, setIsLoadingPremium] = useState(false);
   const [totalLessons, setTotalLessons] = useState(0);
+  const [totalAccessibleLessons, setTotalAccessibleLessons] = useState(0);
 
   const instructorRef = useMemoFirebase(() => {
     if (!db || !course?.instructorId) return null;
@@ -137,19 +138,45 @@ function LessonPlayerContent() {
 
   // Calcular total de lecciones del curso para la barra de progreso
   useEffect(() => {
-    if (!db || !courseId || !modules) return;
+    if (!db || !courseId || !modules || isUserLoading) return;
     const fetchCounts = async () => {
       if (!db) return;
-      let count = 0;
+      let totalGlobal = 0;
+      let totalAccessible = 0;
+      
       for (const mod of modules) {
         const q = query(collection(db, 'courses', courseId, 'modules', mod.id, 'lessons'));
         const snap = await getDocs(q);
-        count += snap.size;
+        const lessonsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        totalGlobal += lessonsData.length;
+        
+        for (const lesson of lessonsData) {
+          // Lógica de acceso similar a finalizedAccess para el cálculo del total
+          const isLessonPremium = !!(lesson as any).isPremium;
+          const isModulePremium = !!mod.isPremium;
+          const isPaidActivity = (isLessonPremium && ((lesson as any).price || 0) > 0) || (isModulePremium && (mod.price || 0) > 0);
+          
+          let hasAccess = false;
+          if (profile?.role === 'admin' || user?.uid === course?.instructorId) {
+            hasAccess = true;
+          } else if (isPaidActivity) {
+            const hasPurchased = (profile?.purchasedCourses?.includes(courseId)) || (profile?.purchasedModules?.includes(mod.id)) || (profile?.purchasedLessons?.includes(lesson.id));
+            hasAccess = hasPurchased || profile?.isPremiumSubscriber;
+          } else {
+            hasAccess = course?.isFree || (profile?.purchasedCourses?.includes(courseId)) || profile?.isPremiumSubscriber || progress?.status === 'enrolled';
+          }
+
+          if (hasAccess) {
+            totalAccessible++;
+          }
+        }
       }
-      setTotalLessons(count);
+      setTotalLessons(totalGlobal);
+      setTotalAccessibleLessons(totalAccessible);
     };
     fetchCounts();
-  }, [db, courseId, modules]);
+  }, [db, courseId, modules, profile, user?.uid, course?.instructorId, course?.isFree, isUserLoading, progress?.status]);
 
   const handleMarkAsCompleted = async () => {
     if (!db || !user || user.isAnonymous || !courseId || !lessonId) {
@@ -161,7 +188,7 @@ function LessonPlayerContent() {
     const isAlreadyCompleted = currentCompleted.includes(lessonId);
 
     if (!isAlreadyCompleted) {
-      const total = course?.totalLessons || totalLessons;
+      const total = totalAccessibleLessons || course?.totalLessons || totalLessons;
       const newCount = currentCompleted.length + 1;
       const percentage = total > 0 ? Math.min(100, Math.round((newCount / total) * 100)) : 0;
 
@@ -196,6 +223,8 @@ function LessonPlayerContent() {
 
       // Crear Certificado Verificable Oficial
       const certRef = doc(db, 'certificates', `${user.uid}_${courseId}`);
+      const isFullCertificate = (progress?.completedLessons?.length || 0) >= totalLessons && totalLessons > 0;
+      
       await setDoc(certRef, {
         userId: user.uid,
         courseId,
@@ -205,6 +234,9 @@ function LessonPlayerContent() {
         instructorName: course?.instructorName || 'Instructor',
         issuedAt: serverTimestamp(),
         isValid: true,
+        type: isFullCertificate ? 'full' : 'basic',
+        totalLessons: totalLessons,
+        completedLessonsCount: progress?.completedLessons?.length || 0,
       }, { merge: true });
 
       const { sendCertificateAction } = await import('@/app/actions/email');
@@ -419,17 +451,17 @@ function LessonPlayerContent() {
             <div className="flex items-center justify-between mb-1">
                 <h3 className="font-headline font-bold text-slate-800 text-sm italic">Tu progreso</h3>
                 <span className="text-primary font-black text-xs bg-primary/10 px-2 py-1 rounded-lg">
-                    {course?.totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / course.totalLessons) * 100) : totalLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100) : 0}%
+                    {totalAccessibleLessons > 0 ? Math.round(((progress?.completedLessons?.length || 0) / totalAccessibleLessons) * 100) : 0}%
                 </span>
             </div>
             <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden shadow-inner">
                 <div 
                     className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]" 
-                    style={{ width: `${course?.totalLessons > 0 ? Math.min(100, Math.round(((progress?.completedLessons?.length || 0) / course.totalLessons) * 100)) : totalLessons > 0 ? Math.min(100, Math.round(((progress?.completedLessons?.length || 0) / totalLessons) * 100)) : 0}%` }}
+                    style={{ width: `${totalAccessibleLessons > 0 ? Math.min(100, Math.round(((progress?.completedLessons?.length || 0) / totalAccessibleLessons) * 100)) : 0}%` }}
                 />
             </div>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
-                {progress?.completedLessons?.length || 0} de {course.totalLessons || totalLessons} lecciones completadas
+                {progress?.completedLessons?.length || 0} de {totalAccessibleLessons} lecciones completadas
             </p>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -575,7 +607,7 @@ function LessonPlayerContent() {
                   </div>
                   {!isGuest && (
                     <>
-                      {(course?.totalLessons || totalLessons) > 0 && (progress?.completedLessons?.length || 0) >= (course?.totalLessons || totalLessons) ? (
+                      {totalAccessibleLessons > 0 && (progress?.completedLessons?.length || 0) >= totalAccessibleLessons ? (
                         <Button 
                           onClick={handleFinalizeCourse}
                           disabled={progress?.status === 'completed'}
