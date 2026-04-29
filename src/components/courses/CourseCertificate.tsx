@@ -38,7 +38,7 @@ export function CourseCertificate({
     : `https://${domain}/verify/${certificateId}`;
 
   return (
-    <div className="relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl">
+    <div className="certificate-container relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' } as any}>
       {/* Elementos decorativos de fondo */}
       <div className="absolute top-0 right-0 w-48 h-48 bg-slate-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2 opacity-30" />
@@ -53,6 +53,7 @@ export function CourseCertificate({
             src={logoUrl} 
             alt="DProgramadores Logo" 
             fill 
+            priority
             className="object-contain" 
           />
         </div>
@@ -71,6 +72,7 @@ export function CourseCertificate({
             src={platformLogoUrl} 
             alt={`${name} Logo`} 
             fill 
+            priority
             className="object-contain" 
           />
         </div>
@@ -142,6 +144,7 @@ export function CourseCertificate({
                src={signatureUrl} 
                alt="Firma Director" 
                fill 
+               priority
                className="object-contain" 
              />
            </div>
@@ -166,6 +169,17 @@ export function CourseCertificate({
       <div className="absolute bottom-6 left-6 pointer-events-none opacity-[0.02] rotate-[-20deg]">
         <Award className="w-64 h-64" />
       </div>
+
+      <style jsx>{`
+        @media print {
+          .certificate-container {
+            box-shadow: none !important;
+            border-width: 8px !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      `}</style>
     </div>
   );
 }
