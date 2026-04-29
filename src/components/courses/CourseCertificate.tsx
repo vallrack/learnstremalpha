@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Crown, ShieldCheck, Award, Calendar, User } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -27,17 +28,40 @@ export function CourseCertificate({
   instructorName,
   certificateId = "PREVIEW-ID",
 }: CourseCertificateProps) {
-  const logoUrl = "https://dprogramadores.com.co/img/logoD.png";
+  const dpLogoUrl = "https://dprogramadores.com.co/img/logoD.png";
   const signatureUrl = "https://drive.google.com/uc?export=view&id=1w2nzR-tylvAKiHe02fzdTKpRD7icoJua";
   const { name, logoUrl: platformLogoUrl, domain } = useBrand();
   const effectiveInstructorName = instructorName || `Experto ${name}`;
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const verifyUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/verify/${certificateId}`
     : `https://${domain}/verify/${certificateId}`;
 
+  // Pre-load all images before printing
+  useEffect(() => {
+    const handleBeforePrint = () => {
+      if (!containerRef.current) return;
+      // Force all images to load by setting src again
+      const imgs = containerRef.current.querySelectorAll('img');
+      imgs.forEach((img) => {
+        const src = img.src;
+        if (src) {
+          img.src = '';
+          img.src = src;
+        }
+      });
+    };
+
+    window.addEventListener('beforeprint', handleBeforePrint);
+    return () => window.removeEventListener('beforeprint', handleBeforePrint);
+  }, []);
+
   return (
-    <div className="certificate-container relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' } as any}>
+    <div
+      ref={containerRef}
+      className="relative w-full max-w-4xl aspect-[1.414/1] bg-white border-[12px] border-slate-900 p-8 flex flex-col items-center justify-between text-center overflow-hidden shadow-2xl print-certificate"
+    >
       {/* Elementos decorativos de fondo */}
       <div className="absolute top-0 right-0 w-48 h-48 bg-slate-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2 opacity-30" />
@@ -47,13 +71,14 @@ export function CourseCertificate({
 
       {/* Cabecera con Logos y Título */}
       <header className="relative z-10 w-full flex items-center justify-between px-6 pt-2">
-        <div className="w-16 h-16 flex items-center justify-center">
-          {/* USANDO IMG ESTÁNDAR PARA MEJOR COMPATIBILIDAD CON IMPRESIÓN */}
-          <img 
-            src={logoUrl} 
-            alt="DProgramadores Logo" 
-            className="max-w-full max-h-full object-contain print:visible" 
-            style={{ display: 'block' }}
+        {/* Logo DProgramadores - unoptimized evita lazy loading */}
+        <div className="relative w-16 h-16 flex-shrink-0">
+          <Image
+            src={dpLogoUrl}
+            alt="DProgramadores Logo"
+            fill
+            unoptimized
+            className="object-contain"
           />
         </div>
         
@@ -66,12 +91,14 @@ export function CourseCertificate({
           </p>
         </div>
 
-        <div className="w-24 h-24 flex items-center justify-center">
-          <img 
-            src={platformLogoUrl} 
-            alt={`${name} Logo`} 
-            className="max-w-full max-h-full object-contain print:visible"
-            style={{ display: 'block' }}
+        {/* Logo de la plataforma - unoptimized evita lazy loading */}
+        <div className="relative w-24 h-24 flex-shrink-0">
+          <Image
+            src={platformLogoUrl}
+            alt={`${name} Logo`}
+            fill
+            unoptimized
+            className="object-contain"
           />
         </div>
       </header>
@@ -112,7 +139,9 @@ export function CourseCertificate({
 
         <div className="flex items-center gap-2 mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
           <User className="h-3.5 w-3.5 text-slate-400" />
-          <span className="text-[11px] font-bold text-slate-600">Instructor a cargo: <span className="text-primary">{effectiveInstructorName}</span></span>
+          <span className="text-[11px] font-bold text-slate-600">
+            Instructor a cargo: <span className="text-primary">{effectiveInstructorName}</span>
+          </span>
         </div>
 
         <p className="text-[10px] text-slate-400 max-w-lg leading-relaxed px-4">
@@ -137,24 +166,25 @@ export function CourseCertificate({
         </div>
 
         <div className="flex flex-col items-center gap-1 border-t border-slate-200 pt-2">
-           <div className="relative w-32 h-10">
-             <img 
-               src={signatureUrl} 
-               alt="Firma Director" 
-               className="max-w-full max-h-full object-contain print:visible" 
-               style={{ display: 'block' }}
-             />
-           </div>
-           <div className="text-center">
-             <p className="text-xs font-bold text-slate-900">Daniel Morales</p>
-             <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wide">Director Académico</p>
-           </div>
+          {/* Firma - unoptimized para compatibilidad de impresión */}
+          <div className="relative w-32 h-10">
+            <Image
+              src={signatureUrl}
+              alt="Firma Director"
+              fill
+              unoptimized
+              className="object-contain"
+            />
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-bold text-slate-900">Daniel Morales</p>
+            <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wide">Director Académico</p>
+          </div>
         </div>
 
         <div className="flex flex-col items-end gap-2">
           <div className="bg-white p-1 rounded-sm border shadow-sm">
-            {/* SVG DEBE RENDERIZARSE BIEN, PERO ASEGURAMOS QUE SEA VISIBLE */}
-            <QRCodeSVG value={verifyUrl} size={64} level="Q" className="print:visible" />
+            <QRCodeSVG value={verifyUrl} size={64} level="Q" />
           </div>
           <div className="bg-slate-900 px-2 py-1 rounded w-[72px] text-center text-white flex flex-col items-center justify-center">
             <ShieldCheck className="h-3 w-3 text-emerald-400 mb-0.5" />
@@ -167,22 +197,6 @@ export function CourseCertificate({
       <div className="absolute bottom-6 left-6 pointer-events-none opacity-[0.02] rotate-[-20deg]">
         <Award className="w-64 h-64" />
       </div>
-
-      <style jsx>{`
-        @media print {
-          .certificate-container {
-            box-shadow: none !important;
-            border-width: 8px !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          img {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

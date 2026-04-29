@@ -62,3 +62,32 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ============================================
+   ESTILOS PARA IMPRESIÓN DE CERTIFICADOS
+   ============================================ */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Forzar visibilidad de imágenes de Next.js al imprimir */
+  img {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Next.js image wrapper span */
+  span[style*="box-sizing"] {
+    display: block !important;
+  }
+
+  .print-certificate {
+    box-shadow: none !important;
+    overflow: visible !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
