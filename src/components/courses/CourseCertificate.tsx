@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Crown, ShieldCheck, Award, Calendar, User } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -48,13 +47,13 @@ export function CourseCertificate({
 
       {/* Cabecera con Logos y Título */}
       <header className="relative z-10 w-full flex items-center justify-between px-6 pt-2">
-        <div className="relative w-16 h-16">
-          <Image 
+        <div className="w-16 h-16 flex items-center justify-center">
+          {/* USANDO IMG ESTÁNDAR PARA MEJOR COMPATIBILIDAD CON IMPRESIÓN */}
+          <img 
             src={logoUrl} 
             alt="DProgramadores Logo" 
-            fill 
-            priority
-            className="object-contain" 
+            className="max-w-full max-h-full object-contain print:visible" 
+            style={{ display: 'block' }}
           />
         </div>
         
@@ -67,13 +66,12 @@ export function CourseCertificate({
           </p>
         </div>
 
-        <div className="relative w-24 h-24 flex items-center justify-center">
-          <Image 
+        <div className="w-24 h-24 flex items-center justify-center">
+          <img 
             src={platformLogoUrl} 
             alt={`${name} Logo`} 
-            fill 
-            priority
-            className="object-contain" 
+            className="max-w-full max-h-full object-contain print:visible"
+            style={{ display: 'block' }}
           />
         </div>
       </header>
@@ -140,12 +138,11 @@ export function CourseCertificate({
 
         <div className="flex flex-col items-center gap-1 border-t border-slate-200 pt-2">
            <div className="relative w-32 h-10">
-             <Image 
+             <img 
                src={signatureUrl} 
                alt="Firma Director" 
-               fill 
-               priority
-               className="object-contain" 
+               className="max-w-full max-h-full object-contain print:visible" 
+               style={{ display: 'block' }}
              />
            </div>
            <div className="text-center">
@@ -156,7 +153,8 @@ export function CourseCertificate({
 
         <div className="flex flex-col items-end gap-2">
           <div className="bg-white p-1 rounded-sm border shadow-sm">
-            <QRCodeSVG value={verifyUrl} size={64} level="Q" />
+            {/* SVG DEBE RENDERIZARSE BIEN, PERO ASEGURAMOS QUE SEA VISIBLE */}
+            <QRCodeSVG value={verifyUrl} size={64} level="Q" className="print:visible" />
           </div>
           <div className="bg-slate-900 px-2 py-1 rounded w-[72px] text-center text-white flex flex-col items-center justify-center">
             <ShieldCheck className="h-3 w-3 text-emerald-400 mb-0.5" />
@@ -175,8 +173,13 @@ export function CourseCertificate({
           .certificate-container {
             box-shadow: none !important;
             border-width: 8px !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          img {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
           }
         }
       `}</style>

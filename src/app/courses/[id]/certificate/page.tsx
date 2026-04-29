@@ -162,6 +162,10 @@ function CertificateContent() {
             min-width: 100% !important;
             padding: 0 !important;
             margin: 0 !important;
+            overflow: visible !important;
+          }
+          .flex-1 {
+            overflow: visible !important;
           }
         }
       `}</style>
