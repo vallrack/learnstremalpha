@@ -4,10 +4,11 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { CourseCertificate } from '@/components/courses/CourseCertificate';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Printer, Share2, Loader2, AlertCircle, Eye } from 'lucide-react';
+import { ChevronLeft, Printer, Share2, Loader2, AlertCircle, Eye, FileImage, FileDown } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { useState, useEffect, Suspense } from 'react';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function CertificatePage() {
   return (
@@ -25,7 +26,9 @@ function CertificateContent() {
   const isPreview = searchParams.get('preview') === 'true';
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -55,8 +58,64 @@ function CertificateContent() {
   }, [db, courseId]);
   const { data: modules } = useCollection(modulesQuery);
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportImage = async () => {
+    try {
+      setIsExporting(true);
+      const element = document.querySelector('.certificate-container') as HTMLElement;
+      if (!element) return;
+      
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(element, {
+        scale: 2, // Alta calidad
+        useCORS: true, // Permite imágenes externas si los headers lo soportan
+        backgroundColor: '#ffffff'
+      });
+      
+      const image = canvas.toDataURL('image/jpeg', 1.0);
+      const link = document.createElement('a');
+      link.download = `Certificado_${course?.title || 'LearnStream'}.jpg`;
+      link.href = image;
+      link.click();
+    } catch (error) {
+      console.error("Error exportando imagen:", error);
+      toast({ variant: "destructive", title: "Error al exportar", description: "No se pudo generar la imagen." });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      setIsExporting(true);
+      const element = document.querySelector('.certificate-container') as HTMLElement;
+      if (!element) return;
+      
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      
+      // Crear PDF con las dimensiones exactas del canvas para evitar bordes blancos
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+      
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`Certificado_${course?.title || 'LearnStream'}.pdf`);
+    } catch (error) {
+      console.error("Error exportando PDF:", error);
+      toast({ variant: "destructive", title: "Error al exportar", description: "No se pudo generar el PDF." });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (!mounted || isUserLoading || isCourseLoading) {
@@ -109,10 +168,14 @@ function CertificateContent() {
               </div>
             )}
 
-            <div className="flex items-center gap-3">
-              <Button variant="outline" className="rounded-xl gap-2" onClick={handlePrint}>
-                <Printer className="h-4 w-4" />
-                Imprimir / PDF
+            <div className="flex items-center flex-wrap gap-3">
+              <Button variant="outline" className="rounded-xl gap-2" onClick={handleExportImage} disabled={isExporting}>
+                {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileImage className="h-4 w-4 text-emerald-600" />}
+                Descargar JPG
+              </Button>
+              <Button variant="outline" className="rounded-xl gap-2" onClick={handleExportPDF} disabled={isExporting}>
+                {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4 text-red-600" />}
+                Descargar PDF
               </Button>
               <Button className="rounded-xl gap-2 shadow-lg shadow-primary/20">
                 <Share2 className="h-4 w-4" />
