@@ -696,7 +696,7 @@ function EmbeddedChallenge({ challengeId, onComplete }: { challengeId: string, o
   const db = useFirestore();
   const challengeRef = useMemoFirebase(() => {
     if (!db || !challengeId) return null;
-    return doc(db, 'challenges', challengeId);
+    return doc(db, 'coding_challenges', challengeId);
   }, [db, challengeId]);
   const { data: challenge } = useDoc(challengeRef);
   const router = useRouter();
