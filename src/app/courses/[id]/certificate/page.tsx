@@ -8,7 +8,7 @@ import { ChevronLeft, Printer, Share2, Loader2, AlertCircle, Eye, FileImage, Fil
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { useState, useEffect, Suspense } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CertificatePage() {
   return (
