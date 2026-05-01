@@ -601,7 +601,6 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
-  const [previewResource, setPreviewResource] = useState<any>(null);
   const isGuest = !user || user.isAnonymous;
 
   const resourcesQuery = useMemoFirebase(() => {
@@ -618,7 +617,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
         <div className="p-5 border-b bg-muted/20"><h3 className="font-headline font-bold text-sm flex items-center gap-2"><Paperclip className="h-4 w-4 text-primary" /> Material</h3></div>
         <div className="p-3 space-y-2">
           {resources.map((res) => (
-            <div key={res.id} className="flex items-center justify-between p-3 rounded-2xl border hover:bg-muted/50 cursor-pointer" onClick={() => !isGuest ? setPreviewResource(res) : toast({ variant: "destructive", title: "Inicia sesión" })}>
+            <div key={res.id} className="flex items-center justify-between p-3 rounded-2xl border hover:bg-muted/50 cursor-pointer" onClick={() => !isGuest ? window.open(res.contentUrl, '_blank') : toast({ variant: "destructive", title: "Inicia sesión" })}>
               <div className="flex items-center gap-3"><div className="bg-background p-2 rounded-xl border"><FileDown className="h-4 w-4 text-red-500" /></div><p className="text-xs font-semibold truncate">{res.title}</p></div>
               <ExternalLink className="h-3 w-3 text-slate-400" />
             </div>
