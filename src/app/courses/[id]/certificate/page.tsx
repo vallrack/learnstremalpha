@@ -40,20 +40,31 @@ function CertificateContent() {
   }, [db, courseId]);
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
 
+  // 1. Perfil del usuario que está navegando (tú)
+  const myProfileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(myProfileRef);
+
+  // 2. Determinar a quién estamos viendo
   const adminViewUid = searchParams.get('uid');
   const targetUid = (profile?.role === 'admin' && adminViewUid) ? adminViewUid : user?.uid;
 
-  const profileRef = useMemoFirebase(() => {
+  // 3. Perfil del estudiante (el dueño del certificado)
+  const studentProfileRef = useMemoFirebase(() => {
     if (!db || !targetUid) return null;
     return doc(db, 'users', targetUid);
   }, [db, targetUid]);
-  const { data: targetProfile } = useDoc(profileRef);
+  const { data: targetProfile } = useDoc(studentProfileRef);
 
+  // 4. Progreso del curso
   const progressRef = useMemoFirebase(() => {
     if (!db || !targetUid || !courseId || isPreview) return null;
     return doc(db, 'users', targetUid, 'courseProgress', courseId);
   }, [db, targetUid, courseId, isPreview]);
   const { data: progress } = useDoc(progressRef);
+
 
 
   const modulesQuery = useMemoFirebase(() => {

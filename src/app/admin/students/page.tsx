@@ -838,24 +838,42 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                          <div className="w-full sm:w-48 space-y-2">
-                            <div className="flex justify-between text-xs font-bold text-slate-500">
-                              <span>Progreso</span>
-                              <span>{Math.round(enr.progressPercentage || 0)}%</span>
-                            </div>
-                            <Progress value={enr.progressPercentage || 0} className="h-2 bg-slate-100" />
-                          </div>
+
+                        {/* Colores dinámicos para la barra de progreso */}
+                        {(() => {
+                          const percentage = enr.progressPercentage || 0;
+                          let colorClass = "bg-rose-500"; // Bajo
+                          if (percentage >= 100) colorClass = "bg-emerald-500"; // Completado
+                          else if (percentage >= 70) colorClass = "bg-emerald-400"; // Alto
+                          else if (percentage >= 35) colorClass = "bg-amber-400"; // Medio
                           
-                          {enr.status === 'completed' && (
-                            <Link href={`/courses/${enr.courseId}/certificate?uid=${studentId}`} target="_blank">
-                              <Button size="sm" variant="outline" className="rounded-xl gap-2 text-xs border-emerald-200 text-emerald-600 hover:bg-emerald-50">
-                                <Trophy className="h-3.5 w-3.5" />
-                                Ver Certificado
-                              </Button>
-                            </Link>
-                          )}
-                        </div>
+                          return (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                              <div className="w-full sm:w-48 space-y-2">
+                                <div className="flex justify-between text-xs font-bold text-slate-500">
+                                  <span>Progreso</span>
+                                  <span className={percentage >= 100 ? "text-emerald-600" : ""}>{Math.round(percentage)}%</span>
+                                </div>
+                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full ${colorClass} transition-all duration-500`} 
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                              
+                              {enr.status === 'completed' && (
+                                <Link href={`/courses/${enr.courseId}/certificate?uid=${studentId}`} target="_blank">
+                                  <Button size="sm" variant="outline" className="rounded-xl gap-2 text-xs border-emerald-200 text-emerald-600 hover:bg-emerald-50">
+                                    <Trophy className="h-3.5 w-3.5" />
+                                    Ver Certificado
+                                  </Button>
+                                </Link>
+                              )}
+                            </div>
+                          );
+                        })()}
+
 
                       </div>
                     </CardContent>
