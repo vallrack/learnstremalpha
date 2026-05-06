@@ -304,10 +304,11 @@ export default function AdminCoursesPage() {
         }
         const docRef = await addDocumentNonBlocking(collection(db, 'courses'), courseData);
         
-        if (baseCourseId && docRef?.id) {
-          setIsCloning(true);
-          try {
-            toast({ title: "Clonando contenido...", description: "Estamos trayendo los módulos y lecciones del curso base." });
+        if (docRef && 'id' in docRef) {
+          if (baseCourseId) {
+            setIsCloning(true);
+            try {
+              toast({ title: "Clonando contenido...", description: "Estamos trayendo los módulos y lecciones del curso base." });
             const idToken = await (activeUser?.getIdToken());
             if (!idToken) throw new Error("No se pudo obtener el token de autenticación");
             
@@ -319,34 +320,37 @@ export default function AdminCoursesPage() {
           } finally {
             setIsCloning(false);
           }
+          } else {
+            toast({ title: "¡Curso creado!", description: "El nuevo programa ya está disponible en el catálogo." });
+          }
+
+          // Notificar a todos sobre el nuevo curso (si está activo y no es base)
+          if (courseData.isActive && !courseData.isBaseCourse) {
+            await addDocumentNonBlocking(collection(db, 'notifications'), {
+              userId: 'all',
+              title: '¡Nuevo Curso Disponible!',
+              message: `Se ha publicado el curso: ${title}. ¡Inscríbete ahora!`,
+              type: 'success',
+              read: false,
+              createdAt: serverTimestamp(),
+              link: `/courses/${docRef.id}`
+            });
+          }
+
+          // Notificar al Admin si el que crea es un instructor
+          if (!isAdmin) {
+            await addDocumentNonBlocking(collection(db, 'notifications'), {
+              userId: 'admin',
+              title: 'Nuevo Curso Publicado',
+              message: `El instructor ${courseData.instructorName} ha creado el curso: ${title}`,
+              type: 'info',
+              read: false,
+              createdAt: serverTimestamp(),
+              link: `/admin`
+            });
+          }
         } else {
           toast({ title: "¡Curso creado!", description: "El nuevo programa ya está disponible en el catálogo." });
-        }
-
-        // Notificar a todos sobre el nuevo curso (si está activo y no es base)
-        if (courseData.isActive && !courseData.isBaseCourse) {
-          await addDocumentNonBlocking(collection(db, 'notifications'), {
-            userId: 'all',
-            title: '¡Nuevo Curso Disponible!',
-            message: `Se ha publicado el curso: ${title}. ¡Inscríbete ahora!`,
-            type: 'success',
-            read: false,
-            createdAt: serverTimestamp(),
-            link: `/courses/${docRef.id}`
-          });
-        }
-
-        // Notificar al Admin si el que crea es un instructor
-        if (!isAdmin && docRef?.id) {
-          await addDocumentNonBlocking(collection(db, 'notifications'), {
-            userId: 'admin',
-            title: 'Nuevo Curso Publicado',
-            message: `El instructor ${courseData.instructorName} ha creado el curso: ${title}`,
-            type: 'info',
-            read: false,
-            createdAt: serverTimestamp(),
-            link: `/admin`
-          });
         }
       }
       
