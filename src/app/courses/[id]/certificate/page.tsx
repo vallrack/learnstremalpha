@@ -40,17 +40,21 @@ function CertificateContent() {
   }, [db, courseId]);
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
 
+  const adminViewUid = searchParams.get('uid');
+  const targetUid = (profile?.role === 'admin' && adminViewUid) ? adminViewUid : user?.uid;
+
   const profileRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
-  const { data: profile } = useDoc(profileRef);
+    if (!db || !targetUid) return null;
+    return doc(db, 'users', targetUid);
+  }, [db, targetUid]);
+  const { data: targetProfile } = useDoc(profileRef);
 
   const progressRef = useMemoFirebase(() => {
-    if (!db || !user?.uid || !courseId || isPreview) return null;
-    return doc(db, 'users', user.uid, 'courseProgress', courseId);
-  }, [db, user?.uid, courseId, isPreview]);
+    if (!db || !targetUid || !courseId || isPreview) return null;
+    return doc(db, 'users', targetUid, 'courseProgress', courseId);
+  }, [db, targetUid, courseId, isPreview]);
   const { data: progress } = useDoc(progressRef);
+
 
   const modulesQuery = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -143,9 +147,11 @@ function CertificateContent() {
     return <div className="p-20 text-center">Curso no encontrado para vista previa.</div>;
   }
 
-  const studentName = isPreview ? "Nombre del Estudiante" : (profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Estudiante');
+  const studentName = isPreview ? "Nombre del Estudiante" : (targetProfile?.displayName || targetProfile?.email?.split('@')[0] || 'Estudiante');
   const completionDate = isPreview ? new Date().toLocaleDateString() : (progress?.completedAt ? new Date(progress.completedAt.toDate()).toLocaleDateString() : new Date().toLocaleDateString());
-  const isPremium = isPreview ? true : (profile?.role === 'admin' || !!profile?.isPremiumSubscriber);
+  const isPremium = isPreview ? true : (targetProfile?.role === 'admin' || !!targetProfile?.isPremiumSubscriber);
+  const certificateId = isPreview ? "PREVIEW-ID" : `${targetUid}_${courseId}`;
+
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col print:bg-white">
@@ -194,7 +200,7 @@ function CertificateContent() {
                 completionDate={completionDate}
                 modulesCount={modules?.length || 0}
                 instructorName={course?.instructorName}
-                certificateId={isPreview ? "PREVIEW-ID" : `${user?.uid}_${courseId}`}
+                certificateId={certificateId}
               />
             </div>
           </div>

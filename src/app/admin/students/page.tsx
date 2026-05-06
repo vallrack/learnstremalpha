@@ -3,6 +3,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { 
@@ -723,13 +725,25 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
                             )}
                           </div>
                         </div>
-                        <div className="w-full sm:w-48 space-y-2">
-                          <div className="flex justify-between text-xs font-bold text-slate-500">
-                            <span>Progreso</span>
-                            <span>{Math.round(enr.progressPercentage || 0)}%</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                          <div className="w-full sm:w-48 space-y-2">
+                            <div className="flex justify-between text-xs font-bold text-slate-500">
+                              <span>Progreso</span>
+                              <span>{Math.round(enr.progressPercentage || 0)}%</span>
+                            </div>
+                            <Progress value={enr.progressPercentage || 0} className="h-2 bg-slate-100" />
                           </div>
-                          <Progress value={enr.progressPercentage || 0} className="h-2 bg-slate-100" />
+                          
+                          {enr.status === 'completed' && (
+                            <Link href={`/courses/${enr.courseId}/certificate?uid=${studentId}`} target="_blank">
+                              <Button size="sm" variant="outline" className="rounded-xl gap-2 text-xs border-emerald-200 text-emerald-600 hover:bg-emerald-50">
+                                <Trophy className="h-3.5 w-3.5" />
+                                Ver Certificado
+                              </Button>
+                            </Link>
+                          )}
                         </div>
+
                       </div>
                     </CardContent>
                   </Card>

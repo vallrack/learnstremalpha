@@ -163,16 +163,15 @@ export async function POST(req: NextRequest) {
 
           const total = totalAccessible || totalGlobal;
           
-          if (prog.data.status === 'completed') completedCoursesCount++;
-
-          // Calcular módulos completados
-          if (structure?.modules && structure.modules.length > 0) {
-              const modWeight = 100 / structure.modules.length;
-              const currentPerc = total > 0 ? (completedLessons.length / total) * 100 : 0;
-              completedModulesCount += Math.floor(currentPerc / modWeight);
-          }
-
-          if (total > 0) {
+          if (prog.data.status === 'completed') {
+              completedCoursesCount++;
+              // Si ya está completado, el progreso DEBE ser 100%
+              if ((prog.data.progressPercentage || 0) !== 100) {
+                  batch.update(prog.ref, { progressPercentage: 100, updatedAt: new Date() });
+                  batchSize++;
+                  updatedProgressCount++;
+              }
+          } else if (total > 0) {
               const newPerc = Math.min(100, Math.round((completedLessons.length / total) * 100));
               if (newPerc !== (prog.data.progressPercentage || 0)) {
                   batch.update(prog.ref, { progressPercentage: newPerc, updatedAt: new Date() });
@@ -180,6 +179,7 @@ export async function POST(req: NextRequest) {
                   updatedProgressCount++;
               }
           }
+
       }
 
       // B. Recalcular XP Total (Fórmula Evolucionada v3.0)
