@@ -180,8 +180,12 @@ export default function AdminStudentsPage() {
 
     setIsSendingBulkEmail(true);
     try {
-      const emails = filteredStudents.map(s => s.email);
-      const result = await sendBulkCustomEmailAction(emails, bulkEmailSubject, bulkEmailMessage);
+      const recipients = filteredStudents.map(s => ({ 
+        email: s.email, 
+        name: s.displayName || 'Estudiante' 
+      }));
+      const result = await sendBulkCustomEmailAction(recipients, bulkEmailSubject, bulkEmailMessage);
+
 
       if (result.success) {
         toast({
@@ -553,7 +557,8 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
     setIsSendingEmail(true);
     try {
       const { sendCustomEmailAction } = await import('@/app/actions/email');
-      const result = await sendCustomEmailAction(studentId, emailSubject, emailMessage);
+      const result = await sendCustomEmailAction(student?.email, student?.displayName || 'Estudiante', emailSubject, emailMessage);
+
       
       if (result.success) {
         toast({ title: "Correo enviado", description: "El estudiante recibirá tu mensaje en breve." });

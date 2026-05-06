@@ -93,9 +93,14 @@ export async function sendEnrollmentWelcomeAction(userId: string, courseId: stri
 /**
  * Acción para enviar un correo personalizado a un estudiante
  */
-export async function sendCustomEmailAction(studentEmail: string, subject: string, message: string) {
+export async function sendCustomEmailAction(studentEmail: string, studentName: string, subject: string, message: string) {
   try {
-    const result = await emailService.sendCustomEmail(studentEmail, subject, message);
+    const result = await emailService.sendCustomEmail({ 
+      email: studentEmail, 
+      name: studentName, 
+      subject, 
+      message 
+    });
     return result;
   } catch (error: any) {
     console.error("Error in sendCustomEmailAction:", error);
@@ -103,18 +108,19 @@ export async function sendCustomEmailAction(studentEmail: string, subject: strin
   }
 }
 
-
-export async function sendBulkCustomEmailAction(emails: string[], subject: string, message: string) {
+export async function sendBulkCustomEmailAction(recipients: { email: string, name: string }[], subject: string, message: string) {
   try {
-    if (!emails || emails.length === 0) throw new Error("No hay destinatarios seleccionados");
+    if (!recipients || recipients.length === 0) throw new Error("No hay destinatarios seleccionados");
     
-    console.log(`Iniciando envío masivo a ${emails.length} destinatarios`);
+    console.log(`Iniciando envío masivo a ${recipients.length} destinatarios`);
     
-    // Para evitar bloqueos, enviamos en paralelo controlado o secuencial
-    // Brevo maneja bien múltiples peticiones, pero vamos a reportar resultados
-    const results = await Promise.all(emails.map(email => 
-      emailService.sendCustomEmail(email, subject, message)
-        .catch(err => ({ success: false, error: err.message, email }))
+    const results = await Promise.all(recipients.map(recipient => 
+      emailService.sendCustomEmail({
+        email: recipient.email,
+        name: recipient.name,
+        subject,
+        message
+      }).catch(err => ({ success: false, error: err.message, email: recipient.email }))
     ));
 
     const successCount = results.filter((r: any) => r.success).length;
@@ -130,3 +136,4 @@ export async function sendBulkCustomEmailAction(emails: string[], subject: strin
     return { success: false, error: error.message };
   }
 }
+
