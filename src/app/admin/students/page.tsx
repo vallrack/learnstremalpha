@@ -130,12 +130,15 @@ export default function AdminStudentsPage() {
         }
       });
 
-      if (!res.ok) throw new Error('Error al sincronizar indicadores');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Error al sincronizar indicadores');
+      }
 
       const data = await res.json();
       toast({
         title: "Sincronización Completada",
-        description: `Se actualizaron ${data.results.updated} registros de progreso correctamente.`
+        description: `Se actualizaron ${data.results.updatedUsersXp || data.results.usersXpUpdated} usuarios correctamente.`
       });
       router.refresh();
     } catch (err: any) {
@@ -144,7 +147,8 @@ export default function AdminStudentsPage() {
         title: "Fallo de Sincronización",
         description: err.message
       });
-    } finally {
+    }
+ finally {
       setIsSyncing(false);
     }
   };

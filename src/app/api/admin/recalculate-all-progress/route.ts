@@ -34,30 +34,46 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Mapear estructura de cursos (Lecciones y Módulos)
+    console.log('--- Iniciando mapeo de estructura de cursos ---');
     const coursesSnap = await adminDb.collection('courses').get();
     const courseStructure: Record<string, any> = {};
     
-    // Obtener todos los módulos y lecciones de todos los cursos para el cálculo de XP y progreso refinado
-    for (const cDoc of coursesSnap.docs) {
-        const modulesSnap = await cDoc.ref.collection('modules').get();
-        const lessonsSnap = await adminDb.collectionGroup('lessons').where('courseId', '==', cDoc.id).get();
+    // Obtener todos los módulos y lecciones de forma eficiente
+    const allModulesSnap = await adminDb.collectionGroup('modules').get();
+    const allLessonsSnap = await adminDb.collectionGroup('lessons').get();
+
+    console.log(`Estructura: ${coursesSnap.size} cursos, ${allModulesSnap.size} módulos, ${allLessonsSnap.size} lecciones encontradas.`);
+
+    coursesSnap.docs.forEach(cDoc => {
+        const cId = cDoc.id;
+        const cData = cDoc.data();
         
-        courseStructure[cDoc.id] = {
-            id: cDoc.id,
-            isFree: cDoc.data().isFree ?? true,
-            totalLessons: cDoc.data().totalLessons || 0,
-            instructorId: cDoc.data().instructorId,
-            modules: modulesSnap.docs.map(m => ({ id: m.id, ...m.data() })),
-            lessons: lessonsSnap.docs.map(l => ({ id: l.id, ...l.data() }))
+        courseStructure[cId] = {
+            id: cId,
+            isFree: cData.isFree ?? true,
+            totalLessons: cData.totalLessons || 0,
+            instructorId: cData.instructorId,
+            modules: allModulesSnap.docs.filter(m => m.ref.parent.parent?.id === cId).map(m => ({ id: m.id, ...m.data() })),
+            lessons: allLessonsSnap.docs.filter(l => {
+              // Buscar el courseId en el path o en el documento
+              const data = l.data();
+              if (data.courseId === cId) return true;
+              // Fallback: revisar el path (courses/{cId}/modules/{mId}/lessons/{lId})
+              return l.ref.path.includes(`courses/${cId}/`);
+            }).map(l => ({ id: l.id, ...l.data() }))
         };
-    }
+    });
+
+    console.log('Mapeo de estructura completado.');
 
     // 3. Obtener datos globales para el cálculo de XP (Collection Groups)
+    console.log('--- Obteniendo datos de submissions y logros ---');
     const [challengesSnap, achievementsSnap, progressSnap] = await Promise.all([
         adminDb.collectionGroup('challenge_submissions').get(),
         adminDb.collectionGroup('achievements').get(),
         adminDb.collectionGroup('courseProgress').get()
     ]);
+
 
     // Mapear conteos por Usuario
     const userChallengesIds: Record<string, Set<string>> = {};
@@ -95,6 +111,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Procesar usuarios y sus progresos
     const usersSnap = await adminDb.collection('users').get();
+    console.log(`--- Procesando ${usersSnap.size} usuarios ---`);
     
     let updatedProgressCount = 0;
     let updatedUsersCount = 0;
@@ -104,6 +121,10 @@ export async function POST(req: NextRequest) {
     let batchSize = 0;
 
     for (const userDoc of usersSnap.docs) {
+      if (totalProcessed % 100 === 0 && totalProcessed > 0) {
+        console.log(`Procesados ${totalProcessed} de ${usersSnap.size} usuarios...`);
+      }
+
       const uid = userDoc.id;
       const userData = userDoc.data() || {};
       const userProgs = userProgressList[uid] || [];
