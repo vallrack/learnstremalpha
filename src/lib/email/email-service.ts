@@ -10,9 +10,15 @@ const brevo = new BrevoClient({
   apiKey: process.env.BREVO_API_KEY || 'YOUR_BREVO_API_KEY'
 });
 
+// Remitente verificado en Brevo según captura del usuario
+const VERIFIED_SENDER = {
+  name: process.env.EMAIL_FROM_NAME || DEFAULT_BRANDING.name,
+  email: process.env.EMAIL_FROM_ADDRESS || 'vallrack67@gmail.com'
+};
+
 export const emailService = {
   /**
-   * Envía un correo de certificado usando Resend (preferido para transaccionales)
+   * Envía un correo de certificado usando Brevo (Cambiado de Resend para simplificar)
    */
   async sendCertificateEmail({ email, name, courseTitle, technology }: { 
     email: string, 
@@ -21,11 +27,13 @@ export const emailService = {
     technology: string 
   }) {
     try {
-      const { data, error } = await resend.emails.send({
-        from: `${DEFAULT_BRANDING.name} <notifications@${DEFAULT_BRANDING.domain}>`,
-        to: [email],
+      console.log(`Intentando enviar certificado a ${email} desde ${VERIFIED_SENDER.email}...`);
+      
+      const response = await brevo.transactionalEmails.sendTransacEmail({
         subject: `¡Felicidades! Tu certificado de ${courseTitle} está listo - ${DEFAULT_BRANDING.name}`,
-        html: `
+        sender: VERIFIED_SENDER,
+        to: [{ email: email, name: name }],
+        htmlContent: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <h1 style="color: #6366f1;">¡Lo lograste, ${name}!</h1>
             <p style="font-size: 16px; line-height: 1.5; color: #374151;">
@@ -45,15 +53,11 @@ export const emailService = {
         `,
       });
 
-      if (error) {
-        console.error('Error sending with Resend:', error);
-        // Fallback or just log
-        return { success: false, error };
-      }
-      return { success: true, data };
-    } catch (err) {
-      console.error('Exception in Resend service:', err);
-      return { success: false, error: err };
+      console.log('Certificado enviado exitosamente via Brevo:', response);
+      return { success: true, data: response };
+    } catch (err: any) {
+      console.error('Error enviando certificado con Brevo:', err?.response?.body || err);
+      return { success: false, error: err?.response?.body?.message || err.message || 'Error desconocido en Brevo' };
     }
   },
 
@@ -76,13 +80,13 @@ export const emailService = {
             <p style="font-size: 12px; color: #64748b;">Si tienes alguna duda, responde a este correo y nuestro equipo te ayudará.</p>
           </div>
         `,
-        sender: { name: DEFAULT_BRANDING.name, email: `ventas@${DEFAULT_BRANDING.domain}` },
+        sender: VERIFIED_SENDER,
         to: [{ email: email, name: name }]
       });
       return { success: true, data: response };
-    } catch (err) {
-      console.error('Error sending with Brevo:', err);
-      return { success: false, error: err };
+    } catch (err: any) {
+      console.error('Error sending payment reminder with Brevo:', err?.response?.body || err);
+      return { success: false, error: err?.response?.body?.message || err.message };
     }
   },
 
@@ -96,8 +100,12 @@ export const emailService = {
     courseTitle: string 
   }) {
     try {
+      console.log(`Intentando enviar bienvenida a ${email} desde ${VERIFIED_SENDER.email}...`);
+      
       const response = await brevo.transactionalEmails.sendTransacEmail({
         subject: `¡Accesos Listos! Curso: ${courseTitle} - ${DEFAULT_BRANDING.name}`,
+        sender: VERIFIED_SENDER,
+        to: [{ email: email, name: name }],
         htmlContent: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 20px;">
             <div style="text-align: center; margin-bottom: 25px;">
@@ -128,13 +136,54 @@ export const emailService = {
             </p>
           </div>
         `,
-        sender: { name: DEFAULT_BRANDING.name, email: `no-reply@${DEFAULT_BRANDING.domain}` },
-        to: [{ email: email, name: name }]
+      });
+      console.log('Correo de bienvenida enviado exitosamente via Brevo:', response);
+      return { success: true, data: response };
+    } catch (err: any) {
+      console.error('Error sending welcome email with Brevo:', err?.response?.body || err);
+      return { success: false, error: err?.response?.body?.message || err.message };
+    }
+  },
+
+  /**
+   * Envía un correo personalizado desde el panel de administración
+   */
+  async sendCustomEmail({ email, name, subject, message }: {
+    email: string,
+    name: string,
+    subject: string,
+    message: string
+  }) {
+    try {
+      console.log(`Enviando correo personalizado a ${email} con asunto: ${subject}`);
+      
+      const response = await brevo.transactionalEmails.sendTransacEmail({
+        subject: subject,
+        sender: VERIFIED_SENDER,
+        to: [{ email: email, name: name }],
+        htmlContent: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 20px;">
+            <div style="margin-bottom: 25px;">
+              <h2 style="color: #0f172a; margin: 0;">Hola, ${name}</h2>
+            </div>
+            
+            <div style="color: #334155; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">
+              ${message}
+            </div>
+
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #e2e8f0;" />
+            <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+              Comunicación oficial de ${DEFAULT_BRANDING.name} - ${DEFAULT_BRANDING.tagline}
+            </p>
+          </div>
+        `,
       });
       return { success: true, data: response };
-    } catch (err) {
-      console.error('Error sending welcome email with Brevo:', err);
-      return { success: false, error: err };
+    } catch (err: any) {
+      console.error('Error enviando correo personalizado:', err?.response?.body || err);
+      return { success: false, error: err?.response?.body?.message || err.message };
     }
   }
 };
+
+

@@ -413,6 +413,34 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [courseToEnroll, setCourseToEnroll] = useState<string>('');
 
+  // Estados para el correo personalizado
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const handleSendCustomEmail = async () => {
+    if (!studentId || !emailSubject || !emailMessage) return;
+    setIsSendingEmail(true);
+    try {
+      const { sendCustomEmailAction } = await import('@/app/actions/email');
+      const result = await sendCustomEmailAction(studentId, emailSubject, emailMessage);
+      
+      if (result.success) {
+        toast({ title: "Correo enviado", description: "El estudiante recibirá tu mensaje en breve." });
+        setShowEmailDialog(false);
+        setEmailSubject('');
+        setEmailMessage('');
+      } else {
+        toast({ variant: "destructive", title: "Error al enviar", description: result.error });
+      }
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error crítico", description: err.message });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   const handleManualEnroll = async () => {
     if (!db || !studentId || !courseToEnroll) return;
     setIsEnrolling(true);
@@ -441,15 +469,29 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
       // Enviar Correo de Bienvenida
       try {
         const { sendEnrollmentWelcomeAction } = await import('@/app/actions/email');
-        await sendEnrollmentWelcomeAction(studentId, courseToEnroll);
+        const emailResult = await sendEnrollmentWelcomeAction(studentId, courseToEnroll);
+        
+        if (emailResult.success) {
+          toast({ 
+            title: "Estudiante matriculado", 
+            description: "Se ha asignado el curso y enviado el correo de bienvenida correctamente." 
+          });
+        } else {
+          toast({ 
+            variant: "warning",
+            title: "Estudiante matriculado (Sin correo)", 
+            description: `El curso fue asignado, pero el correo falló: ${emailResult.error}` 
+          });
+        }
       } catch (emailErr) {
         console.error("Error sending manual welcome email:", emailErr);
+        toast({ 
+          variant: "destructive",
+          title: "Error crítico de correo", 
+          description: "No se pudo conectar con el servicio de mensajería." 
+        });
       }
 
-      toast({ 
-        title: "Estudiante matriculado", 
-        description: "Se ha asignado el curso y enviado el correo de bienvenida." 
-      });
       setCourseToEnroll('');
     } catch (err: any) {
       toast({ 
@@ -509,9 +551,19 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
           </div>
 
           <div className="flex gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowEmailDialog(true)}
+              className="h-full rounded-2xl border-primary/20 text-primary hover:bg-primary/5 gap-2 px-6"
+            >
+              <Mail className="h-5 w-5" />
+              Enviar Correo
+            </Button>
+
             <Card className="rounded-2xl border-slate-200 bg-white p-4 flex items-center gap-4">
               <div className="flex flex-col">
                 <Label className="text-xs font-bold uppercase text-muted-foreground mb-1">Estado de la Cuenta</Label>
+
                 <span className={`text-sm font-bold ${student?.isActive !== false ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {student?.isActive !== false ? 'Cuenta Activa' : 'Cuenta Suspendida'}
                 </span>
@@ -677,6 +729,64 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
           </section>
         </div>
       </div>
+
+      {/* Dialog para enviar correo personalizado */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="sm:max-w-[600px] rounded-[2.5rem] p-0 overflow-hidden">
+          <div className="bg-primary/5 p-8 border-b">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-primary/10 p-2 rounded-xl">
+                <Mail className="h-5 w-5 text-primary" />
+              </div>
+              <DialogTitle className="text-2xl font-headline font-bold">Enviar Correo a {student?.displayName}</DialogTitle>
+            </div>
+            <DialogDescription>
+              Escribe el asunto y el mensaje que deseas enviar directamente al correo del estudiante.
+            </DialogDescription>
+          </div>
+          
+          <div className="p-8 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-slate-700">Asunto</Label>
+              <Input 
+                placeholder="Ej: Información sobre tu progreso..." 
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                className="rounded-xl border-slate-200 h-11"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-slate-700">Mensaje</Label>
+              <Textarea 
+                placeholder="Escribe tu mensaje aquí..." 
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                className="rounded-2xl border-slate-200 min-h-[200px] resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="ghost" 
+                className="flex-1 rounded-xl h-12" 
+                onClick={() => setShowEmailDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                className="flex-1 rounded-xl h-12 font-bold gap-2 shadow-lg shadow-primary/20" 
+                disabled={!emailSubject || !emailMessage || isSendingEmail}
+                onClick={handleSendCustomEmail}
+              >
+                {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Enviar Mensaje
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }

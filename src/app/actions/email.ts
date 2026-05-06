@@ -89,3 +89,27 @@ export async function sendEnrollmentWelcomeAction(userId: string, courseId: stri
     return { success: false, error: 'Error interno de servidor' };
   }
 }
+
+/**
+ * Acción para enviar un correo personalizado a un estudiante
+ */
+export async function sendCustomEmailAction(userId: string, subject: string, message: string) {
+  if (!userId || !subject || !message) return { success: false, error: 'Faltan parámetros' };
+
+  try {
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    if (!userDoc.exists) return { success: false, error: 'Usuario no encontrado' };
+
+    const userData = userDoc.data();
+    const email = userData?.email;
+    const name = userData?.displayName || 'Estudiante';
+
+    if (!email) return { success: false, error: 'El usuario no tiene correo asociado' };
+
+    return await emailService.sendCustomEmail({ email, name, subject, message });
+  } catch (err) {
+    console.error('Error in sendCustomEmailAction:', err);
+    return { success: false, error: 'Error interno de servidor' };
+  }
+}
+

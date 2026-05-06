@@ -117,15 +117,19 @@ export async function POST(req: NextRequest) {
           }
           
           try {
-            await emailService.sendBulkWelcomeEmail({
+            const emailResult = await emailService.sendBulkWelcomeEmail({
               email,
               name: name || email.split('@')[0],
               password: tempPassword,
               courseTitle
             });
-          } catch (emailErr) {
+            
+            if (!emailResult.success) {
+              results.errors.push(`Correo no enviado a ${email}: ${emailResult.error}`);
+            }
+          } catch (emailErr: any) {
             console.error(`Error enviando correo a ${email}:`, emailErr);
-            results.errors.push(`Correo no enviado a ${email}: El servidor de correos no respondió.`);
+            results.errors.push(`Correo no enviado a ${email}: Error de conexión.`);
           }
           
           results.success++;
