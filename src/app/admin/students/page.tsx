@@ -478,7 +478,7 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
           });
         } else {
           toast({ 
-            variant: "warning",
+            variant: "destructive",
             title: "Estudiante matriculado (Sin correo)", 
             description: `El curso fue asignado, pero el correo falló: ${emailResult.error}` 
           });
