@@ -455,8 +455,30 @@ function LessonPlayerContent() {
           </div>
         </aside>
 
-        <main className="flex-1 flex flex-col min-w-0 bg-[#F1F0F4]/30">
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12">
+        <main className="flex-1 flex flex-col min-w-0 bg-[#F1F0F4]/30 relative overflow-hidden">
+          {/* Botón Flotante para Menú Móvil (Lecciones) */}
+          <div className="lg:hidden absolute top-4 left-4 z-50">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="rounded-xl shadow-lg bg-white border-primary/20 text-primary">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-80">
+                <SheetHeader className="p-6 border-b bg-slate-50/50">
+                  <SheetTitle className="text-left font-headline font-bold">Contenido del Curso</SheetTitle>
+                </SheetHeader>
+                <div className="overflow-y-auto h-full pb-20 custom-scrollbar">
+                  {modules?.map((module, i) => (
+                    <ModuleInSidebar key={module.id} module={module} courseId={courseId} activeLessonId={lessonId} index={i} completedLessons={progress?.completedLessons || []} />
+                  ))}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 pt-16 lg:pt-12">
+
             <div className="max-w-4xl mx-auto space-y-8">
               {currentLesson.type === 'challenge' ? (
                  <EmbeddedChallenge 
@@ -477,16 +499,36 @@ function LessonPlayerContent() {
                       <iframe width="100%" height="100%" src={formatVideoUrl(videoSource)} title={currentLesson.title} frameBorder="0" allowFullScreen></iframe>
                     </div>
                   ) : <div className="aspect-video bg-muted rounded-2xl flex flex-col items-center justify-center gap-4 text-muted-foreground border-2 border-dashed"><PlayCircle className="h-12 w-12 opacity-20" /><p>Sin video.</p></div>}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="md:col-span-2 space-y-8">
-                      <article className="prose prose-slate max-w-none bg-card p-8 md:p-10 rounded-3xl border shadow-sm">
-                        <h1 className="text-3xl font-headline font-bold mb-6">{currentLesson.title}</h1>
-                        <div className="text-lg leading-relaxed text-muted-foreground space-y-6 whitespace-pre-wrap">{effectiveDescription || "Sin descripción."}</div>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-8">
+                      <article className="prose prose-slate max-w-none bg-white p-6 md:p-10 rounded-[2rem] border shadow-sm">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                          <h1 className="text-3xl md:text-4xl font-headline font-bold text-slate-900">{currentLesson.title}</h1>
+                          <Badge variant="outline" className="w-fit h-7 bg-primary/5 text-primary border-primary/10 rounded-lg">
+                            {currentLesson.duration || '5 min'} de lectura
+                          </Badge>
+                        </div>
+                        
+                        {/* Materiales en vista móvil (se muestran aquí si hay pocos o es pantalla pequeña) */}
+                        <div className="lg:hidden mb-8">
+                          <LessonResources courseId={courseId} moduleId={moduleId!} lessonId={lessonId} isMobileView={true} />
+                        </div>
+
+                        <div className="text-lg leading-relaxed text-slate-600 space-y-6 whitespace-pre-wrap">
+                          {effectiveDescription || "Sin descripción."}
+                        </div>
                       </article>
+                      
                       <LessonDiscussion courseId={courseId} lessonId={lessonId} />
                     </div>
-                    <div className="space-y-6"><LessonResources courseId={courseId} moduleId={moduleId!} lessonId={lessonId} /></div>
+                    
+                    <div className="hidden lg:block space-y-6">
+                      <div className="sticky top-0">
+                        <LessonResources courseId={courseId} moduleId={moduleId!} lessonId={lessonId} />
+                      </div>
+                    </div>
                   </div>
+
                 </>
               )}
 
@@ -601,7 +643,7 @@ function ModuleInSidebar({ module, courseId, activeLessonId, index, completedLes
   );
 }
 
-function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, moduleId: string, lessonId: string }) {
+function LessonResources({ courseId, moduleId, lessonId, isMobileView }: { courseId: string, moduleId: string, lessonId: string, isMobileView?: boolean }) {
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
@@ -615,22 +657,63 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
 
   if (isLoading || !resources || resources.length === 0) return null;
 
-  return (
-    <>
-      <div className="bg-card border rounded-3xl shadow-sm overflow-hidden">
-        <div className="p-5 border-b bg-muted/20"><h3 className="font-headline font-bold text-sm flex items-center gap-2"><Paperclip className="h-4 w-4 text-primary" /> Material</h3></div>
-        <div className="p-3 space-y-2">
+  if (isMobileView) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Paperclip className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Material de Estudio</h3>
+        </div>
+        <div className="flex flex-col gap-3">
           {resources.map((res) => (
-            <div key={res.id} className="flex items-center justify-between p-3 rounded-2xl border hover:bg-muted/50 cursor-pointer" onClick={() => !isGuest ? window.open(res.contentUrl, '_blank') : toast({ variant: "destructive", title: "Inicia sesión" })}>
-              <div className="flex items-center gap-3"><div className="bg-background p-2 rounded-xl border"><FileDown className="h-4 w-4 text-red-500" /></div><p className="text-xs font-semibold truncate">{res.title}</p></div>
-              <ExternalLink className="h-3 w-3 text-slate-400" />
-            </div>
+            <button 
+              key={res.id} 
+              className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-primary/30 transition-all text-left group"
+              onClick={() => !isGuest ? window.open(res.contentUrl, '_blank') : toast({ variant: "destructive", title: "Inicia sesión" })}
+            >
+              <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0 border group-hover:border-primary/20">
+                <FileText className="h-6 w-6 text-rose-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 truncate">{res.title}</p>
+                <p className="text-[10px] font-medium text-slate-400 uppercase">Descargar Recurso</p>
+              </div>
+              <Download className="h-5 w-5 text-slate-300 group-hover:text-primary transition-colors" />
+            </button>
           ))}
         </div>
       </div>
-    </>
+    );
+  }
+
+  return (
+    <div className="bg-white border rounded-[2rem] shadow-sm overflow-hidden">
+      <div className="p-5 border-b bg-slate-50/50">
+        <h3 className="font-headline font-bold text-sm flex items-center gap-2">
+          <Paperclip className="h-4 w-4 text-primary" /> Material
+        </h3>
+      </div>
+      <div className="p-4 space-y-3">
+        {resources.map((res) => (
+          <div 
+            key={res.id} 
+            className="group flex items-center justify-between p-3 rounded-2xl border border-slate-100 hover:bg-primary/5 hover:border-primary/20 transition-all cursor-pointer" 
+            onClick={() => !isGuest ? window.open(res.contentUrl, '_blank') : toast({ variant: "destructive", title: "Inicia sesión" })}
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-white p-2 rounded-xl border border-slate-100 shadow-sm group-hover:border-primary/10">
+                <FileDown className="h-4 w-4 text-rose-500" />
+              </div>
+              <p className="text-xs font-bold text-slate-700 truncate max-w-[140px]">{res.title}</p>
+            </div>
+            <ExternalLink className="h-3.5 w-3.5 text-slate-300 group-hover:text-primary" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
+
 
 function LessonDiscussion({ courseId, lessonId }: { courseId: string, lessonId: string }) {
   const db = useFirestore();
