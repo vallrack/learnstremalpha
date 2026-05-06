@@ -28,8 +28,10 @@ import {
   Info,
   Plus,
   CheckCircle2,
-  Send
+  Send,
+  History
 } from 'lucide-react';
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
@@ -182,9 +184,11 @@ export default function AdminStudentsPage() {
     try {
       const recipients = filteredStudents.map(s => ({ 
         email: s.email, 
-        name: s.displayName || 'Estudiante' 
+        name: s.displayName || 'Estudiante',
+        id: s.id
       }));
       const result = await sendBulkCustomEmailAction(recipients, bulkEmailSubject, bulkEmailMessage);
+
 
 
       if (result.success) {
@@ -465,6 +469,13 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
   }, [db, studentId]);
   const { data: enrollments, isLoading: isProgressLoading } = useCollection(progressQuery);
 
+  const emailsQuery = useMemoFirebase(() => {
+    if (!db || !studentId) return null;
+    return query(collection(db, 'sentEmails'), where('userId', '==', studentId), orderBy('sentAt', 'desc'));
+  }, [db, studentId]);
+  const { data: sentEmails, isLoading: isEmailsLoading } = useCollection(emailsQuery);
+
+
   const handleToggleStatus = (active: boolean) => {
     if (!db || !studentId) return;
     updateDocumentNonBlocking(doc(db, 'users', studentId), {
@@ -557,7 +568,14 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
     setIsSendingEmail(true);
     try {
       const { sendCustomEmailAction } = await import('@/app/actions/email');
-      const result = await sendCustomEmailAction(student?.email, student?.displayName || 'Estudiante', emailSubject, emailMessage);
+      const result = await sendCustomEmailAction(
+        student?.email, 
+        student?.displayName || 'Estudiante', 
+        emailSubject, 
+        emailMessage,
+        studentId
+      );
+
 
       
       if (result.success) {
@@ -792,7 +810,40 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
               </div>
             </CardContent>
           </Card>
+
+          <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+            <CardHeader className="bg-slate-50 border-b">
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                <History className="h-4 w-4" /> Historial de Comunicaciones
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 max-h-[400px] overflow-y-auto">
+              {isEmailsLoading ? (
+                <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              ) : sentEmails && sentEmails.length > 0 ? (
+                <div className="divide-y divide-slate-50">
+                  {sentEmails.map((email: any) => (
+                    <div key={email.id} className="p-4 hover:bg-slate-50 transition-colors">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-xs font-bold text-primary uppercase">{email.type === 'bulk' ? 'Masivo' : 'Directo'}</span>
+                        <span className="text-[10px] text-slate-400">
+                          {email.sentAt ? new Date(email.sentAt.toDate()).toLocaleDateString() : 'N/A'}
+                        </span>
+                      </div>
+                      <h5 className="text-sm font-bold text-slate-900 line-clamp-1">{email.subject}</h5>
+                      <p className="text-xs text-slate-500 line-clamp-2 mt-1">{email.message}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-12 text-center text-slate-400 text-xs italic">
+                  No hay registros de correos enviados.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
+
 
         <div className="lg:col-span-2 space-y-8">
           <section>

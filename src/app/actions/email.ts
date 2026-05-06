@@ -93,7 +93,26 @@ export async function sendEnrollmentWelcomeAction(userId: string, courseId: stri
 /**
  * Acción para enviar un correo personalizado a un estudiante
  */
-export async function sendCustomEmailAction(studentEmail: string, studentName: string, subject: string, message: string) {
+async function logEmailToFirestore(emailData: { 
+  userId?: string, 
+  email: string, 
+  name: string, 
+  subject: string, 
+  message: string,
+  type: 'custom' | 'bulk' | 'certificate' | 'welcome'
+}) {
+  try {
+    await adminDb.collection('sentEmails').add({
+      ...emailData,
+      sentAt: new Date(),
+      status: 'sent'
+    });
+  } catch (err) {
+    console.error("Error logging email to Firestore:", err);
+  }
+}
+
+export async function sendCustomEmailAction(studentEmail: string, studentName: string, subject: string, message: string, studentId?: string) {
   try {
     const result = await emailService.sendCustomEmail({ 
       email: studentEmail, 
@@ -101,6 +120,18 @@ export async function sendCustomEmailAction(studentEmail: string, studentName: s
       subject, 
       message 
     });
+
+    if (result.success) {
+      await logEmailToFirestore({
+        userId: studentId,
+        email: studentEmail,
+        name: studentName,
+        subject,
+        message,
+        type: 'custom'
+      });
+    }
+
     return result;
   } catch (error: any) {
     console.error("Error in sendCustomEmailAction:", error);
@@ -108,20 +139,32 @@ export async function sendCustomEmailAction(studentEmail: string, studentName: s
   }
 }
 
-export async function sendBulkCustomEmailAction(recipients: { email: string, name: string }[], subject: string, message: string) {
+export async function sendBulkCustomEmailAction(recipients: { email: string, name: string, id?: string }[], subject: string, message: string) {
   try {
     if (!recipients || recipients.length === 0) throw new Error("No hay destinatarios seleccionados");
     
     console.log(`Iniciando envío masivo a ${recipients.length} destinatarios`);
     
-    const results = await Promise.all(recipients.map(recipient => 
-      emailService.sendCustomEmail({
+    const results = await Promise.all(recipients.map(async (recipient) => {
+      const res = await emailService.sendCustomEmail({
         email: recipient.email,
         name: recipient.name,
         subject,
         message
-      }).catch(err => ({ success: false, error: err.message, email: recipient.email }))
-    ));
+      }).catch(err => ({ success: false, error: err.message, email: recipient.email }));
+
+      if (res.success) {
+        await logEmailToFirestore({
+          userId: recipient.id,
+          email: recipient.email,
+          name: recipient.name,
+          subject,
+          message,
+          type: 'bulk'
+        });
+      }
+      return res;
+    }));
 
     const successCount = results.filter((r: any) => r.success).length;
     const failCount = results.length - successCount;
@@ -136,4 +179,5 @@ export async function sendBulkCustomEmailAction(recipients: { email: string, nam
     return { success: false, error: error.message };
   }
 }
+
 
