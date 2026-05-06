@@ -64,6 +64,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteDocumentNonBlocking } from '@/firebase';
 
+import { sendCustomEmailAction, sendBulkCustomEmailAction } from '@/app/actions/email';
+
 export default function AdminStudentsPage() {
   const router = useRouter();
   const db = useFirestore();
@@ -75,6 +77,13 @@ export default function AdminStudentsPage() {
   const [isLoadingFilter, setIsLoadingFilter] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { user: currentUser } = useUser();
+
+  // Estados para Correo Masivo
+  const [showBulkEmailDialog, setShowBulkEmailDialog] = useState(false);
+  const [bulkEmailSubject, setBulkEmailSubject] = useState('');
+  const [bulkEmailMessage, setBulkEmailMessage] = useState('');
+  const [isSendingBulkEmail, setIsSendingBulkEmail] = useState(false);
+
 
   const usersQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -166,6 +175,36 @@ export default function AdminStudentsPage() {
     return hasEmail && isNotAdmin && matchesSearch && matchesCourse;
   }) || [];
 
+  const handleSendBulkEmail = async () => {
+    if (!bulkEmailSubject || !bulkEmailMessage || filteredStudents.length === 0) return;
+
+    setIsSendingBulkEmail(true);
+    try {
+      const emails = filteredStudents.map(s => s.email);
+      const result = await sendBulkCustomEmailAction(emails, bulkEmailSubject, bulkEmailMessage);
+
+      if (result.success) {
+        toast({
+          title: "Envío Masivo Completado",
+          description: result.summary
+        });
+        setShowBulkEmailDialog(false);
+        setBulkEmailSubject('');
+        setBulkEmailMessage('');
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error en Envío Masivo",
+        description: err.message
+      });
+    } finally {
+      setIsSendingBulkEmail(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <Navbar />
@@ -200,6 +239,16 @@ export default function AdminStudentsPage() {
                   {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
                   {isSyncing ? 'Sincronizando...' : 'Recalcular Progresos'}
                 </Button>
+
+                <Button 
+                  onClick={() => setShowBulkEmailDialog(true)}
+                  disabled={filteredStudents.length === 0}
+                  className="rounded-xl h-11 bg-primary text-white hover:bg-primary/90 gap-2 whitespace-nowrap"
+                >
+                  <Mail className="h-4 w-4" />
+                  Correo Masivo ({filteredStudents.length})
+                </Button>
+
                 <div className="w-full sm:w-64">
                   <Select value={filterCourseId} onValueChange={setFilterCourseId}>
                     <SelectTrigger className="rounded-xl h-11 border-slate-200">
@@ -314,6 +363,70 @@ export default function AdminStudentsPage() {
                 </Table>
               )}
             </div>
+
+            {/* Dialog para enviar correo masivo */}
+            <Dialog open={showBulkEmailDialog} onOpenChange={setShowBulkEmailDialog}>
+              <DialogContent className="sm:max-w-[700px] rounded-[2.5rem] p-0 overflow-hidden">
+                <div className="bg-primary/5 p-8 border-b">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="bg-primary/10 p-2 rounded-xl">
+                      <Mail className="h-5 w-5 text-primary" />
+                    </div>
+                    <DialogTitle className="text-2xl font-headline font-bold">Enviar Correo Masivo</DialogTitle>
+                  </div>
+                  <DialogDescription>
+                    Este mensaje se enviará a los <strong>{filteredStudents.length} usuarios</strong> que aparecen actualmente en tu lista filtrada.
+                  </DialogDescription>
+                </div>
+                
+                <div className="p-8 space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-slate-700">Asunto del Comunicado</Label>
+                    <Input 
+                      placeholder="Ej: Nuevas actualizaciones en la plataforma..." 
+                      value={bulkEmailSubject}
+                      onChange={(e) => setBulkEmailSubject(e.target.value)}
+                      className="rounded-xl border-slate-200 h-11"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-slate-700">Contenido del Mensaje</Label>
+                    <Textarea 
+                      placeholder="Escribe el mensaje general para todos los estudiantes..." 
+                      value={bulkEmailMessage}
+                      onChange={(e) => setBulkEmailMessage(e.target.value)}
+                      className="rounded-2xl border-slate-200 min-h-[250px] resize-none"
+                    />
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-800 flex items-start gap-3">
+                    <Info className="h-5 w-5 shrink-0" />
+                    <p>
+                      <strong>Nota de seguridad:</strong> El envío masivo procesará a cada destinatario de forma individual para evitar que los correos sean marcados como SPAM. Dependiendo de la cantidad de alumnos, este proceso puede tomar unos segundos.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      variant="ghost" 
+                      className="flex-1 rounded-xl h-12" 
+                      onClick={() => setShowBulkEmailDialog(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      className="flex-1 rounded-xl h-12 font-bold gap-2 shadow-lg shadow-primary/20" 
+                      disabled={!bulkEmailSubject || !bulkEmailMessage || isSendingBulkEmail}
+                      onClick={handleSendBulkEmail}
+                    >
+                      {isSendingBulkEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      {isSendingBulkEmail ? 'Enviando Comunicados...' : `Enviar a ${filteredStudents.length} Alumnos`}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </>
         )}
       </main>
