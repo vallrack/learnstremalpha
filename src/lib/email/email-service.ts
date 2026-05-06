@@ -10,11 +10,12 @@ const brevo = new BrevoClient({
   apiKey: process.env.BREVO_API_KEY || 'YOUR_BREVO_API_KEY'
 });
 
-// Remitente verificado en Brevo según captura del usuario
+// Remitente verificado en Brevo (vallrack67@gmail.com)
 const VERIFIED_SENDER = {
-  name: process.env.EMAIL_FROM_NAME || DEFAULT_BRANDING.name,
-  email: process.env.EMAIL_FROM_ADDRESS || 'vallrack67@gmail.com'
+  name: "LearnStream", 
+  email: "vallrack67@gmail.com"
 };
+
 
 export const emailService = {
   /**
