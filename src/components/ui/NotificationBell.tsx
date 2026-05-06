@@ -37,14 +37,14 @@ export function NotificationBell() {
     if (profile.role === 'admin') {
       return query(
         collection(db, 'notifications'), 
-        where('userId', 'in', [user.uid, 'admin']),
+        where('userId', 'in', [user.uid, 'admin', 'all']),
         orderBy('createdAt', 'desc')
       );
     }
     
     return query(
       collection(db, 'notifications'), 
-      where('userId', '==', user.uid),
+      where('userId', 'in', [user.uid, 'all']),
       orderBy('createdAt', 'desc')
     );
   }, [db, user?.uid, profile?.role]);

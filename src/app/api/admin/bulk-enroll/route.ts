@@ -136,6 +136,30 @@ export async function POST(req: NextRequest) {
       }));
     }
 
+    // Notificar al Admin
+    await adminDb.collection('notifications').add({
+      userId: 'admin',
+      title: 'Matriculación Masiva Procesada',
+      message: `Se procesaron ${results.total} alumnos para "${courseTitle}". Éxito: ${results.success}, Fallidos: ${results.failed}.`,
+      type: results.failed > 0 ? 'alert' : 'success',
+      read: false,
+      createdAt: new Date(),
+      link: '/admin/students'
+    });
+
+    // Notificar al usuario que lo activó si no es el admin
+    if (decodedToken.uid) {
+      await adminDb.collection('notifications').add({
+        userId: decodedToken.uid,
+        title: 'Matriculación Masiva Finalizada',
+        message: `El proceso para "${courseTitle}" terminó. Éxito: ${results.success}, Fallidos: ${results.failed}.`,
+        type: results.failed > 0 ? 'alert' : 'success',
+        read: false,
+        createdAt: new Date(),
+        link: '/admin/students'
+      });
+    }
+
     return NextResponse.json({
       message: 'Proceso de matriculación masiva completado',
       results

@@ -1,6 +1,7 @@
 'use server';
 
 import { adminDb } from '@/lib/firebase-admin';
+import { sendEnrollmentWelcomeAction } from './email';
 
 export async function verifyEpaycoTransaction(
   ref_payco: string, 
@@ -96,6 +97,30 @@ export async function verifyEpaycoTransaction(
                 status: 'completed'
               });
 
+              // Notificar al Admin
+              await adminDb.collection('notifications').add({
+                userId: 'admin',
+                title: 'Venta: Clase en Vivo',
+                message: `${finalEmail} ha comprado acceso a: ${vcData?.title}`,
+                type: 'info',
+                read: false,
+                createdAt: new Date(),
+                link: '/admin/finances'
+              });
+
+              // Notificar al Instructor
+              if (instructorId) {
+                await adminDb.collection('notifications').add({
+                  userId: instructorId,
+                  title: '¡Nueva Venta!',
+                  message: `${finalEmail} compró tu clase: ${vcData?.title}`,
+                  type: 'success',
+                  read: false,
+                  createdAt: new Date(),
+                  link: '/admin/finances'
+                });
+              }
+
               if (userRef) {
                 const userSnap = await userRef.get();
                 const userData = userSnap.data();
@@ -148,6 +173,30 @@ export async function verifyEpaycoTransaction(
                 status: 'completed'
               });
 
+              // Notificar al Admin
+              await adminDb.collection('notifications').add({
+                userId: 'admin',
+                title: 'Venta: Desafío',
+                message: `${finalEmail} ha comprado el desafío: ${challengeData?.title}`,
+                type: 'info',
+                read: false,
+                createdAt: new Date(),
+                link: '/admin/finances'
+              });
+
+              // Notificar al Instructor
+              if (instructorId) {
+                await adminDb.collection('notifications').add({
+                  userId: instructorId,
+                  title: '¡Nueva Venta!',
+                  message: `${finalEmail} compró tu desafío: ${challengeData?.title}`,
+                  type: 'success',
+                  read: false,
+                  createdAt: new Date(),
+                  link: '/admin/finances'
+                });
+              }
+
               if (userRef) {
                 const userSnap = await userRef.get();
                 const userData = userSnap.data();
@@ -199,6 +248,30 @@ export async function verifyEpaycoTransaction(
                 createdAt: new Date(),
                 status: 'completed'
               });
+
+              // Notificar al Admin
+              await adminDb.collection('notifications').add({
+                userId: 'admin',
+                title: 'Venta: Podcast',
+                message: `${finalEmail} ha comprado el podcast: ${podcastData?.title}`,
+                type: 'info',
+                read: false,
+                createdAt: new Date(),
+                link: '/admin/finances'
+              });
+
+              // Notificar al Instructor
+              if (instructorId) {
+                await adminDb.collection('notifications').add({
+                  userId: instructorId,
+                  title: '¡Nueva Venta!',
+                  message: `${finalEmail} compró tu podcast: ${podcastData?.title}`,
+                  type: 'success',
+                  read: false,
+                  createdAt: new Date(),
+                  link: '/admin/finances'
+                });
+              }
 
               if (userRef) {
                 const userSnap = await userRef.get();
@@ -267,6 +340,30 @@ export async function verifyEpaycoTransaction(
                 status: 'completed'
               });
 
+              // Notificar al Admin
+              await adminDb.collection('notifications').add({
+                userId: 'admin',
+                title: 'Nueva Venta',
+                message: `${finalEmail} ha comprado: ${itemName}`,
+                type: 'info',
+                read: false,
+                createdAt: new Date(),
+                link: '/admin/finances'
+              });
+
+              // Notificar al Instructor
+              if (instructorId) {
+                await adminDb.collection('notifications').add({
+                  userId: instructorId,
+                  title: '¡Nueva Venta!',
+                  message: `${finalEmail} ha adquirido tu contenido: ${itemName}`,
+                  type: 'success',
+                  read: false,
+                  createdAt: new Date(),
+                  link: '/admin/finances'
+                });
+              }
+
               if (userRef) {
                 const userSnap = await userRef.get();
                 const userData = userSnap.data();
@@ -297,6 +394,15 @@ export async function verifyEpaycoTransaction(
                     ref_payco
                  });
               }
+              
+              // Enviar Correo de Bienvenida (Solo si es curso completo o primer acceso)
+              if (actualUserId && moduleId === 'none' && lessonId === 'none') {
+                try {
+                  await sendEnrollmentWelcomeAction(actualUserId, courseId);
+                } catch (err) {
+                  console.error("Error sending ePayco welcome email:", err);
+                }
+              }
             }
           }
           if (userRef) await userRef.update(updateData);
@@ -306,6 +412,17 @@ export async function verifyEpaycoTransaction(
             updateData.isPremiumSubscriber = true;
             updateData.premiumUpdatedAt = new Date().toISOString();
             await userRef.update(updateData);
+
+            // Notificar al Admin
+            await adminDb.collection('notifications').add({
+              userId: 'admin',
+              title: 'Nueva Suscripción Premium',
+              message: `${result.data.x_customer_email || userId} se ha convertido en usuario Premium.`,
+              type: 'success',
+              read: false,
+              createdAt: new Date(),
+              link: '/admin/students'
+            });
           }
         }
       } else if (type === 'instructor' && userRef) {

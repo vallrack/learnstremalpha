@@ -244,11 +244,15 @@ function LessonPlayerContent() {
       }, { merge: true });
 
       const { sendCertificateAction } = await import('@/app/actions/email');
-      await sendCertificateAction(user!.uid, courseId);
+      const emailResult = await sendCertificateAction(user!.uid, courseId);
+      
+      if (!emailResult.success) {
+        console.warn("No se pudo enviar el correo del certificado:", emailResult.error);
+      }
 
       toast({ 
         title: "¡Felicidades!", 
-        description: "Has finalizado el curso y tu certificado está listo.",
+        description: emailResult.success ? "Has finalizado el curso y tu certificado ha sido enviado a tu correo." : "Has finalizado el curso y tu certificado está listo en tu perfil.",
         action: (
           <Button variant="outline" size="sm" onClick={() => router.push(`/courses/${courseId}/certificate`)}>
             Ver Certificado

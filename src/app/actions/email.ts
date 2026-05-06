@@ -57,3 +57,35 @@ export async function sendPaymentReminderAction(userId: string) {
     return { success: false, error: 'Error interno de servidor' };
   }
 }
+
+/**
+ * Acción para enviar un correo de bienvenida cuando un usuario se inscribe en un curso
+ */
+export async function sendEnrollmentWelcomeAction(userId: string, courseId: string) {
+  if (!userId || !courseId) return { success: false, error: 'Faltan parámetros' };
+
+  try {
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const courseDoc = await adminDb.collection('courses').doc(courseId).get();
+
+    if (!userDoc.exists || !courseDoc.exists) {
+      return { success: false, error: 'Usuario o curso no encontrado' };
+    }
+
+    const userData = userDoc.data();
+    const courseData = courseDoc.data();
+
+    const email = userData?.email;
+    const name = userData?.displayName || 'Estudiante';
+    const courseTitle = courseData?.title || 'Curso';
+    const password = userData?.tempPassword || ''; // Si existe clave temporal
+
+    if (!email) return { success: false, error: 'El usuario no tiene correo asociado' };
+
+    // Usamos el mismo template de bulk welcome o uno similar
+    return await emailService.sendBulkWelcomeEmail({ email, name, password, courseTitle });
+  } catch (err) {
+    console.error('Error in sendEnrollmentWelcomeAction:', err);
+    return { success: false, error: 'Error interno de servidor' };
+  }
+}

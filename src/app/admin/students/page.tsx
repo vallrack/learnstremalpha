@@ -23,12 +23,14 @@ import {
   BookOpen,
   Trophy,
   Copy,
-  Info
+  Info,
+  Plus,
+  CheckCircle2
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, collectionGroup, getDocs, where } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc, collectionGroup, getDocs, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -408,6 +410,58 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
     return Object.values(uniqueByTitle);
   }, [enrollments, allCourses]);
 
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [courseToEnroll, setCourseToEnroll] = useState<string>('');
+
+  const handleManualEnroll = async () => {
+    if (!db || !studentId || !courseToEnroll) return;
+    setIsEnrolling(true);
+    try {
+      const progressRef = doc(db, 'users', studentId, 'courseProgress', courseToEnroll);
+      await setDoc(progressRef, {
+        courseId: courseToEnroll,
+        status: 'enrolled',
+        enrollmentDate: serverTimestamp(),
+        progressPercentage: 0,
+        completedLessons: []
+      }, { merge: true });
+
+      // Notificar al Admin
+      const course = allCourses.find(c => c.id === courseToEnroll);
+      await setDoc(doc(collection(db, 'notifications')), {
+        userId: 'admin',
+        title: 'Nueva Matrícula Manual',
+        message: `Se ha matriculado a ${student?.displayName} en ${course?.title}`,
+        type: 'info',
+        read: false,
+        createdAt: serverTimestamp(),
+        link: '/admin/students'
+      });
+
+      // Enviar Correo de Bienvenida
+      try {
+        const { sendEnrollmentWelcomeAction } = await import('@/app/actions/email');
+        await sendEnrollmentWelcomeAction(studentId, courseToEnroll);
+      } catch (emailErr) {
+        console.error("Error sending manual welcome email:", emailErr);
+      }
+
+      toast({ 
+        title: "Estudiante matriculado", 
+        description: "Se ha asignado el curso y enviado el correo de bienvenida." 
+      });
+      setCourseToEnroll('');
+    } catch (err: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Error al matricular", 
+        description: err.message 
+      });
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
       <header className="flex flex-col gap-6">
@@ -556,9 +610,32 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
 
         <div className="lg:col-span-2 space-y-8">
           <section>
-            <h3 className="text-xl font-headline font-bold mb-6 flex items-center gap-2">
-              <GraduationCap className="h-5 w-5 text-primary" />
-              Progreso Académico
+            <h3 className="text-xl font-headline font-bold mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                Progreso Académico
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Select value={courseToEnroll} onValueChange={setCourseToEnroll}>
+                  <SelectTrigger className="w-64 rounded-xl h-10 border-slate-200 bg-white">
+                    <SelectValue placeholder="Seleccionar curso..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allCourses.filter(c => !enrichedEnrollments.some(e => e.courseId === c.id)).map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleManualEnroll} 
+                  disabled={!courseToEnroll || isEnrolling}
+                  className="rounded-xl h-10 gap-2 font-bold"
+                >
+                  {isEnrolling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Matricular
+                </Button>
+              </div>
             </h3>
             
             <div className="space-y-4">

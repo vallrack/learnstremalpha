@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert, Code2, ArrowRight, Video, CalendarIcon, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { doc, collection, query, orderBy, Timestamp, getDocs, limit, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, orderBy, Timestamp, getDocs, limit, setDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useState, useEffect, Suspense } from 'react';
 import { formatPrice } from '@/lib/currency';
@@ -348,6 +348,39 @@ function CourseDetailContent() {
                             progressPercentage: 0,
                             completedLessons: []
                           }, { merge: true });
+
+                          // Notificar al Admin
+                          await addDoc(collection(db, 'notifications'), {
+                            userId: 'admin',
+                            title: 'Nueva Inscripción',
+                            message: `${profile?.displayName || user?.email} se ha inscrito en: ${course.title}`,
+                            type: 'info',
+                            read: false,
+                            createdAt: serverTimestamp(),
+                            link: `/admin/students`
+                          });
+
+                          // Notificar al Instructor
+                          if (course.instructorId) {
+                            await addDoc(collection(db, 'notifications'), {
+                              userId: course.instructorId,
+                              title: 'Nuevo Estudiante',
+                              message: `${profile?.displayName || user?.email} se ha unido a tu curso: ${course.title}`,
+                              type: 'success',
+                              read: false,
+                              createdAt: serverTimestamp(),
+                              link: `/admin/courses/${id}/content`
+                            });
+                          }
+
+                          // Enviar Correo de Bienvenida
+                          try {
+                            const { sendEnrollmentWelcomeAction } = await import('@/app/actions/email');
+                            await sendEnrollmentWelcomeAction(user!.uid, id);
+                          } catch (err) {
+                            console.error("Error enviando correo de bienvenida:", err);
+                          }
+
                           if (firstLessonPath) {
                             router.push(`/courses/${id}/learn/${firstLessonPath.lessonId}?moduleId=${firstLessonPath.moduleId}`);
                           }

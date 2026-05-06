@@ -285,6 +285,17 @@ export default function AdminCoursesPage() {
       if (editingCourseId) {
         await updateDocumentNonBlocking(doc(db, 'courses', editingCourseId), courseData);
         toast({ title: "Curso actualizado", description: "Los cambios se guardaron correctamente." });
+
+        // Notificar a todos sobre la actualización
+        await addDocumentNonBlocking(collection(db, 'notifications'), {
+          userId: 'all',
+          title: 'Curso Actualizado',
+          message: `El curso "${title}" ha sido actualizado con nuevo contenido.`,
+          type: 'info',
+          read: false,
+          createdAt: serverTimestamp(),
+          link: `/courses/${editingCourseId}`
+        });
       } else {
         courseData.instructorId = activeUser.uid;
         courseData.createdAt = serverTimestamp();
@@ -310,6 +321,32 @@ export default function AdminCoursesPage() {
           }
         } else {
           toast({ title: "¡Curso creado!", description: "El nuevo programa ya está disponible en el catálogo." });
+        }
+
+        // Notificar a todos sobre el nuevo curso (si está activo y no es base)
+        if (courseData.isActive && !courseData.isBaseCourse) {
+          await addDocumentNonBlocking(collection(db, 'notifications'), {
+            userId: 'all',
+            title: '¡Nuevo Curso Disponible!',
+            message: `Se ha publicado el curso: ${title}. ¡Inscríbete ahora!`,
+            type: 'success',
+            read: false,
+            createdAt: serverTimestamp(),
+            link: `/courses/${docRef.id}`
+          });
+        }
+
+        // Notificar al Admin si el que crea es un instructor
+        if (!isAdmin && docRef?.id) {
+          await addDocumentNonBlocking(collection(db, 'notifications'), {
+            userId: 'admin',
+            title: 'Nuevo Curso Publicado',
+            message: `El instructor ${courseData.instructorName} ha creado el curso: ${title}`,
+            type: 'info',
+            read: false,
+            createdAt: serverTimestamp(),
+            link: `/admin`
+          });
         }
       }
       
