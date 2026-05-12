@@ -165,19 +165,24 @@ export async function POST(req: NextRequest) {
           
           if (prog.data.status === 'completed') {
               completedCoursesCount++;
-              // Si ya está completado, el progreso DEBE ser 100%
+              // Si ya está completado, el progreso DEBE ser 100% — nunca lo bajamos
               if ((prog.data.progressPercentage || 0) !== 100) {
                   batch.update(prog.ref, { progressPercentage: 100, updatedAt: new Date() });
                   batchSize++;
                   updatedProgressCount++;
               }
-          } else if (total > 0) {
+          } else if (total > 0 && completedLessons.length > 0) {
+              // Solo recalcular si tenemos lecciones completadas — evita resetear a 0 por error de estructura
               const newPerc = Math.min(100, Math.round((completedLessons.length / total) * 100));
               if (newPerc !== (prog.data.progressPercentage || 0)) {
                   batch.update(prog.ref, { progressPercentage: newPerc, updatedAt: new Date() });
                   batchSize++;
                   updatedProgressCount++;
               }
+          } else if (total > 0 && completedLessons.length === 0 && (prog.data.progressPercentage || 0) > 0) {
+              // Si hay total de lecciones pero ninguna completada y el progreso guardado es > 0,
+              // puede ser un error de estructura del curso. Preservamos el progreso existente y lo dejamos intacto.
+              console.warn(`[Recalculate] Preservando progreso existente (${prog.data.progressPercentage}%) para usuario ${uid} en curso ${courseId} — completedLessons está vacío pero progressPercentage > 0. Puede indicar un problema de estructura.`);
           }
 
       }

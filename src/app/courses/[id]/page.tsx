@@ -341,13 +341,24 @@ function CourseDetailContent() {
                       className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20"
                       onClick={async () => {
                         if (db && progressRef) {
-                          await setDoc(progressRef, {
+                          // Verificar si ya existe un progreso antes de inscribir
+                          const { getDoc: getDocFn } = await import('firebase/firestore');
+                          const progressSnap = await getDocFn(progressRef);
+
+                          const enrollData: any = {
                             courseId: id,
                             status: 'enrolled',
                             enrolledAt: serverTimestamp(),
-                            progressPercentage: 0,
-                            completedLessons: []
-                          }, { merge: true });
+                            updatedAt: serverTimestamp(),
+                          };
+
+                          // Solo inicializar a cero si el registro NO existe previamente
+                          if (!progressSnap.exists()) {
+                            enrollData.progressPercentage = 0;
+                            enrollData.completedLessons = [];
+                          }
+
+                          await setDoc(progressRef, enrollData, { merge: true });
 
                           // Notificar al Admin
                           await addDoc(collection(db, 'notifications'), {

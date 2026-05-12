@@ -35,7 +35,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, collectionGroup, getDocs, where, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, collectionGroup, getDocs, getDoc, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -598,13 +598,22 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
     setIsEnrolling(true);
     try {
       const progressRef = doc(db, 'users', studentId, 'courseProgress', courseToEnroll);
-      await setDoc(progressRef, {
+      const progressSnap = await getDoc(progressRef);
+      
+      const enrollmentData: any = {
         courseId: courseToEnroll,
         status: 'enrolled',
         enrollmentDate: serverTimestamp(),
-        progressPercentage: 0,
-        completedLessons: []
-      }, { merge: true });
+        updatedAt: serverTimestamp(),
+      };
+
+      // Solo inicializar a cero si el registro NO existe previamente
+      if (!progressSnap.exists()) {
+        enrollmentData.progressPercentage = 0;
+        enrollmentData.completedLessons = [];
+      }
+
+      await setDoc(progressRef, enrollmentData, { merge: true });
 
       // Notificar al Admin
       const course = allCourses.find(c => c.id === courseToEnroll);

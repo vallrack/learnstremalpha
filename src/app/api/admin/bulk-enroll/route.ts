@@ -101,19 +101,24 @@ export async function POST(req: NextRequest) {
           const progressDoc = await progressRef.get();
           
           if (!progressDoc.exists) {
-              await progressRef.set({
-                  courseId: courseId,
-                  status: 'enrolled',
-                  progressPercentage: 0,
-                  completedLessons: [],
-                  enrollmentDate: FieldValue.serverTimestamp(),
-                  lastAccessedAt: FieldValue.serverTimestamp(),
-                  groupId: groupId || null,
-              });
+            // Nuevo estudiante — inicializar progreso desde cero
+            await progressRef.set({
+              courseId: courseId,
+              status: 'enrolled',
+              progressPercentage: 0,
+              completedLessons: [],
+              enrollmentDate: FieldValue.serverTimestamp(),
+              lastAccessedAt: FieldValue.serverTimestamp(),
+              groupId: groupId || null,
+            });
           } else {
-              if (groupId) {
-                await progressRef.update({ groupId });
-              }
+            // Estudiante existente — solo actualizar estado y grupo, SIN tocar el progreso
+            const updateData: any = {
+              status: 'enrolled',
+              updatedAt: FieldValue.serverTimestamp(),
+            };
+            if (groupId) updateData.groupId = groupId;
+            await progressRef.update(updateData);
           }
           
           try {

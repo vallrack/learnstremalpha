@@ -180,4 +180,138 @@ export async function sendBulkCustomEmailAction(recipients: { email: string, nam
   }
 }
 
+/**
+ * Notifica sobre un nuevo curso a todos los alumnos y al admin
+ */
+export async function notifyNewCourseAction(courseId: string) {
+  if (!courseId) return { success: false, error: 'ID de curso requerido' };
+
+  try {
+    const courseDoc = await adminDb.collection('courses').doc(courseId).get();
+    if (!courseDoc.exists) return { success: false, error: 'Curso no encontrado' };
+
+    const courseData = courseDoc.data();
+    const courseTitle = courseData?.title || 'Nuevo Curso';
+    const description = courseData?.description || '';
+    const instructorId = courseData?.instructorId;
+    const instructorName = courseData?.instructorName || 'Instructor';
+
+    // 1. Notificar al Admin
+    await emailService.sendCourseAdminAlert({
+      subject: 'Nuevo Curso Publicado',
+      message: `El instructor ${instructorName} ha publicado el curso: ${courseTitle}`
+    });
+
+    // 2. Notificar al Docente
+    if (instructorId) {
+      const instructorDoc = await adminDb.collection('users').doc(instructorId).get();
+      if (instructorDoc.exists) {
+        const instructorData = instructorDoc.data();
+        if (instructorData?.email) {
+          await emailService.sendCourseTeacherNotification({
+            email: instructorData.email,
+            name: instructorData.displayName || instructorName,
+            courseTitle,
+            action: 'created'
+          });
+        }
+      }
+    }
+
+    // 3. Notificar a todos los Estudiantes (Usuarios con rol 'student' o sin rol definido que no sean admin)
+    // Nota: Limitamos a 500 para evitar abusos en una sola pasada, pero LearnStream suele ser más pequeño
+    const studentsSnap = await adminDb.collection('users')
+      .where('role', 'in', ['student', null])
+      .limit(500)
+      .get();
+    
+    const students = studentsSnap.docs
+      .map(doc => ({ id: doc.id, ...doc.data() as any }))
+      .filter((s: any) => s.email && s.role !== 'admin');
+
+    console.log(`Enviando anuncio de nuevo curso a ${students.length} estudiantes`);
+
+    // Enviamos en paralelo para mayor velocidad
+    await Promise.all(students.map(student => 
+      emailService.sendCourseCreatedEmail({
+        email: student.email,
+        name: student.displayName || 'Estudiante',
+        courseTitle,
+        description,
+        courseId
+      })
+    ));
+
+    return { success: true, count: students.length };
+  } catch (err: any) {
+    console.error('Error in notifyNewCourseAction:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Notifica sobre la actualización de un curso a los alumnos inscritos
+ */
+export async function notifyCourseUpdateAction(courseId: string) {
+  if (!courseId) return { success: false, error: 'ID de curso requerido' };
+
+  try {
+    const courseDoc = await adminDb.collection('courses').doc(courseId).get();
+    if (!courseDoc.exists) return { success: false, error: 'Curso no encontrado' };
+
+    const courseData = courseDoc.data();
+    const courseTitle = courseData?.title || 'Curso Actualizado';
+    const instructorId = courseData?.instructorId;
+    const instructorName = courseData?.instructorName || 'Instructor';
+
+    // 1. Notificar al Docente
+    if (instructorId) {
+      const instructorDoc = await adminDb.collection('users').doc(instructorId).get();
+      if (instructorDoc.exists) {
+        const instructorData = instructorDoc.data();
+        if (instructorData?.email) {
+          await emailService.sendCourseTeacherNotification({
+            email: instructorData.email,
+            name: instructorData.displayName || instructorName,
+            courseTitle,
+            action: 'updated'
+          });
+        }
+      }
+    }
+
+    // 2. Notificar a los alumnos inscritos (usando Collection Group en Firestore Admin)
+    const enrollmentsSnap = await adminDb.collectionGroup('courseProgress')
+      .where('courseId', '==', courseId)
+      .get();
+    
+    const studentIds = [...new Set(enrollmentsSnap.docs.map(doc => doc.ref.parent.parent?.id).filter(Boolean))];
+
+    if (studentIds.length > 0) {
+      console.log(`Enviando notificación de actualización a ${studentIds.length} estudiantes inscritos`);
+      
+      // Obtener datos de los estudiantes
+      const studentDocs = await Promise.all(studentIds.map(id => adminDb.collection('users').doc(id!).get()));
+      
+      await Promise.all(studentDocs.map(doc => {
+        const studentData = doc.data();
+        if (studentData?.email) {
+          return emailService.sendCourseUpdatedEmail({
+            email: studentData.email,
+            name: studentData.displayName || 'Estudiante',
+            courseTitle,
+            courseId
+          });
+        }
+        return Promise.resolve();
+      }));
+    }
+
+    return { success: true, count: studentIds.length };
+  } catch (err: any) {
+    console.error('Error in notifyCourseUpdateAction:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 

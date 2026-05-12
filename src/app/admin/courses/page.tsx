@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { cloneCourseContent } from '@/lib/course-duplication';
 import { Search } from 'lucide-react';
+import { notifyNewCourseAction, notifyCourseUpdateAction } from '@/app/actions/email';
 
 export default function AdminCoursesPage() {
   const router = useRouter();
@@ -296,6 +297,9 @@ export default function AdminCoursesPage() {
           createdAt: serverTimestamp(),
           link: `/courses/${editingCourseId}`
         });
+
+        // Notificar vía Email (sin esperar para no bloquear el UI)
+        notifyCourseUpdateAction(editingCourseId);
       } else {
         courseData.instructorId = activeUser.uid;
         courseData.createdAt = serverTimestamp();
@@ -335,6 +339,9 @@ export default function AdminCoursesPage() {
               createdAt: serverTimestamp(),
               link: `/courses/${docRef.id}`
             });
+
+            // Notificar vía Email (sin esperar para no bloquear el UI)
+            notifyNewCourseAction(docRef.id);
           }
 
           // Notificar al Admin si el que crea es un instructor

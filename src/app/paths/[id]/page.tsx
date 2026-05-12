@@ -72,15 +72,24 @@ export default function PathDetailsPage() {
         purchasedCourses: arrayUnion(...(pathData?.courseIds || []))
       });
 
-      // Registrar inicio para analíticas cruzadas opcionalmente
-      pathData.courseIds.forEach((cid: string) => {
-        setDocumentNonBlocking(doc(db!, 'users', user.uid, 'courseProgress', cid), {
+      // Registrar inicio para analíticas cruzadas — sin borrar progreso existente
+      const { getDoc: getDocFn } = await import('firebase/firestore');
+      for (const cid of (pathData.courseIds || [])) {
+        const progressRef = doc(db!, 'users', user.uid, 'courseProgress', cid);
+        const progressSnap = await getDocFn(progressRef);
+        
+        const enrollData: any = {
           courseId: cid,
           status: 'in_progress',
-          progressPercentage: 0,
           enrolledAt: new Date()
-        }, { merge: true });
-      });
+        };
+        // Solo inicializar a cero si el documento NO existe aún
+        if (!progressSnap.exists()) {
+          enrollData.progressPercentage = 0;
+          enrollData.completedLessons = [];
+        }
+        setDocumentNonBlocking(progressRef, enrollData, { merge: true });
+      }
 
       toast({ title: '¡Inscripción Exitosa!', description: 'Has desbloqueado todos los cursos de esta ruta.' });
     } catch (error) {

@@ -190,6 +190,11 @@ function LessonPlayerContent() {
       if (user?.isAnonymous) toast({ variant: "destructive", title: "Inicia sesión", description: "Debes estar registrado para guardar tu progreso." });
       return;
     }
+
+    if (!progressRef) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo obtener la referencia de progreso. Intenta recargar la página." });
+      return;
+    }
     
     const currentCompleted = progress?.completedLessons || [];
     const isAlreadyCompleted = currentCompleted.includes(lessonId);
@@ -199,17 +204,26 @@ function LessonPlayerContent() {
       const newCount = currentCompleted.length + 1;
       const percentage = total > 0 ? Math.min(100, Math.round((newCount / total) * 100)) : 0;
 
-      await setDoc(progressRef!, {
-        courseId,
-        completedLessons: arrayUnion(lessonId),
-        lastLessonId: lessonId,
-        progressPercentage: percentage,
-        updatedAt: serverTimestamp(),
-        status: 'in-progress'
-      }, { merge: true });
-      
-      toast({ title: "¡Lección completada!", description: `Progreso: ${percentage}%` });
-      router.refresh();
+      try {
+        await setDoc(progressRef, {
+          courseId,
+          completedLessons: arrayUnion(lessonId),
+          lastLessonId: lessonId,
+          progressPercentage: percentage,
+          updatedAt: serverTimestamp(),
+          status: 'in-progress'
+        }, { merge: true });
+        
+        toast({ title: "¡Lección completada!", description: `Progreso guardado: ${percentage}%` });
+        router.refresh();
+      } catch (err: any) {
+        console.error("[Progress] Error al guardar lección completada:", err);
+        toast({ 
+          variant: "destructive", 
+          title: "Error al guardar progreso", 
+          description: "No se pudo registrar la lección. Verifica tu conexión e intenta de nuevo." 
+        });
+      }
     }
   };
 
