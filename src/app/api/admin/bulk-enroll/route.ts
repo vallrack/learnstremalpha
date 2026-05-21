@@ -72,16 +72,16 @@ export async function POST(req: NextRequest) {
           }
 
           let uid: string;
+          let emailPasswordToSend: string;
           const tempPassword = ((name?.split(' ')[0] || 'User').normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "") + Math.floor(1000 + Math.random() * 9000) + '!').trim();
           
           try {
             const userRecord = await adminAuth.getUserByEmail(email);
             uid = userRecord.uid;
+            emailPasswordToSend = 'Tu contraseña habitual (ya estabas registrado en la plataforma)';
             
-            await adminAuth.updateUser(uid, { password: tempPassword });
-            
+            // NO actualizamos su contraseña en Firebase Auth ni guardamos tempPassword en Firestore
             await adminDb.collection('users').doc(uid).set({
-              tempPassword: tempPassword,
               displayName: name || userRecord.displayName || email.split('@')[0],
             }, { merge: true });
 
@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
                 displayName: name || email.split('@')[0],
               });
               uid = newUser.uid;
+              emailPasswordToSend = tempPassword;
 
               await adminDb.collection('users').doc(uid).set({
                 email: email,
@@ -136,7 +137,7 @@ export async function POST(req: NextRequest) {
             const emailResult = await emailService.sendBulkWelcomeEmail({
               email,
               name: name || email.split('@')[0],
-              password: tempPassword,
+              password: emailPasswordToSend,
               courseTitle
             });
             

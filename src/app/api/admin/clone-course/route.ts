@@ -44,65 +44,119 @@ export async function POST(req: NextRequest) {
       ? sourceModules.filter(m => moduleIds.includes(m.id))
       : sourceModules;
 
-    // Proceso de clonación (Server-side es mucho más rápido y confiable)
-    for (let i = 0; i < modulesToClone.length; i++) {
-        const sourceModule: any = modulesToClone[i];
+    // Proceso de clonación (Optimizada con lectura paralela y escritura en lotes/Batches)
+    const modulesWithContent = await Promise.all(
+      modulesToClone.map(async (sourceModule: any) => {
         const originalModuleId = sourceModule.id;
+        
+        // Obtener todas las lecciones del módulo
+        const lessonsSnapshot = await modulesRef.doc(originalModuleId).collection('lessons').orderBy('orderIndex', 'asc').get();
+        
+        const lessonsWithContent = await Promise.all(
+          lessonsSnapshot.docs.map(async (lessonDoc) => {
+            const originalLessonId = lessonDoc.id;
+            const sourceLesson = lessonDoc.data();
 
-        // Crear nuevo módulo
-        const newModuleData = {
-          ...sourceModule,
-          courseId: targetCourseId,
+            // Obtener premium data y recursos en paralelo
+            const [premiumSnap, resourcesSnapshot] = await Promise.all([
+              modulesRef.doc(originalModuleId).collection('lessons').doc(originalLessonId).collection('premium').doc('data').get(),
+              modulesRef.doc(originalModuleId).collection('lessons').doc(originalLessonId).collection('resources').get()
+            ]);
+
+            return {
+              originalLessonId,
+              sourceLesson,
+              premiumData: premiumSnap.exists ? premiumSnap.data() : null,
+              resources: resourcesSnapshot.docs.map(r => r.data())
+            };
+          })
+        );
+
+        return {
+          originalModuleId,
+          sourceModule,
+          lessons: lessonsWithContent
+        };
+      })
+    );
+
+    let batch = adminDb.batch();
+    let writeCount = 0;
+
+    const commitBatchIfNeeded = async () => {
+      if (writeCount >= 400) {
+        await batch.commit();
+        batch = adminDb.batch();
+        writeCount = 0;
+      }
+    };
+
+    for (let i = 0; i < modulesWithContent.length; i++) {
+      const { sourceModule, lessons } = modulesWithContent[i];
+      
+      // Crear nueva referencia de módulo (ID generado sin llamadas de red)
+      const newModuleRef = adminDb.collection('courses').doc(targetCourseId).collection('modules').doc();
+      const newModuleData = {
+        ...sourceModule,
+        courseId: targetCourseId,
+        instructorId: instructorId,
+        orderIndex: startOrderIndex + i,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      delete newModuleData.id;
+
+      batch.set(newModuleRef, newModuleData);
+      writeCount++;
+      await commitBatchIfNeeded();
+
+      for (const lesson of lessons) {
+        const { sourceLesson, premiumData, resources } = lesson;
+        
+        // Crear nueva referencia de lección
+        const newLessonRef = newModuleRef.collection('lessons').doc();
+        const newLessonData = {
+          ...sourceLesson,
+          moduleId: newModuleRef.id,
           instructorId: instructorId,
-          orderIndex: startOrderIndex + i,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
         };
-        delete newModuleData.id;
 
-        const newModuleRef = await adminDb.collection('courses').doc(targetCourseId).collection('modules').add(newModuleData);
-        const newModuleId = newModuleRef.id;
+        batch.set(newLessonRef, newLessonData);
+        writeCount++;
+        await commitBatchIfNeeded();
 
-        // Clonar lecciones
-        const lessonsSnapshot = await modulesRef.doc(originalModuleId).collection('lessons').orderBy('orderIndex', 'asc').get();
-        
-        for (const lessonDoc of lessonsSnapshot.docs) {
-            const sourceLesson = lessonDoc.data();
-            const originalLessonId = lessonDoc.id;
-
-            const newLessonData = {
-                ...sourceLesson,
-                moduleId: newModuleId,
-                instructorId: instructorId,
-                createdAt: FieldValue.serverTimestamp(),
-                updatedAt: FieldValue.serverTimestamp(),
-            };
-
-            const newLessonRef = await adminDb.collection('courses').doc(targetCourseId).collection('modules').doc(newModuleId).collection('lessons').add(newLessonData);
-            const newLessonId = newLessonRef.id;
-
-            // Clonar Premium Data
-            const premiumSnap = await modulesRef.doc(originalModuleId).collection('lessons').doc(originalLessonId).collection('premium').doc('data').get();
-            if (premiumSnap.exists) {
-                await adminDb.collection('courses').doc(targetCourseId).collection('modules').doc(newModuleId).collection('lessons').doc(newLessonId).collection('premium').doc('data').set({
-                    ...premiumSnap.data(),
-                    updatedAt: FieldValue.serverTimestamp()
-                });
-            }
-
-            // Clonar Recursos
-            const resourcesSnapshot = await modulesRef.doc(originalModuleId).collection('lessons').doc(originalLessonId).collection('resources').get();
-            for (const resourceDoc of resourcesSnapshot.docs) {
-                const resourceData = resourceDoc.data();
-                await adminDb.collection('courses').doc(targetCourseId).collection('modules').doc(newModuleId).collection('lessons').doc(newLessonId).collection('resources').add({
-                    ...resourceData,
-                    lessonId: newLessonId,
-                    instructorId: instructorId,
-                    createdAt: FieldValue.serverTimestamp(),
-                    updatedAt: FieldValue.serverTimestamp(),
-                });
-            }
+        // Premium Data
+        if (premiumData) {
+          const premiumRef = newLessonRef.collection('premium').doc('data');
+          batch.set(premiumRef, {
+            ...premiumData,
+            updatedAt: FieldValue.serverTimestamp()
+          });
+          writeCount++;
+          await commitBatchIfNeeded();
         }
+
+        // Recursos
+        for (const resourceData of resources) {
+          const resourceRef = newLessonRef.collection('resources').doc();
+          batch.set(resourceRef, {
+            ...resourceData,
+            lessonId: newLessonRef.id,
+            instructorId: instructorId,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+          writeCount++;
+          await commitBatchIfNeeded();
+        }
+      }
+    }
+
+    // Guardar el último lote si tiene cambios pendientes
+    if (writeCount > 0) {
+      await batch.commit();
     }
 
     return NextResponse.json({ message: 'Contenido clonado exitosamente' });

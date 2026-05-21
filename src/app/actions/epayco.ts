@@ -51,6 +51,37 @@ async function processAcceptedTransaction(
 
       const amount = Number(data.x_amount || data.amount);
       const finalEmail = extraData?.userEmail || data.x_customer_email || data.customer_email || guestEmail || '';
+
+      // Validación de Seguridad Contra Manipulación de Precios
+      let expectedPrice = 0;
+      try {
+        if (virtualClassId !== 'none') {
+          const vcDoc = await adminDb.collection('courses').doc(courseId).collection('virtualClasses').doc(virtualClassId).get();
+          expectedPrice = vcDoc.data()?.price || 0;
+        } else if (challengeId !== 'none') {
+          const challengeDoc = await adminDb.collection('coding_challenges').doc(challengeId).get();
+          expectedPrice = challengeDoc.data()?.price || 0;
+        } else if (podcastId !== 'none') {
+          const podcastDoc = await adminDb.collection('podcasts').doc(podcastId).get();
+          expectedPrice = podcastDoc.data()?.price || 0;
+        } else if (lessonId !== 'none') {
+          const lessonDoc = await adminDb.collection('courses').doc(courseId).collection('modules').doc(moduleId).collection('lessons').doc(lessonId).get();
+          expectedPrice = lessonDoc.data()?.price || 0;
+        } else if (moduleId !== 'none') {
+          const moduleDoc = await adminDb.collection('courses').doc(courseId).collection('modules').doc(moduleId).get();
+          expectedPrice = moduleDoc.data()?.price || 0;
+        } else {
+          const courseDoc = await adminDb.collection('courses').doc(courseId).get();
+          expectedPrice = courseDoc.data()?.price || 0;
+        }
+
+        if (expectedPrice > 0 && amount < expectedPrice) {
+          console.error(`[Payment Security] Intento de manipulación de precio: Pagado=${amount}, Esperado=${expectedPrice}. Usuario: ${userId}`);
+          return { success: false, message: `Monto pagado (${amount}) es menor al precio real del artículo (${expectedPrice}).` };
+        }
+      } catch (priceErr) {
+        console.warn('[Payment Security] Error consultando el precio oficial del artículo, continuando:', priceErr);
+      }
       
       // Lógica de Registro de Transacción por Tipo...
       // (Para brevedad en el refactor inicial, mantenemos la estructura pero centralizada)
@@ -247,21 +278,42 @@ export async function verifyEpaycoTransaction(
  * El Webhook envía los datos directamente por POST.
  */
 export async function processEpaycoWebhook(data: any) {
-  // ePayco envía el x_extra1 como el userId que configuramos en el handler.open
-  const userId = data.x_extra1;
-  const type = data.x_extra2 === 'instructor' ? 'instructor' : 'premium';
-  
-  if (!userId) {
-    console.error('[Webhook] Petición sin userId en extra1');
+  const ref_payco = data.x_ref_payco || data.ref_payco;
+  if (!ref_payco) {
+    console.error('[Webhook] Petición sin referencia de pago');
     return { success: false };
   }
 
-  // Verificar código de respuesta (1 = Aceptado)
-  if (Number(data.x_cod_response) === 1) {
-    console.log(`[Webhook] Procesando pago exitoso para usuario: ${userId}`);
-    return await processAcceptedTransaction(data, userId, type as any);
-  }
+  try {
+    // Verificación Pull Activa (Seguridad contra Spoofing)
+    const response = await fetch(`https://secure.epayco.co/validation/v1/reference/${ref_payco}`);
+    const apiResult = await response.json();
 
-  console.log(`[Webhook] Notificación recibida con estado: ${data.x_response}`);
-  return { success: true };
+    if (!apiResult.success || !apiResult.data) {
+      console.error(`[Webhook] Transacción ${ref_payco} no existe en ePayco o falló la verificación`);
+      return { success: false };
+    }
+
+    const validatedData = apiResult.data;
+    const userId = validatedData.x_extra1 || validatedData.extra1;
+    const type = (validatedData.x_extra2 || validatedData.extra2) === 'instructor' ? 'instructor' : 'premium';
+
+    if (!userId) {
+      console.error(`[Webhook] Transacción ${ref_payco} válida pero sin userId en extra1`);
+      return { success: false };
+    }
+
+    // Verificar código de respuesta oficial (1 = Aceptado)
+    if (Number(validatedData.x_cod_response) === 1) {
+      console.log(`[Webhook] Procesando pago exitoso verificado para usuario: ${userId}`);
+      return await processAcceptedTransaction(validatedData, userId, type as any);
+    }
+
+    console.log(`[Webhook] Notificación oficial recibida con estado no aceptado: ${validatedData.x_response}`);
+    return { success: true };
+
+  } catch (error) {
+    console.error('[Webhook] Error en verificación pull de webhook:', error);
+    return { success: false };
+  }
 }
