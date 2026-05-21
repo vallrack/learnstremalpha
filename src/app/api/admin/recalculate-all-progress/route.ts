@@ -1,9 +1,10 @@
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { UserProfile, Course, CourseProgress } from '@/types';
 
 /**
- * Endpoint para recalcular el porcentaje de progreso de todos los estudiantes en todos los cursos.
- * Útil para sincronizar datos tras cambios estructurales o corrección de bugs en el guardado.
+ * Endpoint para recalcular el porcentaje de progreso de todos los estudiantes.
+ * Optimizado para procesamiento por lotes (Batching) para mayor escalabilidad.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -28,201 +29,175 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 403 });
     }
     
-    const userData = userDoc.data();
-    if (userData?.role !== 'admin' && decodedToken.email !== 'demo@learnstream.ai') {
+    const adminData = userDoc.data() as UserProfile;
+    if (adminData?.role !== 'admin' && decodedToken.email !== 'demo@learnstream.ai') {
       return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
     }
 
-    // 2. Mapear estructura de cursos (Lecciones y Módulos)
-    console.log('--- Iniciando mapeo de estructura de cursos ---');
-    const coursesSnap = await adminDb.collection('courses').get();
-    const courseStructure: Record<string, any> = {};
+    console.log('[Recalculate] Iniciando mapeo de estructura de cursos...');
     
-    // Obtener todos los módulos y lecciones de forma eficiente
+    // Cargar estructura base de cursos
+    const coursesSnap = await adminDb.collection('courses').get();
     const allModulesSnap = await adminDb.collectionGroup('modules').get();
     const allLessonsSnap = await adminDb.collectionGroup('lessons').get();
 
-    console.log(`Estructura: ${coursesSnap.size} cursos, ${allModulesSnap.size} módulos, ${allLessonsSnap.size} lecciones encontradas.`);
-
+    const courseStructure: Record<string, any> = {};
     coursesSnap.docs.forEach(cDoc => {
-        const cId = cDoc.id;
-        const cData = cDoc.data();
-        
-        courseStructure[cId] = {
-            id: cId,
-            isFree: cData.isFree ?? true,
-            totalLessons: cData.totalLessons || 0,
-            instructorId: cData.instructorId,
-            modules: allModulesSnap.docs.filter(m => m.ref.parent.parent?.id === cId).map(m => ({ id: m.id, ...m.data() })),
-            lessons: allLessonsSnap.docs.filter(l => {
-              // Buscar el courseId en el path o en el documento
-              const data = l.data();
-              if (data.courseId === cId) return true;
-              // Fallback: revisar el path (courses/{cId}/modules/{mId}/lessons/{lId})
-              return l.ref.path.includes(`courses/${cId}/`);
-            }).map(l => ({ id: l.id, ...l.data() }))
-        };
+      const cId = cDoc.id;
+      const cData = cDoc.data() as Course;
+      courseStructure[cId] = {
+        ...cData,
+        modules: allModulesSnap.docs.filter(m => m.ref.parent.parent?.id === cId).map(m => ({ id: m.id, ...m.data() })),
+        lessons: allLessonsSnap.docs.filter(l => l.ref.path.includes(`courses/${cId}/`)).map(l => ({ id: l.id, ...l.data() }))
+      };
     });
 
-    console.log('Mapeo de estructura completado.');
-
-    // 3. Obtener datos globales para el cálculo de XP (Collection Groups)
-    console.log('--- Obteniendo datos de submissions y logros ---');
-    const [challengesSnap, achievementsSnap, progressSnap] = await Promise.all([
-        adminDb.collectionGroup('challenge_submissions').get(),
-        adminDb.collectionGroup('achievements').get(),
-        adminDb.collectionGroup('courseProgress').get()
+    // Cargar submissions y logros (Collection Groups)
+    // Nota: Si esto crece mucho, también deberá ser paginado
+    const [challengesSnap, achievementsSnap] = await Promise.all([
+      adminDb.collectionGroup('challenge_submissions').where('passed', '==', true).get(),
+      adminDb.collectionGroup('achievements').get()
     ]);
 
-
-    // Mapear conteos por Usuario
-    const userChallengesIds: Record<string, Set<string>> = {};
+    const userChallengesCount: Record<string, number> = {};
     challengesSnap.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.passed === true && data.challengeId) { 
-            const uid = doc.ref.parent.parent?.id;
-            if (uid) {
-                if (!userChallengesIds[uid]) userChallengesIds[uid] = new Set();
-                userChallengesIds[uid].add(data.challengeId);
-            }
-        }
+      const uid = doc.ref.parent.parent?.id;
+      if (uid) userChallengesCount[uid] = (userChallengesCount[uid] || 0) + 1;
     });
 
-    const userAchievementsIds: Record<string, Set<string>> = {};
+    const userAchievementsCount: Record<string, number> = {};
     achievementsSnap.docs.forEach(doc => {
-        const data = doc.data();
-        const challengeId = data.challengeId;
-        const uid = doc.ref.parent.parent?.id;
-        
-        if (uid && challengeId) {
-            if (!userAchievementsIds[uid]) userAchievementsIds[uid] = new Set();
-            userAchievementsIds[uid].add(challengeId);
-        }
+      const uid = doc.ref.parent.parent?.id;
+      if (uid) userAchievementsCount[uid] = (userAchievementsCount[uid] || 0) + 1;
     });
 
-    const userProgressList: Record<string, any[]> = {};
-    progressSnap.docs.forEach(doc => {
-        const uid = doc.ref.parent.parent?.id;
-        if (uid) {
-            if (!userProgressList[uid]) userProgressList[uid] = [];
-            userProgressList[uid].push({ ref: doc.ref, data: doc.data() });
-        }
-    });
-
-    // 4. Procesar usuarios y sus progresos
-    const usersSnap = await adminDb.collection('users').get();
-    console.log(`--- Procesando ${usersSnap.size} usuarios ---`);
-    
+    // 2. Procesar usuarios por lotes para evitar Timeouts
+    const BATCH_SIZE = 50;
+    let lastUserDoc = null;
+    let totalProcessed = 0;
     let updatedProgressCount = 0;
     let updatedUsersCount = 0;
-    let totalProcessed = 0;
+    let hasMore = true;
 
-    let batch = adminDb.batch();
-    let batchSize = 0;
+    console.log(`[Recalculate] Procesando usuarios en lotes de ${BATCH_SIZE}...`);
 
-    for (const userDoc of usersSnap.docs) {
-      if (totalProcessed % 100 === 0 && totalProcessed > 0) {
-        console.log(`Procesados ${totalProcessed} de ${usersSnap.size} usuarios...`);
+    while (hasMore) {
+      let query = adminDb.collection('users').orderBy('__name__').limit(BATCH_SIZE);
+      if (lastUserDoc) {
+        query = query.startAfter(lastUserDoc);
       }
 
-      const uid = userDoc.id;
-      const userData = userDoc.data() || {};
-      const userProgs = userProgressList[uid] || [];
-      
-      // A. Recalcular Progreso de cada curso y Módulos Completados
-      let completedCoursesCount = 0;
-      let completedModulesCount = 0;
+      const usersSnap = await query.get();
+      if (usersSnap.empty) {
+        hasMore = false;
+        break;
+      }
 
-      for (const prog of userProgs) {
-          const courseId = prog.data.courseId;
-          const structure = courseStructure[courseId];
-          const totalGlobal = structure?.totalLessons || 0;
+      let batch = adminDb.batch();
+      let operationsInBatch = 0;
+
+      for (const userDoc of usersSnap.docs) {
+        const uid = userDoc.id;
+        const userData = userDoc.data() as UserProfile;
+        
+        // Obtener progresos de ESTE usuario
+        const progressSnap = await userDoc.ref.collection('courseProgress').get();
+        let completedCoursesCount = 0;
+
+        for (const progDoc of progressSnap.docs) {
+          const progData = progDoc.data() as CourseProgress;
+          const structure = courseStructure[progData.courseId];
+          
+          if (!structure) continue;
+
           let totalAccessible = 0;
-          const completedLessons = prog.data.completedLessons || [];
+          const completedLessons = progData.completedLessons || [];
 
-          if (structure) {
-            for (const lesson of structure.lessons || []) {
-                const mod = (structure.modules as any[]).find(m => m.id === lesson.moduleId);
-                const isLessonPremium = !!lesson.isPremium;
-                const isModulePremium = !!mod?.isPremium;
-                const isPaidActivity = (isLessonPremium && (lesson.price || 0) > 0) || (isModulePremium && (mod?.price || 0) > 0);
-                
-                let hasAccess = false;
-                if (userData.role === 'admin' || uid === structure.instructorId) {
-                    hasAccess = true;
-                } else if (isPaidActivity) {
-                    const hasPurchased = (userData.purchasedCourses?.includes(courseId)) || (userData.purchasedModules?.includes(lesson.moduleId)) || (userData.purchasedLessons?.includes(lesson.id));
-                    hasAccess = hasPurchased || userData.isPremiumSubscriber;
-                } else {
-                    hasAccess = structure.isFree || (userData.purchasedCourses?.includes(courseId)) || userData.isPremiumSubscriber || prog.data.status === 'enrolled';
-                }
+          // Calcular lecciones accesibles según el perfil del usuario
+          for (const lesson of structure.lessons || []) {
+            const mod = structure.modules?.find((m: any) => m.id === lesson.moduleId);
+            const isPaid = !!lesson.isPremium || !!mod?.isPremium;
+            
+            let hasAccess = false;
+            if (userData.role === 'admin' || uid === structure.instructorId) {
+              hasAccess = true;
+            } else if (isPaid) {
+              hasAccess = !!(userData.purchasedCourses?.includes(progData.courseId) || 
+                           userData.purchasedModules?.includes(lesson.moduleId) || 
+                           userData.purchasedLessons?.includes(lesson.id) || 
+                           userData.isPremiumSubscriber);
+            } else {
+              hasAccess = structure.isFree || userData.isPremiumSubscriber || progData.status === 'enrolled';
+            }
 
-                if (hasAccess) totalAccessible++;
+            if (hasAccess) totalAccessible++;
+          }
+
+          const total = totalAccessible || structure.totalLessons || 0;
+          
+          if (progData.status === 'completed') {
+            completedCoursesCount++;
+            if (progData.progressPercentage !== 100) {
+              batch.update(progDoc.ref, { progressPercentage: 100, updatedAt: new Date() });
+              operationsInBatch++;
+              updatedProgressCount++;
+            }
+          } else if (total > 0 && completedLessons.length > 0) {
+            const newPerc = Math.min(100, Math.round((completedLessons.length / total) * 100));
+            if (newPerc !== progData.progressPercentage) {
+              batch.update(progDoc.ref, { progressPercentage: newPerc, updatedAt: new Date() });
+              operationsInBatch++;
+              updatedProgressCount++;
             }
           }
+        }
 
-          const total = totalAccessible || totalGlobal;
-          
-          if (prog.data.status === 'completed') {
-              completedCoursesCount++;
-              // Si ya está completado, el progreso DEBE ser 100% — nunca lo bajamos
-              if ((prog.data.progressPercentage || 0) !== 100) {
-                  batch.update(prog.ref, { progressPercentage: 100, updatedAt: new Date() });
-                  batchSize++;
-                  updatedProgressCount++;
-              }
-          } else if (total > 0 && completedLessons.length > 0) {
-              // Solo recalcular si tenemos lecciones completadas — evita resetear a 0 por error de estructura
-              const newPerc = Math.min(100, Math.round((completedLessons.length / total) * 100));
-              if (newPerc !== (prog.data.progressPercentage || 0)) {
-                  batch.update(prog.ref, { progressPercentage: newPerc, updatedAt: new Date() });
-                  batchSize++;
-                  updatedProgressCount++;
-              }
-          } else if (total > 0 && completedLessons.length === 0 && (prog.data.progressPercentage || 0) > 0) {
-              // Si hay total de lecciones pero ninguna completada y el progreso guardado es > 0,
-              // puede ser un error de estructura del curso. Preservamos el progreso existente y lo dejamos intacto.
-              console.warn(`[Recalculate] Preservando progreso existente (${prog.data.progressPercentage}%) para usuario ${uid} en curso ${courseId} — completedLessons está vacío pero progressPercentage > 0. Puede indicar un problema de estructura.`);
-          }
-
-      }
-
-      // B. Recalcular XP Total (Fórmula Evolucionada v3.0)
-      const passedChallenges = userChallengesIds[uid]?.size || 0;
-      const totalAchievements = userAchievementsIds[uid]?.size || 0;
-      
-      const calculatedXp = (completedCoursesCount * 500) + (completedModulesCount * 100) + (passedChallenges * 100) + (totalAchievements * 250);
-      
-      if (calculatedXp !== (userData.xp || 0)) {
+        // Calcular XP
+        const passedChallenges = userChallengesCount[uid] || 0;
+        const totalAchievements = userAchievementsCount[uid] || 0;
+        const calculatedXp = (completedCoursesCount * 500) + (passedChallenges * 100) + (totalAchievements * 250);
+        
+        if (calculatedXp !== (userData.xp || 0)) {
           batch.update(userDoc.ref, { xp: calculatedXp, lastSyncAt: new Date() });
-          batchSize++;
+          operationsInBatch++;
           updatedUsersCount++;
-      }
+        }
 
-      totalProcessed++;
-
-      if (batchSize >= 450) {
+        totalProcessed++;
+        
+        // Si el lote de Firestore está lleno, hacer commit
+        if (operationsInBatch >= 450) {
           await batch.commit();
           batch = adminDb.batch();
-          batchSize = 0;
+          operationsInBatch = 0;
+        }
       }
-    }
 
-    if (batchSize > 0) {
+      if (operationsInBatch > 0) {
         await batch.commit();
+      }
+
+      lastUserDoc = usersSnap.docs[usersSnap.docs.length - 1];
+      console.log(`[Recalculate] Procesados ${totalProcessed} usuarios...`);
+      
+      // Seguridad: Si ya procesamos muchos, salimos para evitar timeout infinito (opcional)
+      if (totalProcessed > 5000) {
+        console.warn('[Recalculate] Límite de seguridad alcanzado (5000 usuarios).');
+        break;
+      }
     }
 
     return NextResponse.json({
-      message: 'Sincronización masiva de Progreso y Ranking completada',
+      success: true,
       results: {
-          totalUsersProcessed: totalProcessed,
-          usersXpUpdated: updatedUsersCount,
-          courseProgressUpdated: updatedProgressCount
+        totalUsersProcessed: totalProcessed,
+        usersXpUpdated: updatedUsersCount,
+        courseProgressUpdated: updatedProgressCount
       }
     });
 
   } catch (error: any) {
-    console.error('Recalculate Progress Error:', error);
+    console.error('[Recalculate] Error:', error);
     return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 });
   }
 }

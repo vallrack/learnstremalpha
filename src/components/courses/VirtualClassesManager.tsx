@@ -64,7 +64,13 @@ export function VirtualClassesManager({ courseId, isAuthorized }: { courseId: st
     const scheduledDate = new Date(`${date}T${time}`);
     
     // Auto-generate Jitsi link if none provided
-    const finalMeetLink = customMeetLink || `https://meet.jit.si/learnstream_${courseId}_${Math.random().toString(36).substring(2, 10)}`;
+    const jitsiAppId = process.env.NEXT_PUBLIC_JITSI_APP_ID;
+    const roomName = `learnstream_${courseId}_${Math.random().toString(36).substring(2, 10)}`;
+    const finalMeetLink = customMeetLink || (
+      jitsiAppId 
+        ? `https://8x8.vc/${jitsiAppId}/${roomName}`
+        : `https://meet.jit.si/${roomName}`
+    );
 
     const classData = {
       title,

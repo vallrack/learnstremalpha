@@ -2,10 +2,21 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { emailService } from '@/lib/email/email-service';
 import { NextRequest, NextResponse } from 'next/server';
+import { UserProfile } from '@/types';
+
+interface StudentInput {
+  email: string;
+  name?: string;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { courseId, students, courseTitle, groupId } = await req.json();
+    const { courseId, students, courseTitle, groupId } = await req.json() as { 
+      courseId: string; 
+      students: StudentInput[]; 
+      courseTitle: string; 
+      groupId?: string 
+    };
 
     if (!courseId || !students || !Array.isArray(students)) {
       return NextResponse.json(
@@ -34,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 403 });
     }
     
-    const userData = userDoc.data();
+    const userData = userDoc.data() as UserProfile;
     if (userData?.role !== 'admin' && userData?.role !== 'instructor') {
       return NextResponse.json({ error: 'Permisos insuficientes para realizar esta acción' }, { status: 403 });
     }
@@ -49,9 +60,9 @@ export async function POST(req: NextRequest) {
     // Procesar en lotes de 5 para optimizar velocidad sin saturar el servicio de correo
     const batchSize = 5;
     for (let i = 0; i < students.length; i += batchSize) {
-      const batch = students.slice(i, i + batchSize);
+      const batchChunk = students.slice(i, i + batchSize);
       
-      await Promise.all(batch.map(async (student: any) => {
+      await Promise.all(batchChunk.map(async (student) => {
         try {
           const { email, name } = student;
           if (!email) {
@@ -60,7 +71,7 @@ export async function POST(req: NextRequest) {
             return;
           }
 
-          let uid;
+          let uid: string;
           const tempPassword = ((name?.split(' ')[0] || 'User').normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "") + Math.floor(1000 + Math.random() * 9000) + '!').trim();
           
           try {
@@ -132,7 +143,7 @@ export async function POST(req: NextRequest) {
             if (!emailResult.success) {
               results.errors.push(`Correo no enviado a ${email}: ${emailResult.error}`);
             }
-          } catch (emailErr: any) {
+          } catch (emailErr) {
             console.error(`Error enviando correo a ${email}:`, emailErr);
             results.errors.push(`Correo no enviado a ${email}: Error de conexión.`);
           }
@@ -148,11 +159,11 @@ export async function POST(req: NextRequest) {
     // Notificar al Admin
     await adminDb.collection('notifications').add({
       userId: 'admin',
-      title: 'Matriculación Masiva Procesada',
-      message: `Se procesaron ${results.total} alumnos para "${courseTitle}". Éxito: ${results.success}, Fallidos: ${results.failed}.`,
-      type: results.failed > 0 ? 'alert' : 'success',
+      title: 'Matriculación Masiva Completada',
+      message: `Se procesaron ${results.total} estudiantes para el curso ${courseTitle}. Éxitos: ${results.success}, Fallos: ${results.failed}`,
+      type: results.failed > 0 ? 'warning' : 'success',
       read: false,
-      createdAt: new Date(),
+      createdAt: FieldValue.serverTimestamp(),
       link: '/admin/students'
     });
 
