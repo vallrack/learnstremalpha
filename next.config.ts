@@ -133,6 +133,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Turbopack es el bundler por defecto en Next.js 16.
+  // Declaramos la config vacía para silenciar el warning de incompatibilidad con webpack.
+  turbopack: {},
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.alias['react'] = path.resolve('./node_modules/react');
