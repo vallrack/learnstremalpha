@@ -30,7 +30,8 @@ export function CourseCertificate({
 }: CourseCertificateProps) {
   const dpLogoUrl = "/images/logo-dprogramadores.png";
   const signatureUrl = "/images/firma-director.png";
-  const { name, logoUrl: platformLogoUrl, domain } = useBrand();
+  const platformLogoUrl = "/images/logo-learnstream.png";
+  const { name, domain } = useBrand();
   const effectiveInstructorName = instructorName || `Experto ${name}`;
 
   const verifyUrl = typeof window !== 'undefined' 
@@ -70,7 +71,7 @@ export function CourseCertificate({
           <div className="flex items-center justify-center w-24 h-24 shrink-0 print-image-container">
             <img 
               src={platformLogoUrl} 
-              alt={`${name} Logo`} 
+              alt="LearnStream Logo" 
               style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
             />
           </div>
