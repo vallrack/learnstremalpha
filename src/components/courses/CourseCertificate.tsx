@@ -50,10 +50,11 @@ export function CourseCertificate({
         {/* Cabecera con Logos y Título */}
         <header className="relative z-10 w-full flex items-center justify-between px-6 pt-2">
           <div className="flex items-center justify-center w-16 h-16 shrink-0 print-image-container">
-            {/* Usamos img tag nativo con proxy Next.js y maxWidth/maxHeight para compatibilidad con html2canvas */}
+            {/* Usamos img tag nativo con URLs directas para evitar problemas con dominios externos y html2canvas */}
             <img 
-              src={`/_next/image?url=${encodeURIComponent(dpLogoUrl)}&w=256&q=100`} 
+              src={dpLogoUrl} 
               alt="DProgramadores Logo" 
+              crossOrigin="anonymous"
               style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
             />
           </div>
@@ -69,8 +70,9 @@ export function CourseCertificate({
 
           <div className="flex items-center justify-center w-24 h-24 shrink-0 print-image-container">
             <img 
-              src={`/_next/image?url=${encodeURIComponent(platformLogoUrl)}&w=256&q=100`} 
+              src={platformLogoUrl} 
               alt={`${name} Logo`} 
+              crossOrigin="anonymous"
               style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
             />
           </div>
@@ -139,8 +141,9 @@ export function CourseCertificate({
           <div className="flex flex-col items-center gap-1 border-t border-slate-200 pt-2 print-element">
              <div className="flex items-center justify-center w-32 h-10 shrink-0 print-image-container">
                <img 
-                 src={`/_next/image?url=${encodeURIComponent(signatureUrl)}&w=256&q=100`} 
+                 src={signatureUrl} 
                  alt="Firma Director" 
+                 crossOrigin="anonymous"
                  style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
                />
              </div>
