@@ -28,8 +28,8 @@ export function CourseCertificate({
   instructorName,
   certificateId = "PREVIEW-ID",
 }: CourseCertificateProps) {
-  const dpLogoUrl = "https://dprogramadores.com.co/img/logoD.png";
-  const signatureUrl = "https://drive.google.com/uc?export=view&id=1w2nzR-tylvAKiHe02fzdTKpRD7icoJua";
+  const dpLogoUrl = "/images/logo-dprogramadores.png";
+  const signatureUrl = "/images/firma-director.png";
   const { name, logoUrl: platformLogoUrl, domain } = useBrand();
   const effectiveInstructorName = instructorName || `Experto ${name}`;
 
@@ -54,7 +54,6 @@ export function CourseCertificate({
             <img 
               src={dpLogoUrl} 
               alt="DProgramadores Logo" 
-              crossOrigin="anonymous"
               style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
             />
           </div>
@@ -72,7 +71,6 @@ export function CourseCertificate({
             <img 
               src={platformLogoUrl} 
               alt={`${name} Logo`} 
-              crossOrigin="anonymous"
               style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
             />
           </div>
@@ -143,7 +141,6 @@ export function CourseCertificate({
                <img 
                  src={signatureUrl} 
                  alt="Firma Director" 
-                 crossOrigin="anonymous"
                  style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto' }}
                />
              </div>
