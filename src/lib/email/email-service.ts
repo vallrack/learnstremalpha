@@ -480,6 +480,85 @@ export const emailService = {
       console.error('Error enviando informe semanal:', err?.response?.body || err);
       return { success: false, error: err?.response?.body?.message || err.message };
     }
+  },
+
+  /**
+   * Envía correo de aprobación de solicitud de instructor/academia
+   */
+  async sendInstructorApprovedEmail({ email, name, role }: { email: string, name: string, role: string }) {
+    try {
+      const roleText = role === 'academy' ? 'Academia' : 'Instructor';
+      const response = await brevo.transactionalEmails.sendTransacEmail({
+        subject: `🎉 ¡Felicidades! Tu solicitud de ${roleText} ha sido aprobada - ${DEFAULT_BRANDING.name}`,
+        sender: VERIFIED_SENDER,
+        to: [{ email, name }],
+        htmlContent: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 20px;">
+            <h1 style="color: #6366f1; margin: 0;">¡Felicidades, ${name}!</h1>
+            <p style="font-size: 16px; color: #334155; line-height: 1.6; margin-top: 15px;">
+              Tu solicitud para unirte a <strong>${DEFAULT_BRANDING.name}</strong> con el rol de <strong>${roleText}</strong> ha sido revisada y aprobada por nuestro equipo de administración.
+            </p>
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 12px; margin: 25px 0;">
+              <p style="margin: 0; color: #166534; font-weight: bold;">Beneficios de tu cuenta:</p>
+              <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #14532d; font-size: 14px;">
+                <li>Crear y editar tus propios cursos y lecciones.</li>
+                <li>Diseñar retos interactivos de código con IA.</li>
+                <li>Panel de finanzas y revenue share configurado.</li>
+              </ul>
+            </div>
+            <div style="text-align: center;">
+              <a href="https://${DEFAULT_BRANDING.domain}/admin" style="display: inline-block; background-color: #6366f1; color: white; padding: 14px 30px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px;">Ir a mi Panel de Control</a>
+            </div>
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #e2e8f0;" />
+            <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+              ${DEFAULT_BRANDING.name} - ${DEFAULT_BRANDING.tagline}
+            </p>
+          </div>
+        `,
+      });
+      return { success: true, data: response };
+    } catch (err: any) {
+      console.error('Error sending instructor approved email:', err);
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Envía correo de rechazo de solicitud de instructor
+   */
+  async sendInstructorRejectedEmail({ email, name, feedback }: { email: string, name: string, feedback: string }) {
+    try {
+      const response = await brevo.transactionalEmails.sendTransacEmail({
+        subject: `Actualización sobre tu solicitud de creador - ${DEFAULT_BRANDING.name}`,
+        sender: VERIFIED_SENDER,
+        to: [{ email, name }],
+        htmlContent: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 20px;">
+            <h2 style="color: #0f172a; margin: 0;">Hola, ${name}</h2>
+            <p style="font-size: 16px; color: #334155; line-height: 1.6; margin-top: 15px;">
+              Agradecemos tu interés en unirte como creador en <strong>${DEFAULT_BRANDING.name}</strong>. En este momento, no hemos podido aprobar tu solicitud debido al siguiente motivo:
+            </p>
+            <div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 20px; border-radius: 12px; margin: 25px 0;">
+              <p style="margin: 0; color: #991b1b; font-weight: bold;">Comentarios del equipo:</p>
+              <p style="margin: 10px 0 0 0; color: #7f1d1d; font-size: 14px; font-style: italic;">
+                "${feedback || 'No se especificaron detalles. Por favor, revisa tu bio o especialidad de perfil.'}"
+              </p>
+            </div>
+            <p style="font-size: 14px; color: #64748b;">
+              Puedes actualizar tu perfil con los cambios sugeridos e intentar enviar tu solicitud nuevamente más adelante.
+            </p>
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #e2e8f0;" />
+            <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+              Soporte de ${DEFAULT_BRANDING.name}
+            </p>
+          </div>
+        `,
+      });
+      return { success: true, data: response };
+    } catch (err: any) {
+      console.error('Error sending instructor rejected email:', err);
+      return { success: false, error: err.message };
+    }
   }
 };
 

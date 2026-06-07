@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { sendInstructorApprovedEmailAction, sendInstructorRejectedEmailAction } from '@/app/actions/email';
 
 export default function AdminApplicationsPage() {
   const db = useFirestore();
@@ -52,6 +53,8 @@ export default function AdminApplicationsPage() {
     canUseAI: true
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [rejectionFeedback, setRejectionFeedback] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const appsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -59,43 +62,93 @@ export default function AdminApplicationsPage() {
   }, [db]);
   const { data: applications, isLoading } = useCollection(appsQuery);
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!db || !selectedApp) return;
+    setIsSubmitting(true);
+    try {
+      // 1. Aprobar solicitud
+      updateDocumentNonBlocking(doc(db, 'instructor_applications', selectedApp.id), {
+        status: 'approved'
+      });
 
-    // 1. Aprobar solicitud
-    updateDocumentNonBlocking(doc(db, 'instructor_applications', selectedApp.id), {
-      status: 'approved'
-    });
+      // 2. Convertir usuario y asignar rol/permisos/porcentaje
+      updateDocumentNonBlocking(doc(db, 'users', selectedApp.userId), {
+        role: targetRole,
+        instructorStatus: 'active',
+        revenueSharePercentage: parseInt(revenueShare),
+        permissions: permissions,
+        subscription: {
+          status: 'active',
+          plan: targetRole === 'academy' ? 'manual_activation' : 'none',
+          activatedAt: new Date(),
+          expiresAt: targetRole === 'academy' ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : null // 1 año por defecto en manual
+        }
+      });
 
-    // 2. Convertir usuario y asignar rol/permisos/porcentaje
-    updateDocumentNonBlocking(doc(db, 'users', selectedApp.userId), {
-      role: targetRole,
-      instructorStatus: 'active',
-      revenueSharePercentage: parseInt(revenueShare),
-      permissions: permissions,
-      subscription: {
-        status: 'active',
-        plan: targetRole === 'academy' ? 'manual_activation' : 'none',
-        activatedAt: new Date(),
-        expiresAt: targetRole === 'academy' ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : null // 1 año por defecto en manual
+      // 3. Notificar al solicitante
+      addDoc(collection(db, 'notifications'), {
+        userId: selectedApp.userId,
+        title: targetRole === 'academy' ? '¡Tu Academia ha sido Activada!' : '¡Solicitud de Instructor Aprobada!',
+        message: targetRole === 'academy' 
+          ? 'Ya puedes gestionar tu propia academia con permisos personalizados.'
+          : 'Tu perfil como instructor ha sido activado. Ya puedes empezar a publicar cursos.',
+        read: false,
+        link: '/admin/courses',
+        type: 'success',
+        createdAt: new Date()
+      }).catch(err => console.error("Error creating notification", err));
+
+      // 4. Enviar correo real
+      if (selectedApp.userEmail) {
+        await sendInstructorApprovedEmailAction(selectedApp.userEmail, selectedApp.userName, targetRole);
       }
-    });
+    } catch (err) {
+      console.error("Error in handleApprove:", err);
+    } finally {
+      setIsSubmitting(false);
+      setIsDialogOpen(false);
+      setSelectedApp(null);
+    }
+  };
 
-    // 3. Notificar al solicitante
-    addDoc(collection(db, 'notifications'), {
-      userId: selectedApp.userId,
-      title: targetRole === 'academy' ? '¡Tu Academia ha sido Activada!' : '¡Solicitud de Instructor Aprobada!',
-      message: targetRole === 'academy' 
-        ? 'Ya puedes gestionar tu propia academia con permisos personalizados.'
-        : 'Tu perfil como instructor ha sido activado. Ya puedes empezar a publicar cursos.',
-      read: false,
-      link: '/admin/courses',
-      type: 'success',
-      createdAt: new Date()
-    }).catch(err => console.error("Error creating notification", err));
+  const handleReject = async () => {
+    if (!db || !selectedApp) return;
+    setIsSubmitting(true);
+    try {
+      // 1. Rechazar solicitud
+      updateDocumentNonBlocking(doc(db, 'instructor_applications', selectedApp.id), {
+        status: 'rejected',
+        feedback: rejectionFeedback
+      });
 
-    setIsDialogOpen(false);
-    setSelectedApp(null);
+      // 2. Actualizar estado en el usuario
+      updateDocumentNonBlocking(doc(db, 'users', selectedApp.userId), {
+        instructorStatus: 'rejected'
+      });
+
+      // 3. Notificar al solicitante
+      addDoc(collection(db, 'notifications'), {
+        userId: selectedApp.userId,
+        title: 'Solicitud de Instructor Rechazada',
+        message: `Tu solicitud fue rechazada. Motivo: ${rejectionFeedback || 'No especificado.'}`,
+        read: false,
+        link: '/instructor/apply',
+        type: 'error',
+        createdAt: new Date()
+      }).catch(err => console.error("Error creating notification", err));
+
+      // 4. Enviar correo real
+      if (selectedApp.userEmail) {
+        await sendInstructorRejectedEmailAction(selectedApp.userEmail, selectedApp.userName, rejectionFeedback);
+      }
+    } catch (err) {
+      console.error("Error in handleReject:", err);
+    } finally {
+      setIsSubmitting(false);
+      setIsDialogOpen(false);
+      setSelectedApp(null);
+      setRejectionFeedback('');
+    }
   };
 
   return (
@@ -280,16 +333,43 @@ export default function AdminApplicationsPage() {
                              onCheckedChange={v => setPermissions({...permissions, canUseAI: v})} 
                            />
                         </div>
-                     </div>
+                      </div>
+                   </div>
+
+                  <div className="space-y-4 border-t pt-6">
+                    <Label className="font-bold flex items-center gap-2 text-rose-600">
+                      <XCircle className="h-4 w-4" />
+                      Feedback de Rechazo
+                    </Label>
+                    <textarea 
+                      placeholder="Indica el motivo si vas a rechazar la solicitud..." 
+                      value={rejectionFeedback} 
+                      onChange={(e) => setRejectionFeedback(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 p-4 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 min-h-[80px]"
+                    />
                   </div>
                 </div>
               </div>
             )}
 
-            <DialogFooter className="gap-2">
-              <Button variant="outline" className="rounded-xl h-12 flex-1" onClick={() => setIsDialogOpen(false)}>Cerrar</Button>
-              <Button className="rounded-xl h-12 flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={handleApprove}>
-                Aprobar Instructor
+            <DialogFooter className="gap-2 flex-col sm:flex-row">
+              <Button variant="outline" className="rounded-xl h-12 flex-1 sm:w-auto" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
+                Cerrar
+              </Button>
+              <Button 
+                variant="destructive" 
+                className="rounded-xl h-12 flex-1 bg-rose-600 hover:bg-rose-700 text-white sm:w-auto"
+                onClick={handleReject} 
+                disabled={isSubmitting || !rejectionFeedback.trim()}
+              >
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin animate-infinite" /> : 'Rechazar'}
+              </Button>
+              <Button 
+                className="rounded-xl h-12 flex-1 bg-emerald-600 hover:bg-emerald-700 text-white sm:w-auto"
+                onClick={handleApprove}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin animate-infinite" /> : 'Aprobar Instructor'}
               </Button>
             </DialogFooter>
           </DialogContent>

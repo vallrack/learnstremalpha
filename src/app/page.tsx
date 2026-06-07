@@ -190,7 +190,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-primary/20 rounded-[3rem] -rotate-6 scale-105 blur-xl transition-all duration-700 hover:rotate-0 hover:scale-100" />
               <div className="relative w-full h-full rounded-3xl lg:rounded-[3rem] overflow-hidden bg-white shadow-2xl flex items-center justify-center p-8 border border-white/50">
                 <Image 
-                  src={logoUrl} 
+                  src="/images/logo-learnstream.png" 
                   alt="Logo LearnStream"
                   fill
                   className="object-contain p-12 drop-shadow-2xl"
@@ -425,7 +425,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <div className="relative w-10 h-10 overflow-hidden rounded-lg">
               <Image 
-                src={logoUrl} 
+                src="/images/logo-learnstream.png" 
                 alt="Logo LearnStream" 
                 fill 
                 className="object-contain" 
@@ -434,12 +434,12 @@ export default function Home() {
             <span className="font-headline font-bold text-lg">{name}</span>
           </div>
           <div className="flex gap-8 text-sm text-muted-foreground">
-            <Link href="#" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Términos' : 'Terms'}</Link>
-            <Link href="#" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Privacidad' : 'Privacy'}</Link>
-            <Link href="#" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Soporte' : 'Support'}</Link>
-            <Link href="#" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Contacto' : 'Contact'}</Link>
+            <Link href="/terms" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Términos' : 'Terms'}</Link>
+            <Link href="/privacy" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Privacidad' : 'Privacy'}</Link>
+            <Link href="mailto:vallrack67@gmail.com" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Soporte' : 'Support'}</Link>
+            <Link href="mailto:vallrack67@gmail.com" className="hover:text-primary transition-colors">{t.common.language === 'es' ? 'Contacto' : 'Contact'}</Link>
           </div>
-          <p className="text-sm text-muted-foreground">© 2024 {name}. {t.common.language === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}</p>
+          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} {name}. {t.common.language === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}</p>
         </div>
       </footer>
     </div>

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { Bell, Check, Loader2, Info, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -37,25 +37,32 @@ export function NotificationBell() {
     if (profile.role === 'admin') {
       return query(
         collection(db, 'notifications'), 
-        where('userId', 'in', [user.uid, 'admin', 'all']),
-        orderBy('createdAt', 'desc')
+        where('userId', 'in', [user.uid, 'admin', 'all'])
       );
     }
     
     return query(
       collection(db, 'notifications'), 
-      where('userId', 'in', [user.uid, 'all']),
-      orderBy('createdAt', 'desc')
+      where('userId', 'in', [user.uid, 'all'])
     );
   }, [db, user?.uid, profile?.role]);
 
   const { data: notifications, isLoading, error } = useCollection(notificationsQuery);
 
+  const sortedNotifications = useMemo(() => {
+    if (!notifications) return [];
+    return [...notifications].sort((a: any, b: any) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt instanceof Date ? a.createdAt.getTime() : 0);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt instanceof Date ? b.createdAt.getTime() : 0);
+      return dateB - dateA;
+    });
+  }, [notifications]);
+
   if (error) {
     console.error("Notification query failed:", error);
   }
 
-  const unreadCount = notifications?.filter((n: any) => !n.read).length || 0;
+  const unreadCount = sortedNotifications.filter((n: any) => !n.read).length || 0;
 
   const handleNotificationClick = async (notification: any) => {
     if (!db) return;
@@ -72,9 +79,9 @@ export function NotificationBell() {
   };
 
   const markAllAsRead = async () => {
-    if (!db || !notifications) return;
+    if (!db || !sortedNotifications) return;
     const batch = writeBatch(db);
-    notifications.filter((n: any) => !n.read).forEach((n: any) => {
+    sortedNotifications.filter((n: any) => !n.read).forEach((n: any) => {
       batch.update(doc(db, 'notifications', n.id), { read: true });
     });
     await batch.commit();
@@ -107,14 +114,14 @@ export function NotificationBell() {
         <ScrollArea className="h-[400px]">
           {isLoading ? (
             <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : !notifications || notifications.length === 0 || error ? (
+          ) : !sortedNotifications || sortedNotifications.length === 0 || error ? (
             <div className="p-8 text-center flex flex-col items-center text-muted-foreground">
               <Bell className="h-8 w-8 mb-2 opacity-20" />
               <p className="text-sm">{error ? "Error al cargar notificaciones" : "No tienes notificaciones nuevas."}</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {notifications.map((notif: any) => {
+              {sortedNotifications.map((notif: any) => {
                 const date = notif.createdAt?.toDate ? notif.createdAt.toDate() : new Date();
                 const Icon = notif.type === 'success' ? CheckCircle2 : notif.type === 'alert' ? AlertCircle : Info;
                 const iconColor = notif.type === 'success' ? 'text-emerald-500 bg-emerald-50' : notif.type === 'alert' ? 'text-rose-500 bg-rose-50' : 'text-primary bg-primary/10';

@@ -6,7 +6,7 @@ import { CourseCertificate } from '@/components/courses/CourseCertificate';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Printer, Share2, Loader2, AlertCircle, Eye, FileImage, FileDown } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { doc, collection, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useState, useEffect, Suspense } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -65,13 +65,46 @@ function CertificateContent() {
   }, [db, targetUid, courseId, isPreview]);
   const { data: progress } = useDoc(progressRef);
 
-
-
   const modulesQuery = useMemoFirebase(() => {
     if (!db || !courseId) return null;
     return collection(db, 'courses', courseId, 'modules');
   }, [db, courseId]);
   const { data: modules } = useCollection(modulesQuery);
+
+  const isPremium = isPreview ? true : (targetProfile?.role === 'admin' || !!targetProfile?.isPremiumSubscriber);
+  const certificateId = isPreview ? "PREVIEW-ID" : `${targetUid}_${courseId}`;
+
+  // Auto-crear el certificado si ya se completó el curso y no existe en la base de datos
+  useEffect(() => {
+    if (!db || isPreview || !targetUid || !courseId || !progress || progress.status !== 'completed' || !course || !targetProfile) return;
+
+    const ensureCertificateExists = async () => {
+      try {
+        const certRef = doc(db, 'certificates', `${targetUid}_${courseId}`);
+        const certSnap = await getDoc(certRef);
+        if (!certSnap.exists()) {
+          console.log("Creando certificado faltante en Firestore...");
+          await setDoc(certRef, {
+            userId: targetUid,
+            courseId,
+            studentName: targetProfile.displayName || targetProfile.email?.split('@')[0] || 'Estudiante',
+            courseTitle: course.title || 'Curso',
+            technology: course.technology || 'General',
+            instructorName: course.instructorName || 'Instructor',
+            issuedAt: progress.completedAt || serverTimestamp(),
+            isValid: true,
+            type: isPremium ? 'full' : 'basic',
+            totalLessons: modules?.length || 0,
+            completedLessonsCount: progress.completedLessons?.length || 0,
+          }, { merge: true });
+        }
+      } catch (err) {
+        console.error("Error al auto-guardar el certificado:", err);
+      }
+    };
+
+    ensureCertificateExists();
+  }, [db, isPreview, targetUid, courseId, progress, targetProfile, course, modules, isPremium]);
 
   const handleExportImage = async () => {
     try {
@@ -133,6 +166,28 @@ function CertificateContent() {
     }
   };
 
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/verify/${certificateId}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Certificado de ${course?.title || 'Curso'} - LearnStream`,
+          text: `¡He completado con éxito el curso "${course?.title || 'Curso'}" en LearnStream!`,
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.error("Error al compartir:", error);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({ title: "Enlace copiado", description: "El enlace de verificación del certificado se copió al portapapeles." });
+      } catch (err) {
+        console.error("Error al copiar enlace:", err);
+      }
+    }
+  };
+
   if (!mounted || isUserLoading || isCourseLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -145,7 +200,7 @@ function CertificateContent() {
   if (!isPreview && profile?.role !== 'admin' && (!course || !progress || progress.status !== 'completed')) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4 text-center p-6">
-        <AlertCircle className="h-12 w-12 text-amber-50" />
+        <AlertCircle className="h-12 w-12 text-amber-500" />
         <h1 className="text-2xl font-bold">Certificado no disponible</h1>
         <p className="text-muted-foreground">Debes completar el 100% del curso para obtener tu certificación.</p>
         <Button onClick={() => router.back()}>Volver</Button>
@@ -160,10 +215,7 @@ function CertificateContent() {
 
   const studentName = isPreview ? "Nombre del Estudiante" : (targetProfile?.displayName || targetProfile?.email?.split('@')[0] || 'Estudiante');
   const completionDate = isPreview ? new Date().toLocaleDateString() : (progress?.completedAt ? new Date(progress.completedAt.toDate()).toLocaleDateString() : new Date().toLocaleDateString());
-  const isPremium = isPreview ? true : (targetProfile?.role === 'admin' || !!targetProfile?.isPremiumSubscriber);
-  const certificateId = isPreview ? "PREVIEW-ID" : `${targetUid}_${courseId}`;
-
-
+  
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col print:bg-white">
       <div className="print:hidden">
@@ -194,7 +246,7 @@ function CertificateContent() {
                 {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4 text-red-600" />}
                 Descargar PDF
               </Button>
-              <Button className="rounded-xl gap-2 shadow-lg shadow-primary/20">
+              <Button className="rounded-xl gap-2 shadow-lg shadow-primary/20" onClick={handleShare}>
                 <Share2 className="h-4 w-4" />
                 Compartir Logro
               </Button>

@@ -314,4 +314,29 @@ export async function notifyCourseUpdateAction(courseId: string) {
   }
 }
 
+/**
+ * Server Action para enviar email de aprobación a un instructor
+ */
+export async function sendInstructorApprovedEmailAction(email: string, name: string, role: string) {
+  try {
+    return await emailService.sendInstructorApprovedEmail({ email, name, role });
+  } catch (error: any) {
+    console.error("Error in sendInstructorApprovedEmailAction:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Server Action para enviar email de rechazo a un instructor
+ */
+export async function sendInstructorRejectedEmailAction(email: string, name: string, feedback: string) {
+  try {
+    return await emailService.sendInstructorRejectedEmail({ email, name, feedback });
+  } catch (error: any) {
+    console.error("Error in sendInstructorRejectedEmailAction:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+
 
